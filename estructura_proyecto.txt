@@ -1,0 +1,60 @@
+.
+├── DEPLOYMENT_STATUS.md
+├── Dockerfile
+├── FEATURES_STATUS.md
+├── client
+│   ├── index.html
+│   ├── public
+│   └── src
+├── components.json
+├── docker-compose.yml
+├── drizzle
+│   ├── 0000_spooky_multiple_man.sql
+│   ├── 0001_cloudy_apocalypse.sql
+│   ├── meta
+│   ├── migrations
+│   ├── relations.ts
+│   └── schema.ts
+├── drizzle.config.ts
+├── estructura_proyecto.txt
+├── nginx.conf
+├── package.json
+├── pnpm-lock.yaml
+├── server
+│   ├── _core
+│   ├── advancedMonitoring.test.ts
+│   ├── advancedMonitoring.ts
+│   ├── analytics.test.ts
+│   ├── analytics.ts
+│   ├── apkBuilder.test.ts
+│   ├── apkBuilder.ts
+│   ├── apkCompiler.test.ts
+│   ├── apkCompiler.ts
+│   ├── apkDownload.ts
+│   ├── auth.logout.test.ts
+│   ├── db.ts
+│   ├── geofencing.test.ts
+│   ├── geofencing.ts
+│   ├── notifications.test.ts
+│   ├── notifications.ts
+│   ├── permissionsManager.test.ts
+│   ├── permissionsManager.ts
+│   ├── qrcode.d.ts
+│   ├── remoteControl.test.ts
+│   ├── remoteControl.ts
+│   ├── routers
+│   ├── routers.ts
+│   ├── storage.ts
+│   ├── twoFactorAuth.test.ts
+│   ├── twoFactorAuth.ts
+│   ├── websocket.test.ts
+│   └── websocket.ts
+├── shared
+│   ├── _core
+│   ├── const.ts
+│   └── types.ts
+├── tsconfig.json
+├── vercel.json
+└── vite.config.ts
+
+11 directories, 46 files

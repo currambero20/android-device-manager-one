@@ -1,0 +1,14 @@
+server/
+drizzle/
+node_modules/
+.git/
+*.log
+.env
+.env.local
+railway.json
+docker-compose.yml
+Dockerfile
+nginx.conf
+DEPLOYMENT_STATUS.md
+FEATURES_STATUS.md
+estructura_proyecto.txt

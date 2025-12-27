@@ -5,22 +5,25 @@ import path from "path";
 import { defineConfig } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
-
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
-
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()],
   base: '/',
   resolve: {
     alias: {
+      // Apunta a la carpeta src que está en el mismo nivel que este archivo
       '@': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, './shared'),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      // Sale de la carpeta client para buscar la carpeta shared en la raíz
+      '@shared': path.resolve(__dirname, '../shared'),
+      // Sale de la carpeta client para buscar los assets en la raíz
+      "@assets": path.resolve(__dirname, "../attached_assets"),
     },
   },
-  envDir: path.resolve(import.meta.dirname),
-  root: path.resolve(import.meta.dirname),
-  publicDir: path.resolve(import.meta.dirname, "public"),
+  // El directorio de entorno es donde está este archivo
+  envDir: path.resolve(__dirname),
+  // El root es la carpeta actual (client)
+  root: path.resolve(__dirname),
+  // La carpeta public está dentro de la carpeta actual
+  publicDir: path.resolve(__dirname, "public"),
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -38,6 +41,8 @@ export default defineConfig({
     ],
     fs: {
       strict: true,
+      // IMPORTANTE: Permite a Vite acceder a la carpeta /shared que está afuera
+      allow: ['..'],
       deny: ["**/.*"],
     },
   },

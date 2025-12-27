@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "public": true,
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+{
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "client/dist",
+  "installCommand": "pnpm install --no-frozen-lockfile"
+}    
+}

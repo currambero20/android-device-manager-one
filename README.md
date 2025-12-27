@@ -1,6 +1,6 @@
 # Android Device Manager
 
-Sistema de gestión de dispositivos Android con funcionalidades avanzadas de monitoreo, control remoto
+Sistema de gestión de dispositivos Android con funcionalidades avanzadas de monitoreo, control remoto y servicios
 
 ## 🚀 Despliegue
 

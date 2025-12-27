@@ -11,8 +11,9 @@
       "source": "/(.* )",
       "destination": "/index.html"
     }
-    {
-      "outputDirectory": "dist"
-    }
+
   ]
+}
+{
+  "outputDirectory": "dist"
 }

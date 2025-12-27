@@ -11,14 +11,21 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Esta ruta es correcta: sube un nivel para encontrar shared
       '@shared': path.resolve(__dirname, '../shared'),
       "@assets": path.resolve(__dirname, "../attached_assets"),
     },
   },
-  // Importante: Al ejecutar desde la raíz, Vite necesita saber dónde está el index.html
   root: path.resolve(__dirname),
+  publicDir: path.resolve(__dirname, "public"),
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+  },
+  server: {
+    fs: {
+      // ESTO ES VITAL: Permite a Vite leer archivos fuera de la carpeta client
+      allow: ['..']
+    }
   }
 });

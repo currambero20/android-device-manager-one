@@ -2,7 +2,7 @@
   "name": "android_device_manager",
   "version": "1.0.0",
   "type": "module",
-  "license": "MIT",
+  "license": "MITE",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
     "build": "vite build",

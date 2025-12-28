@@ -8,8 +8,8 @@
   },
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/oauth/callback",
+      "dest": "/api/oauth/callback.js"
     },
     {
       "src": "/(.*)",

@@ -4,15 +4,15 @@
   "type": "module",
   "license": "MITE",
   "scripts": {
-    "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
+    "dev": "cd client && npm run dev",
     "build": "vite build --root .",
     "build:frontend": "vite build",
-    "start": "node dist/index.js",
+    "start": "cd client && npm run preview"
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "echo 'No tests configured' && exit 0",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "build": "vite build"
+    "build": "cd client && npm run build",
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
@@ -116,6 +116,6 @@
     "vitest": "^2.1.4"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": "18.x"
   }
 }

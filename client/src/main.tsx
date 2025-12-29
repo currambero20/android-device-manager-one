@@ -6,19 +6,19 @@ import superjson from "superjson";
 import App from "./App";
 import "./index.css";
 
-const queryClient = new QueryClient( );
+const queryClient = new QueryClient();
 
-// CORRECCIÓN: Usar la variable de entorno para la URL de la API
+// ✅ Usar variable de entorno de Vercel
 const API_URL = import.meta.env.VITE_API_URL || "/api/trpc";
 
-console.log("Conectando a la API en:", API_URL);
+console.log("API URL:", API_URL);
 
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: API_URL,
       transformer: superjson,
-      fetch(input, init ) {
+      fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",

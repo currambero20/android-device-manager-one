@@ -1,19 +1,15 @@
 {
   "version": 2,
-  "installCommand": "npm install --legacy-peer-deps && cd client && npm install --legacy-peer-deps",
   "buildCommand": "cd client && npm run build",
   "outputDirectory": "client/dist",
   "env": {
-    "NODE_ENV": "production"
+    "VITE_API_URL": "@vite_api_url"
   },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/oauth/callback",
-      "dest": "/api/oauth/callback.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
+

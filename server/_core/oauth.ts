@@ -88,8 +88,7 @@ export function registerOAuthRoutes(app: Express) {
 
       console.log(`[OAuth] User ${userInfo.sub} logged in`);
 
-      // 6. Redirigir al frontend
-      // ⚠️ IMPORTANTE: Redirigir a Vercel, no a localhost
+      // 6. Redirigir a Vercel
       const frontendUrl = process.env.FRONTEND_URL || "https://repodeploy.vercel.app";
       res.redirect(302, `${frontendUrl}/dashboard`);
     } catch (error: any) {

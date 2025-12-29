@@ -1,24 +1,18 @@
-// client/src/const.ts
-
 export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
-/**
- * Genera la URL de inicio de sesión de Google OAuth 2.0.
- */
 export const getLoginUrl = () => {
   const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
   
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   
-  if (!clientId ) {
+  if (!clientId) {
     console.error("VITE_GOOGLE_CLIENT_ID is not set");
     return "#";
   }
 
-  // La URL a la que Google enviará al usuario tras el login
-  const redirectUri = `${window.location.origin}/api/oauth/callback`;
+  // URL de callback en Render
+  const redirectUri = `https://android-device-manager-one-1.onrender.com/api/oauth/callback`;
   
-  // Codificamos la URI de redirección en el estado
   const state = btoa(redirectUri);
 
   const params = new URLSearchParams({
@@ -33,3 +27,45 @@ export const getLoginUrl = () => {
 
   return `${googleAuthUrl}?${params.toString()}`;
 };
+```
+
+### 4.2 Actualizar `client/src/main.tsx`
+
+```typescript
+import { trpc } from "./lib/trpc";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { httpBatchLink } from "@trpc/client";
+import { createRoot } from "react-dom/client";
+import superjson from "superjson";
+import App from "./App";
+import "./index.css";
+
+const queryClient = new QueryClient();
+
+// ✅ Usar variable de entorno de Vercel
+const API_URL = import.meta.env.VITE_API_URL || "/api/trpc";
+
+console.log("API URL:", API_URL);
+
+const trpcClient = trpc.createClient({
+  links: [
+    httpBatchLink({
+      url: API_URL,
+      transformer: superjson,
+      fetch(input, init) {
+        return globalThis.fetch(input, {
+          ...(init ?? {}),
+          credentials: "include",
+        });
+      },
+    }),
+  ],
+});
+
+createRoot(document.getElementById("root")!).render(
+  <trpc.Provider client={trpcClient} queryClient={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </trpc.Provider>
+);

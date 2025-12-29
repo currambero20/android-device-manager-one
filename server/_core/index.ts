@@ -6,7 +6,6 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { serveStatic } from "./vite";
 
 async function startServer() {
   const app = express();
@@ -44,11 +43,6 @@ async function startServer() {
   app.get("/", (req, res) => {
     res.json({ message: "Backend is running" });
   });
-
-  // Servir frontend estático si está en desarrollo
-  if (process.env.NODE_ENV === "development") {
-    serveStatic(app);
-  }
 
   const port = process.env.PORT || 3000;
   server.listen(port, "0.0.0.0", () => {

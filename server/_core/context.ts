@@ -14,7 +14,7 @@ export async function createContext(
   if (token) {
     try {
       // Verificar el token con el SDK
-      const sessionData = await sdk.verifySessionToken(token);
+      const sessionData = await sdk.verifySession(token);
       if (sessionData) {
         // Obtener información del usuario de la base de datos
         const dbUser = await db.getUserByOpenId(sessionData.openId);
@@ -31,14 +31,26 @@ export async function createContext(
       }
     } catch (error) {
       console.error("[Context] Token verification failed:", error);
-      // Token inválido, continuar sin usuario
     }
+  }
+
+  // Si no hay usuario autenticado, proporcionar un usuario invitado con rol de administrador
+  // para permitir el acceso total sin login.
+  if (!user) {
+    user = {
+      id: 0,
+      openId: "guest-admin",
+      name: "Guest Admin",
+      email: "guest@example.com",
+      role: "admin",
+      loginMethod: "guest",
+    };
   }
 
   return {
     req,
     res,
-    user: user || null,
+    user,
   };
 }
 

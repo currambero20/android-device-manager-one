@@ -7,6 +7,15 @@ import Home from "./pages/Home";
 import DashboardLayout from "./components/DashboardLayout";
 import { useEffect, useState } from "react";
 
+import { Route, Switch, Redirect } from "wouter";
+import Dashboard from "./pages/Dashboard";
+import Devices from "./pages/Devices";
+import Users from "./pages/Users";
+import Permissions from "./pages/Permissions";
+import ApkBuilder from "./pages/ApkBuilder";
+import AuditLogs from "./pages/AuditLogs";
+import Settings from "./pages/Settings";
+
 function Router() {
   const { user, isAuthenticated, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
@@ -26,13 +35,38 @@ function Router() {
     );
   }
 
-  // Si está autenticado, mostrar dashboard
-  if (isAuthenticated && user) {
-    return <DashboardLayout />;
-  }
+  return (
+    <Switch>
+      <Route path="/" component={Home} />
+      
+      {/* Protected Routes */}
+      <Route path="/dashboard">
+        {isAuthenticated ? <Dashboard /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/devices">
+        {isAuthenticated ? <Devices /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/users">
+        {isAuthenticated ? <Users /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/permissions">
+        {isAuthenticated ? <Permissions /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/apk-builder">
+        {isAuthenticated ? <ApkBuilder /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/audit-logs">
+        {isAuthenticated ? <AuditLogs /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/settings">
+        {isAuthenticated ? <Settings /> : <Redirect to="/" />}
+      </Route>
 
-  // Si no está autenticado, mostrar página de login
-  return <Home />;
+      <Route>
+        <Redirect to="/" />
+      </Route>
+    </Switch>
+  );
 }
 
 function App() {

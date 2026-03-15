@@ -10,10 +10,11 @@ export const getLoginUrl = () => {
     return "#";
   }
 
-  // URL de callback en Render
+  // URL de callback en Render - Intentamos que coincida exactamente con lo registrado
   const redirectUri = `https://android-device-manager-one-1.onrender.com/api/oauth/callback`;
   
-  const state = btoa(redirectUri);
+  // Usamos el origin del frontend como state para que el backend sepa a dónde volver (opcional pero útil)
+  const state = btoa(window.location.origin);
 
   const params = new URLSearchParams({
     client_id: clientId,

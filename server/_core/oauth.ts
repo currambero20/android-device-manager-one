@@ -22,7 +22,9 @@ export function registerOAuthRoutes(app: Express) {
 
     try {
       // 1. Intercambiar código por tokens
-      const redirectUri = `${req.protocol}://${req.get('host')}/api/oauth/callback`;
+      const host = req.get('host');
+      const protocol = host?.includes('localhost') ? 'http' : 'https';
+      const redirectUri = `${protocol}://${host}/api/oauth/callback`;
       
       const tokenResponse = await axios.post("https://oauth2.googleapis.com/token", {
         code,
@@ -92,9 +94,18 @@ export function registerOAuthRoutes(app: Express) {
       const frontendUrl = process.env.FRONTEND_URL || "https://repodeploy.vercel.app";
       res.redirect(302, `${frontendUrl}/dashboard`);
     } catch (error: any) {
-      console.error("[OAuth] Callback failed:", error?.response?.data || error?.message);
+      const errorData = error?.response?.data || error?.message;
+      console.error("[OAuth] Callback failed (v1.2):", errorData);
+      
       const frontendUrl = process.env.FRONTEND_URL || "https://repodeploy.vercel.app";
-      return res.redirect(302, `${frontendUrl}/?error=auth_failed`);
+      // Si el cliente espera JSON (o para debugging), devolver JSON detallado
+      if (req.headers.accept?.includes('application/json')) {
+        return res.status(500).json({ 
+          error: "OAuth callback failed (v1.2)", 
+          details: errorData 
+        });
+      }
+      return res.redirect(302, `${frontendUrl}/?error=auth_failed_v1.2`);
     }
   });
 }

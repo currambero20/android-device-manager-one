@@ -8,8 +8,8 @@ import "./index.css";
 
 const queryClient = new QueryClient();
 
-// ✅ Usar variable de entorno de Vercel
-const API_URL = import.meta.env.VITE_API_URL || "/api/trpc";
+// ✅ Usar variable de entorno de Vercel o fallback a Render
+const API_URL = import.meta.env.VITE_API_URL || "https://android-device-manager-one-1.onrender.com/api/trpc";
 
 console.log("API URL:", API_URL);
 

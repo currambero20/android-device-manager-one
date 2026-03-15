@@ -14,10 +14,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <Smartphone className="w-12 h-12 glow-cyan mx-auto mb-4 animate-pulse" />
-        <h2 className="text-xl font-semibold gradient-text">Loading Dashboard...</h2>
-        <p className="text-muted-foreground mt-2">Bypassing authentication...</p>
+      <div className="text-center p-8 bg-card/50 backdrop-blur rounded-2xl border border-glow-cyan">
+        <Smartphone className="w-16 h-12 glow-cyan mx-auto mb-6" />
+        <h1 className="text-4xl font-bold gradient-text mb-4 tracking-tight">Android Device Manager</h1>
+        <p className="text-muted-foreground text-lg mb-8 max-w-md mx-auto">
+          Plataforma avanzada para la gestión y monitoreo centralizado de dispositivos Android.
+        </p>
+        <div className="animate-pulse text-cyan-400 font-medium">
+          Accediendo con cuenta de invitado...
+        </div>
       </div>
     </div>
   );

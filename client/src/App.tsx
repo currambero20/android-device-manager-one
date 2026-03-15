@@ -37,7 +37,9 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/">
+        {isAuthenticated ? <Redirect to="/dashboard" /> : <Home />}
+      </Route>
       
       {/* Protected Routes */}
       <Route path="/dashboard">

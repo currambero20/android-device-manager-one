@@ -2,38 +2,43 @@ version: '3.8'
 
 services:
   frontend:
-    build: .
+    build:
+      context: .
+      args:
+        - VITE_API_URL=/api
+        - VITE_WEBSOCKET_URL=ws://localhost/ws
     ports:
       - "80:80"
     depends_on:
       - backend
-    environment:
-      - VITE_API_URL=http://localhost:3000
-      - VITE_WEBSOCKET_URL=ws://localhost:3001
 
   backend:
-    image: node:18-alpine
+    image: node:20-alpine
     working_dir: /app
     volumes:
       - .:/app
-    command: sh -c "npm install && npm run dev"
+    command: sh -c "npm install && npx tsx server/_core/index.ts"
     ports:
       - "3000:3000"
       - "3001:3001"
+    depends_on:
+      - mysql
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://user:password@postgres:5432/device_manager
+      - DATABASE_URL=mysql://user:password@mysql:3306/device_manager
+      - WEBSOCKET_PORT=3001
 
-  postgres:
-    image: postgres:15-alpine
+  mysql:
+    image: mysql:8.0
     environment:
-      - POSTGRES_DB=device_manager
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
+      - MYSQL_DATABASE=device_manager
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=rootpassword
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     ports:
-      - "5432:5432"
+      - "3306:3306"
 
 volumes:
-  postgres_data:
+  mysql_data:

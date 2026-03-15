@@ -22,7 +22,7 @@ export function registerOAuthRoutes(app: Express) {
 
     try {
       // 1. Intercambiar código por tokens
-      const redirectUri = state ? atob(state) : `${req.protocol}://${req.get('host')}/api/oauth/callback`;
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/oauth/callback`;
       
       const tokenResponse = await axios.post("https://oauth2.googleapis.com/token", {
         code,

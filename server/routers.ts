@@ -18,7 +18,7 @@ import { auditLogsRouter } from "./routers/auditLogsRouter";
 import { usersRouter } from "./routers/usersRouter";
 import { devicesRouter } from "./routers/devicesRouter";
 import { dashboardRouter } from "./routers/dashboardRouter";
-import { localAuthRouter } from "./routers/localAuthRouter";
+import { loginProcedure, registerProcedure } from "./routers/localAuthRouter";
 
 export const appRouter = router({
   /**
@@ -40,8 +40,8 @@ export const appRouter = router({
     }),
 
     // Local username/password authentication
-    login: localAuthRouter.login,
-    register: localAuthRouter.register,
+    login: loginProcedure,
+    register: registerProcedure,
 
     // Two-factor authentication  
     twoFactor: authRouter,

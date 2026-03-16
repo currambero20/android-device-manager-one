@@ -137,18 +137,6 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
             </button>
           </form>
 
-          {/* Default credentials hint */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
-            <p className="text-xs font-medium text-blue-700 mb-1">
-              Credenciales por defecto:
-            </p>
-            <p className="text-xs text-blue-600">
-              👤 Usuario: <strong>admin</strong>
-            </p>
-            <p className="text-xs text-blue-600">
-              🔑 Contraseña: <strong>admin123</strong>
-            </p>
-          </div>
         </div>
 
         {/* Footer */}

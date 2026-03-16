@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
+import { publicProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT } from "jose";
 import * as db from "../db";
 
 const JWT_SECRET = new TextEncoder().encode(
@@ -11,7 +11,7 @@ const JWT_SECRET = new TextEncoder().encode(
 const COOKIE_NAME = "session_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
-// Simple password hash using base64 (replace with bcrypt in production)
+// Password hash using Web Crypto API (no external deps)
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(password + "salt-adm-2024");
@@ -25,181 +25,151 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
   return hashed === hash;
 }
 
-export const localAuthRouter = router({
-  /**
-   * Login with username and password
-   */
-  login: publicProcedure
-    .input(
-      z.object({
-        username: z.string().min(1),
-        password: z.string().min(1),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const dbInstance = await db.getDb();
+async function createSessionToken(payload: Record<string, unknown>): Promise<string> {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("30d")
+    .sign(JWT_SECRET);
+}
 
-      // If no DB, use fallback admin credentials
-      if (!dbInstance) {
-        const adminUsername = process.env.ADMIN_USERNAME || "admin";
-        const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+function setCookie(res: any, token: string) {
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: COOKIE_MAX_AGE,
+    path: "/",
+  });
+}
 
-        if (input.username !== adminUsername || input.password !== adminPassword) {
-          throw new TRPCError({
-            code: "UNAUTHORIZED",
-            message: "Credenciales incorrectas",
-          });
-        }
+/**
+ * Login procedure - exported individually so it can be added to the auth sub-router
+ */
+export const loginProcedure = publicProcedure
+  .input(
+    z.object({
+      username: z.string().min(1),
+      password: z.string().min(1),
+    })
+  )
+  .mutation(async ({ input, ctx }) => {
+    const dbInstance = await db.getDb();
 
-        // Create JWT for fallback admin
-        const token = await new SignJWT({
-          sub: "admin-fallback",
-          openId: "admin-fallback",
-          name: "Administrador",
-          email: "admin@device-manager.local",
-          role: "admin",
-          loginMethod: "local",
-        })
-          .setProtectedHeader({ alg: "HS256" })
-          .setExpirationTime("30d")
-          .sign(JWT_SECRET);
+    // No DB - use env var admin credentials (fallback mode)
+    if (!dbInstance) {
+      const adminUsername = process.env.ADMIN_USERNAME || "admin";
+      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
 
-        ctx.res.cookie(COOKIE_NAME, token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: COOKIE_MAX_AGE,
-          path: "/",
-        });
-
-        return {
-          success: true,
-          user: {
-            id: 0,
-            name: "Administrador",
-            email: "admin@device-manager.local",
-            role: "admin",
-          },
-        };
-      }
-
-      // With DB - look up user by email (username field)
-      const user = await db.getUserByEmail(input.username);
-      if (!user) {
+      if (input.username !== adminUsername || input.password !== adminPassword) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Credenciales incorrectas",
         });
       }
 
-      // Check password
-      if (!user.passwordHash) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Este usuario no tiene contraseña configurada. Usa OAuth.",
-        });
-      }
-
-      const valid = await verifyPassword(input.password, user.passwordHash);
-      if (!valid) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Credenciales incorrectas",
-        });
-      }
-
-      // Create JWT
-      const token = await new SignJWT({
-        sub: String(user.id),
-        openId: user.openId || String(user.id),
-        name: user.name || input.username,
-        email: user.email || input.username,
-        role: user.role || "user",
+      const token = await createSessionToken({
+        sub: "admin-fallback",
+        openId: "admin-fallback",
+        name: "Administrador",
+        email: "admin@device-manager.local",
+        role: "admin",
         loginMethod: "local",
-      })
-        .setProtectedHeader({ alg: "HS256" })
-        .setExpirationTime("30d")
-        .sign(JWT_SECRET);
-
-      ctx.res.cookie(COOKIE_NAME, token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: COOKIE_MAX_AGE,
-        path: "/",
       });
+
+      setCookie(ctx.res, token);
 
       return {
         success: true,
         user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
+          id: 0,
+          name: "Administrador",
+          email: "admin@device-manager.local",
+          role: "admin",
         },
       };
-    }),
-
-  /**
-   * Register a new user (admin only in production)
-   */
-  register: publicProcedure
-    .input(
-      z.object({
-        username: z.string().min(3),
-        password: z.string().min(6),
-        name: z.string().optional(),
-        role: z.enum(["admin", "user", "viewer"]).default("user"),
-        adminKey: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const expectedAdminKey = process.env.ADMIN_REGISTRATION_KEY || "adm-register-2024";
-
-      if (input.adminKey !== expectedAdminKey) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Clave de administrador incorrecta",
-        });
-      }
-
-      const passwordHash = await hashPassword(input.password);
-
-      const dbInstance = await db.getDb();
-      if (!dbInstance) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Base de datos no disponible",
-        });
-      }
-
-      await db.upsertUser({
-        openId: `local-${input.username}-${Date.now()}`,
-        name: input.name || input.username,
-        email: input.username,
-        role: input.role,
-        loginMethod: "local",
-        passwordHash,
-      });
-
-      return { success: true, message: "Usuario creado correctamente" };
-    }),
-
-  /**
-   * Verify a JWT session token (used by context)
-   */
-  verifyToken: async (token: string) => {
-    try {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
-      return {
-        openId: payload.openId as string,
-        name: payload.name as string,
-        email: payload.email as string,
-        role: payload.role as string,
-        sub: payload.sub as string,
-      };
-    } catch {
-      return null;
     }
-  },
-});
+
+    // DB available - look up user by email/username
+    const user = await db.getUserByEmail(input.username);
+    if (!user) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Credenciales incorrectas" });
+    }
+
+    if (!user.passwordHash) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Este usuario no tiene contraseña local configurada",
+      });
+    }
+
+    const valid = await verifyPassword(input.password, user.passwordHash);
+    if (!valid) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Credenciales incorrectas" });
+    }
+
+    const token = await createSessionToken({
+      sub: String(user.id),
+      openId: user.openId || String(user.id),
+      name: user.name || input.username,
+      email: user.email || input.username,
+      role: user.role || "user",
+      loginMethod: "local",
+    });
+
+    setCookie(ctx.res, token);
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    };
+  });
+
+/**
+ * Register procedure - for creating new local users (requires admin key)
+ */
+export const registerProcedure = publicProcedure
+  .input(
+    z.object({
+      username: z.string().min(3),
+      password: z.string().min(6),
+      name: z.string().optional(),
+      role: z.enum(["admin", "manager", "user", "viewer"]).default("user"),
+      adminKey: z.string(),
+    })
+  )
+  .mutation(async ({ input }) => {
+    const expectedAdminKey = process.env.ADMIN_REGISTRATION_KEY || "adm-register-2024";
+
+    if (input.adminKey !== expectedAdminKey) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Clave de administrador incorrecta",
+      });
+    }
+
+    const passwordHash = await hashPassword(input.password);
+    const dbInstance = await db.getDb();
+
+    if (!dbInstance) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Base de datos no disponible",
+      });
+    }
+
+    await db.upsertUser({
+      openId: `local-${input.username}-${Date.now()}`,
+      name: input.name || input.username,
+      email: input.username,
+      role: input.role,
+      loginMethod: "local",
+      passwordHash,
+    });
+
+    return { success: true, message: "Usuario creado correctamente" };
+  });

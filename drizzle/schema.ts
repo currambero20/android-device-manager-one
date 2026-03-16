@@ -26,6 +26,7 @@ export const users = mysqlTable(
     role: mysqlEnum("role", ["admin", "manager", "user", "viewer"]).default("viewer").notNull(),
     twoFactorEnabled: boolean("twoFactorEnabled").default(false).notNull(),
     twoFactorSecret: varchar("twoFactorSecret", { length: 255 }),
+    passwordHash: varchar("passwordHash", { length: 255 }),
     isActive: boolean("isActive").default(true).notNull(),
     lastSignedIn: timestamp("lastSignedIn"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),

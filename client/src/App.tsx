@@ -3,8 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAuth } from "./_core/hooks/useAuth";
-import Home from "./pages/Home";
-import DashboardLayout from "./components/DashboardLayout";
+import LoginPage from "./pages/LoginPage";
 import { useEffect, useState } from "react";
 
 import { Route, Switch, Redirect } from "wouter";
@@ -34,78 +33,84 @@ function Router() {
     setMounted(true);
   }, []);
 
+  // Show loading spinner only briefly
   if (!mounted || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-500 text-sm">Cargando sistema...</p>
         </div>
       </div>
     );
   }
 
+  // Show login page when not authenticated
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
   return (
     <Switch>
       <Route path="/">
-        {isAuthenticated ? <Redirect to="/dashboard" /> : <Home />}
+        <Redirect to="/dashboard" />
       </Route>
-      
-      {/* Protected Routes */}
+
+      {/* Protected Routes - all accessible when authenticated */}
       <Route path="/dashboard">
-        {isAuthenticated ? <Dashboard /> : <Redirect to="/" />}
+        <Dashboard />
       </Route>
       <Route path="/devices">
-        {isAuthenticated ? <Devices /> : <Redirect to="/" />}
+        <Devices />
       </Route>
       <Route path="/users">
-        {isAuthenticated ? <Users /> : <Redirect to="/" />}
+        <Users />
       </Route>
       <Route path="/permissions">
-        {isAuthenticated ? <Permissions /> : <Redirect to="/" />}
+        <Permissions />
       </Route>
       <Route path="/apk-builder">
-        {isAuthenticated ? <ApkBuilder /> : <Redirect to="/" />}
+        <ApkBuilder />
       </Route>
       <Route path="/audit-logs">
-        {isAuthenticated ? <AuditLogs /> : <Redirect to="/" />}
+        <AuditLogs />
       </Route>
       <Route path="/settings">
-        {isAuthenticated ? <Settings /> : <Redirect to="/" />}
+        <Settings />
       </Route>
       <Route path="/device-map">
-        {isAuthenticated ? <DeviceMap /> : <Redirect to="/" />}
+        <DeviceMap />
       </Route>
       <Route path="/app-manager">
-        {isAuthenticated ? <AppManager /> : <Redirect to="/" />}
+        <AppManager />
       </Route>
       <Route path="/file-explorer">
-        {isAuthenticated ? <FileExplorer /> : <Redirect to="/" />}
+        <FileExplorer />
       </Route>
       <Route path="/permissions-management">
-        {isAuthenticated ? <PermissionsManagement /> : <Redirect to="/" />}
+        <PermissionsManagement />
       </Route>
       <Route path="/advanced-monitoring">
-        {isAuthenticated ? <AdvancedMonitoring /> : <Redirect to="/" />}
+        <AdvancedMonitoring />
       </Route>
       <Route path="/monitoring">
-        {isAuthenticated ? <DeviceMonitoring /> : <Redirect to="/" />}
+        <DeviceMonitoring />
       </Route>
       <Route path="/remote-control">
-        {isAuthenticated ? <RemoteControl /> : <Redirect to="/" />}
+        <RemoteControl />
       </Route>
       <Route path="/analytics">
-        {isAuthenticated ? <Analytics /> : <Redirect to="/" />}
+        <Analytics />
       </Route>
       <Route path="/geofencing">
-        {isAuthenticated ? <Geofencing /> : <Redirect to="/" />}
+        <Geofencing />
       </Route>
       <Route path="/notifications">
-        {isAuthenticated ? <Notifications /> : <Redirect to="/" />}
+        <Notifications />
       </Route>
 
       <Route>
-        <Redirect to="/" />
+        <Redirect to="/dashboard" />
       </Route>
     </Switch>
   );

@@ -18,31 +18,32 @@ import { auditLogsRouter } from "./routers/auditLogsRouter";
 import { usersRouter } from "./routers/usersRouter";
 import { devicesRouter } from "./routers/devicesRouter";
 import { dashboardRouter } from "./routers/dashboardRouter";
+import { localAuthRouter } from "./routers/localAuthRouter";
 
 export const appRouter = router({
   /**
    * Authentication routes
    */
   auth: router({
-    me: protectedProcedure.query(async ({ ctx }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Not authenticated",
-        });
-      }
-      return ctx.user;
+    // ✅ FIXED: publicProcedure so unauthenticated users get null (not a 500 error)
+    me: publicProcedure.query(async ({ ctx }) => {
+      return ctx.user ?? null;
     }),
-    
+
     logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      // Clear the session cookie
+      ctx.res.clearCookie(COOKIE_NAME, { path: "/", maxAge: -1 });
+      ctx.res.clearCookie("session_token", { path: "/", maxAge: -1 });
       return {
         success: true,
       } as const;
     }),
 
-    // Two-factor authentication
+    // Local username/password authentication
+    login: localAuthRouter.login,
+    register: localAuthRouter.register,
+
+    // Two-factor authentication  
     twoFactor: authRouter,
   }),
 

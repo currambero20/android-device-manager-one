@@ -192,3 +192,13 @@ export async function getAuditLogsByDeviceId(deviceId: number, limit: number = 5
     .orderBy(desc(auditLogs.timestamp))
     .limit(limit);
 }
+
+export async function getAllAuditLogs(limit: number = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(auditLogs)
+    .orderBy(desc(auditLogs.timestamp))
+    .limit(limit);
+}

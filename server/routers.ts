@@ -14,6 +14,7 @@ import { mapsRouter } from "./routers/mapsRouter";
 import { permissionsRouter } from "./routers/permissionsRouter";
 import { remoteControlRouter } from "./routers/remoteControlRouter";
 import { advancedMonitoringRouter } from "./routers/advancedMonitoringRouter";
+import { auditLogsRouter } from "./routers/auditLogsRouter";
 
 export const appRouter = router({
   /**
@@ -58,6 +59,9 @@ export const appRouter = router({
 
   // Permissions
   permissions: permissionsRouter,
+
+  // Audit Logs
+  auditLogs: auditLogsRouter,
 });
 
 export type AppRouter = typeof appRouter;

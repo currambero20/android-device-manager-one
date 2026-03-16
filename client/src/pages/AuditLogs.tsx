@@ -138,12 +138,12 @@ export default function AuditLogs() {
               <label className="text-sm font-medium glow-cyan mb-2 block">
                 Action Type
               </label>
-              <Select value={actionTypeFilter} onValueChange={setActionTypeFilter}>
+              <Select value={actionTypeFilter || "all"} onValueChange={(val) => setActionTypeFilter(val === "all" ? "" : val)}>
                 <SelectTrigger className="input-neon">
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-glow">
-                  <SelectItem value="">All Actions</SelectItem>
+                  <SelectItem value="all">All Actions</SelectItem>
                   {actionTypes.map((type) => (
                     <SelectItem key={type} value={type}>
                       {type.replace(/_/g, " ").toUpperCase()}
@@ -156,12 +156,12 @@ export default function AuditLogs() {
               <label className="text-sm font-medium glow-cyan mb-2 block">
                 Status
               </label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter || "all"} onValueChange={(val) => setStatusFilter(val === "all" ? "" : val)}>
                 <SelectTrigger className="input-neon">
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-glow">
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="success">Success</SelectItem>
                   <SelectItem value="failure">Failure</SelectItem>
                 </SelectContent>

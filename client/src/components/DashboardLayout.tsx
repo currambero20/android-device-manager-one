@@ -31,61 +31,61 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
 
   const navigationItems = [
     {
-      label: "Dashboard",
+      label: "Panel",
       icon: LayoutDashboard,
       href: "/dashboard",
       roles: ["admin", "manager", "user", "viewer"],
     },
     {
-      label: "Devices",
+      label: "Dispositivos",
       icon: Smartphone,
       href: "/devices",
       roles: ["admin", "manager", "user"],
     },
     {
-      label: "Users",
+      label: "Usuarios",
       icon: Users,
       href: "/users",
       roles: ["admin"],
     },
     {
-      label: "Permissions",
+      label: "Permisos",
       icon: Shield,
       href: "/permissions",
       roles: ["admin", "manager"],
     },
     {
-      label: "APK Builder",
+      label: "Creador de APK",
       icon: Zap,
       href: "/apk-builder",
       roles: ["admin", "manager", "user"],
     },
     {
-      label: "Audit Logs",
+      label: "Registros de Auditoría",
       icon: FileText,
       href: "/audit-logs",
       roles: ["admin", "manager"],
     },
     {
-      label: "Monitoring",
+      label: "Monitor de Dispositivo",
       icon: Smartphone,
       href: "/monitoring",
       roles: ["admin", "manager", "user"],
     },
     {
-      label: "Remote Control",
+      label: "Control Remoto",
       icon: Zap,
       href: "/remote-control",
       roles: ["admin", "manager", "user"],
     },
     {
-      label: "Analytics",
+      label: "Análisis y Métricas",
       icon: Activity,
       href: "/analytics",
       roles: ["admin", "manager", "user"],
     },
     {
-      label: "Geofencing",
+      label: "Geovallas",
       icon: Shield,
       href: "/geofencing",
       roles: ["admin", "manager", "user"],
@@ -127,7 +127,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       roles: ["admin", "manager", "user"],
     },
     {
-      label: "Settings",
+      label: "Configuración",
       icon: Settings,
       href: "/settings",
       roles: ["admin", "manager", "user", "viewer"],
@@ -142,19 +142,19 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       <aside
         className={`${
           sidebarOpen ? "w-64" : "w-20"
-        } border-r border-glow-cyan bg-card/50 backdrop-blur transition-all duration-300 flex flex-col overflow-hidden`}
+        } border-r border-accent/20 bg-card/80 backdrop-blur-md transition-all duration-300 flex flex-col overflow-hidden shadow-sm`}
       >
         {/* Logo */}
-        <div className="p-4 border-b border-glow-cyan flex items-center justify-between">
+        <div className="p-4 border-b border-accent/10 flex items-center justify-between">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
-              <Smartphone className="w-6 h-6 glow-cyan" />
-              <span className="font-bold text-sm gradient-text">ADM</span>
+              <Smartphone className="w-6 h-6 text-cyan-600" />
+              <span className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700">ADM</span>
             </div>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1 hover:bg-accent/20 rounded transition-colors"
+            className="p-1 hover:bg-accent/10 rounded transition-colors text-muted-foreground hover:text-foreground"
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -166,9 +166,9 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
             const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href}>
-                <a className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent/20 transition-colors group">
-                  <Icon className="w-5 h-5 glow-purple group-hover:glow-cyan transition-all" />
-                  {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
+                <a className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent/10 transition-colors group">
+                  <Icon className="w-5 h-5 text-cyan-600 group-hover:text-blue-600 transition-all" />
+                  {sidebarOpen && <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">{item.label}</span>}
                 </a>
               </Link>
             );
@@ -176,24 +176,24 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
         </nav>
 
         {/* User Section */}
-        <div className="border-t border-glow-cyan p-4 space-y-3">
+        <div className="border-t border-accent/20 p-4 space-y-3">
           {sidebarOpen && (
-            <div className="card-neon-cyan p-3">
-              <p className="text-xs font-bold text-cyan-400 mb-1">Current User</p>
-              <p className="text-sm truncate">{user?.name}</p>
+            <div className="bg-accent/5 border border-accent/10 rounded-lg p-3">
+              <p className="text-[10px] font-bold text-cyan-600 uppercase tracking-wider mb-1">Usuario Actual</p>
+              <p className="text-sm font-medium truncate">{user?.name}</p>
               <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
             </div>
           )}
           <Button
             onClick={logout}
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="w-full btn-neon"
+            className="w-full justify-start hover:bg-destructive/10 hover:text-destructive"
           >
             {sidebarOpen ? (
               <>
                 <LogOut className="w-4 h-4 mr-2" />
-                Logout
+                Cerrar Sesión
               </>
             ) : (
               <LogOut className="w-4 h-4" />
@@ -205,12 +205,12 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="border-b border-glow-cyan bg-card/50 backdrop-blur">
+        <header className="border-b border-accent/20 bg-background/80 backdrop-blur-md z-10">
           <div className="px-6 py-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold gradient-text">{title || "Dashboard"}</h1>
+            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 lowercase">{title || "dashboard"}</h1>
             <div className="flex items-center gap-4">
-              <div className="status-online animate-pulse"></div>
-              <span className="text-sm text-muted-foreground">System Online</span>
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Sistema Activo</span>
             </div>
           </div>
         </header>

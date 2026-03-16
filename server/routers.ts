@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME } from "../shared/const";
 import { router, publicProcedure, protectedProcedure } from "./_core/trpc";
 import { getSessionCookieOptions } from "./_core/cookies";
 
@@ -15,6 +15,9 @@ import { permissionsRouter } from "./routers/permissionsRouter";
 import { remoteControlRouter } from "./routers/remoteControlRouter";
 import { advancedMonitoringRouter } from "./routers/advancedMonitoringRouter";
 import { auditLogsRouter } from "./routers/auditLogsRouter";
+import { usersRouter } from "./routers/usersRouter";
+import { devicesRouter } from "./routers/devicesRouter";
+import { dashboardRouter } from "./routers/dashboardRouter";
 
 export const appRouter = router({
   /**
@@ -43,6 +46,12 @@ export const appRouter = router({
     twoFactor: authRouter,
   }),
 
+  // Devices
+  devices: devicesRouter,
+
+  // Dashboard
+  dashboard: dashboardRouter,
+
   // Analytics and monitoring
   analytics: analyticsRouter,
   advancedMonitoring: advancedMonitoringRouter,
@@ -62,6 +71,9 @@ export const appRouter = router({
 
   // Audit Logs
   auditLogs: auditLogsRouter,
+
+  // User Management
+  users: usersRouter,
 });
 
 export type AppRouter = typeof appRouter;

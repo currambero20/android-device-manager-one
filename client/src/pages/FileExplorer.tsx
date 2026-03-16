@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -93,26 +94,27 @@ export default function FileExplorer() {
   };
 
   return (
-    <div className="space-y-6">
+    <DashboardLayout title="Explorador de Archivos">
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">
+          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700">
             Explorador de Archivos
           </h1>
-          <p className="text-gray-400 mt-2">Navega y gestiona archivos del dispositivo</p>
+          <p className="text-muted-foreground mt-2">Navega y gestiona archivos del dispositivo</p>
         </div>
-        <HardDriveIcon className="w-12 h-12 text-purple-500" />
+        <HardDriveIcon className="w-12 h-12 text-primary opacity-80" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Selección de Dispositivo */}
-        <Card className="lg:col-span-1 bg-gray-900 border-purple-500/30">
+        <Card className="lg:col-span-1 border-accent/20 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Dispositivos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Select value={selectedDevice?.toString() || ""} onValueChange={(val) => setSelectedDevice(Number(val))}>
-              <SelectTrigger className="bg-gray-800 border-gray-700">
+              <SelectTrigger className="bg-secondary/50 border-accent/20">
                 <SelectValue placeholder="Selecciona dispositivo" />
               </SelectTrigger>
               <SelectContent>
@@ -125,18 +127,18 @@ export default function FileExplorer() {
             </Select>
 
             {selectedDevice && storageInfo && (
-              <div className="space-y-2 p-3 bg-gray-800 rounded-lg">
+              <div className="space-y-2 p-3 bg-secondary/30 rounded-lg border border-accent/10">
                 <div className="text-sm font-medium">Almacenamiento</div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
+                <div className="w-full bg-muted rounded-full h-2">
                   <div
-                    className="bg-gradient-to-r from-cyan-400 to-purple-500 h-2 rounded-full"
+                    className="bg-gradient-to-r from-cyan-500 to-blue-600 h-2 rounded-full shadow-[0_0_8px_rgba(6,182,212,0.3)]"
                     style={{ width: `${storageInfo.usagePercentage}%` }}
                   />
                 </div>
-                <div className="text-xs text-gray-400 space-y-1">
-                  <div>Usado: {formatFileSize(storageInfo.used)}</div>
-                  <div>Libre: {formatFileSize(storageInfo.free)}</div>
-                  <div>Total: {formatFileSize(storageInfo.total)}</div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div>Usado: <span className="font-medium text-foreground">{formatFileSize(storageInfo.used)}</span></div>
+                  <div>Libre: <span className="font-medium text-foreground">{formatFileSize(storageInfo.free)}</span></div>
+                  <div>Total: <span className="font-medium text-foreground">{formatFileSize(storageInfo.total)}</span></div>
                 </div>
               </div>
             )}
@@ -147,9 +149,11 @@ export default function FileExplorer() {
         {selectedDevice ? (
           <div className="lg:col-span-3 space-y-4">
             {/* Barra de Navegación */}
-            <Card className="bg-gray-900 border-purple-500/30">
+            <Card className="border-accent/20 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Ubicación: {currentPath}</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                   Ubicación: <span className="text-primary font-mono text-sm">{currentPath}</span>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex gap-2">
@@ -158,7 +162,7 @@ export default function FileExplorer() {
                     disabled={currentPath === "/"}
                     variant="outline"
                     size="sm"
-                    className="border-purple-500/50"
+                    className="border-accent/40 bg-secondary/30 hover:bg-secondary/50"
                   >
                     ← Atrás
                   </Button>
@@ -166,40 +170,42 @@ export default function FileExplorer() {
                     onClick={() => setCurrentPath("/")}
                     variant="outline"
                     size="sm"
-                    className="border-purple-500/50"
+                    className="border-accent/40 bg-secondary/30 hover:bg-secondary/50"
                   >
                     Inicio
                   </Button>
                 </div>
 
                 <div className="relative">
-                  <Search className="absolute left-2 top-2.5 w-4 h-4 text-gray-500" />
+                  <Search className="absolute left-2 top-2.5 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Buscar archivos..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 bg-gray-800 border-gray-700"
+                    className="pl-8 bg-secondary/50 border-accent/20"
                   />
                 </div>
               </CardContent>
             </Card>
 
             {/* Lista de Archivos */}
-            <Card className="bg-gray-900 border-purple-500/30">
-              <CardHeader>
-                <CardTitle className="text-lg">Contenido</CardTitle>
-                <CardDescription>
-                  {filteredContents.length} elementos
-                  {isLoadingDirectory && <Loader2 className="w-4 h-4 animate-spin ml-2 inline" />}
-                </CardDescription>
+            <Card className="border-accent/20 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle className="text-lg">Contenido</CardTitle>
+                  <CardDescription>
+                    {filteredContents.length} elementos
+                    {isLoadingDirectory && <Loader2 className="w-4 h-4 animate-spin ml-2 inline" />}
+                  </CardDescription>
+                </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-96 border border-gray-700 rounded-lg p-3">
+                <ScrollArea className="h-96 border border-accent/20 rounded-lg p-3">
                   <div className="space-y-2">
                     {filteredContents.map((item: any, idx: number) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-3 bg-gray-800 rounded-lg border border-gray-700 hover:border-purple-500/50 transition-all group"
+                        className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-accent/10 hover:border-primary/30 transition-all group"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           {getFileIcon(item.type)}
@@ -207,14 +213,14 @@ export default function FileExplorer() {
                             {item.type === "folder" ? (
                               <button
                                 onClick={() => handleNavigate(item.name)}
-                                className="text-sm font-medium text-cyan-400 hover:text-cyan-300 truncate text-left"
+                                className="text-sm font-medium text-cyan-600 hover:text-cyan-700 truncate text-left"
                               >
                                 {item.name}
                               </button>
                             ) : (
-                              <div className="text-sm font-medium truncate">{item.name}</div>
+                              <div className="text-sm font-medium truncate text-foreground">{item.name}</div>
                             )}
-                            <div className="text-xs text-gray-400">
+                            <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                               {item.type === "folder" ? "Carpeta" : formatFileSize(item.size)}
                             </div>
                           </div>
@@ -231,7 +237,7 @@ export default function FileExplorer() {
                               }
                               variant="ghost"
                               size="sm"
-                              className="text-cyan-400 hover:bg-cyan-400/20"
+                              className="text-primary hover:bg-primary/5"
                               disabled={downloadFileMutation.isPending}
                             >
                               <DownloadIcon className="w-4 h-4" />
@@ -245,7 +251,7 @@ export default function FileExplorer() {
                               }
                               variant="ghost"
                               size="sm"
-                              className="text-red-400 hover:bg-red-400/20"
+                              className="text-destructive hover:bg-destructive/5"
                               disabled={deleteFileMutation.isPending}
                             >
                               <TrashIcon className="w-4 h-4" />
@@ -260,16 +266,17 @@ export default function FileExplorer() {
             </Card>
           </div>
         ) : (
-          <Card className="lg:col-span-3 bg-gray-900 border-purple-500/30">
+          <Card className="lg:col-span-3 border-accent/20 bg-secondary/10 dashed">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center justify-center h-96 text-center">
-                <HardDriveIcon className="w-12 h-12 text-gray-500 mb-4" />
-                <p className="text-gray-400">Selecciona un dispositivo para explorar archivos</p>
+                <HardDriveIcon className="w-12 h-12 text-muted-foreground/30 mb-4" />
+                <p className="text-muted-foreground">Selecciona un dispositivo para explorar archivos</p>
               </div>
             </CardContent>
           </Card>
         )}
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

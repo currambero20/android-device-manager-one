@@ -15,6 +15,16 @@ import Permissions from "./pages/Permissions";
 import ApkBuilder from "./pages/ApkBuilder";
 import AuditLogs from "./pages/AuditLogs";
 import Settings from "./pages/Settings";
+import DeviceMap from "./pages/DeviceMap";
+import AppManager from "./pages/AppManager";
+import FileExplorer from "./pages/FileExplorer";
+import PermissionsManagement from "./pages/PermissionsManagement";
+import AdvancedMonitoring from "./pages/AdvancedMonitoring";
+import DeviceMonitoring from "./pages/DeviceMonitoring";
+import RemoteControl from "./pages/RemoteControl";
+import Analytics from "./pages/Analytics";
+import Geofencing from "./pages/Geofencing";
+import Notifications from "./pages/Notifications";
 
 function Router() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -63,6 +73,36 @@ function Router() {
       <Route path="/settings">
         {isAuthenticated ? <Settings /> : <Redirect to="/" />}
       </Route>
+      <Route path="/device-map">
+        {isAuthenticated ? <DeviceMap /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/app-manager">
+        {isAuthenticated ? <AppManager /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/file-explorer">
+        {isAuthenticated ? <FileExplorer /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/permissions-management">
+        {isAuthenticated ? <PermissionsManagement /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/advanced-monitoring">
+        {isAuthenticated ? <AdvancedMonitoring /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/monitoring">
+        {isAuthenticated ? <DeviceMonitoring /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/remote-control">
+        {isAuthenticated ? <RemoteControl /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/analytics">
+        {isAuthenticated ? <Analytics /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/geofencing">
+        {isAuthenticated ? <Geofencing /> : <Redirect to="/" />}
+      </Route>
+      <Route path="/notifications">
+        {isAuthenticated ? <Notifications /> : <Redirect to="/" />}
+      </Route>
 
       <Route>
         <Redirect to="/" />
@@ -74,7 +114,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark">
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />

@@ -1,20 +1,27 @@
-import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/express";
-import { COOKIE_NAME } from "@shared/const";
+import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import { sdk } from "./sdk";
 import * as db from "../db";
 
 export async function createContext(
-  opts: FetchCreateContextFnOptions,
+  opts: CreateExpressContextOptions,
 ) {
   const { req, res } = opts;
-  const token = req.cookies[COOKIE_NAME];
+  const sessionToken = req.cookies?.session_token;
 
   let user = null;
 
-  if (token) {
+  if (!sessionToken) {
+    return {
+      req,
+      res,
+      user: null,
+    };
+  }
+
+  if (sessionToken) {
     try {
       // Verificar el token con el SDK
-      const sessionData = await sdk.verifySession(token);
+      const sessionData = await sdk.verifySession(sessionToken);
       if (sessionData) {
         // Obtener información del usuario de la base de datos
         const dbUser = await db.getUserByOpenId(sessionData.openId);
@@ -34,19 +41,6 @@ export async function createContext(
     }
   }
 
-  // Si no hay usuario autenticado, proporcionar un usuario invitado con rol de administrador
-  // para permitir el acceso total sin login.
-  if (!user) {
-    user = {
-      id: 0,
-      openId: "guest-admin",
-      name: "Guest Admin",
-      email: "guest@example.com",
-      role: "admin",
-      loginMethod: "guest",
-    };
-  }
-
   return {
     req,
     res,
@@ -54,4 +48,4 @@ export async function createContext(
   };
 }
 
-export type Context = Awaited<ReturnType<typeof createContext>>;
+export type TrpcContext = Awaited<ReturnType<typeof createContext>>;

@@ -42,32 +42,26 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    // Definimos un usuario invitado por defecto si el backend no devuelve uno (aunque ahora debería)
-    const guestUser = {
-      id: 0,
-      openId: "guest-admin",
-      name: "Guest Admin",
-      email: "guest@example.com",
-      role: "admin",
-      loginMethod: "guest",
-    };
+    const user = meQuery.data ?? null;
 
-    const user = meQuery.data ?? guestUser;
-
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(user)
-    );
+    if (user) {
+      localStorage.setItem(
+        "manus-runtime-user-info",
+        JSON.stringify(user)
+      );
+    }
+    
     return {
       user,
-      loading: meQuery.isLoading && !meQuery.isFetched, // Solo carga en la primera petición
-      error: null, // Ignoramos errores de auth
-      isAuthenticated: true, // Siempre autenticado
+      loading: meQuery.isLoading && !meQuery.isFetched,
+      error: meQuery.error,
+      isAuthenticated: !!user,
     };
   }, [
     meQuery.data,
     meQuery.isLoading,
     meQuery.isFetched,
+    meQuery.error,
   ]);
 
   useEffect(() => {

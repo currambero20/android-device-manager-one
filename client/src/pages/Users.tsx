@@ -45,29 +45,67 @@ export default function Users() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "user" as const,
+    role: "user" as "admin" | "manager" | "user" | "viewer",
   });
 
-  // TODO: Implement getAllUsers query in db.ts
-  const users: any[] = [];
-  const isLoading = false;
+  const { data: users = [], isLoading, refetch } = trpc.users.getAll.useQuery();
+
+  const updateRoleMutation = trpc.users.updateRole.useMutation({
+    onSuccess: () => {
+      toast.success("User role updated successfully");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Failed to update role: ${error.message}`);
+    },
+  });
+
+  const deleteUserMutation = trpc.users.delete.useMutation({
+    onSuccess: () => {
+      toast.success("User deleted successfully");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete user: ${error.message}`);
+    },
+  });
+
+  const createUserMutation = trpc.users.create.useMutation({
+    onSuccess: () => {
+      toast.success("Usuario creado exitosamente");
+      setIsDialogOpen(false);
+      setFormData({ name: "", email: "", role: "user" });
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Error al crear usuario: ${error.message}`);
+    },
+  });
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email) {
-      toast.error("Name and Email are required");
+      toast.error("Nombre y Email son requeridos");
       return;
     }
-    // TODO: Implement user creation mutation
-    toast.success("User created successfully");
-    setIsDialogOpen(false);
-    setFormData({ name: "", email: "", role: "user" });
+
+    if (editingUserId) {
+      await updateRoleMutation.mutateAsync({ id: editingUserId, role: formData.role });
+      setIsDialogOpen(false);
+      setEditingUserId(null);
+      setFormData({ name: "", email: "", role: "user" });
+    } else {
+      await createUserMutation.mutateAsync(formData);
+    }
   };
 
-  const handleDeleteUser = (userId: number) => {
+  const handleUpdateRole = async (userId: number, role: any) => {
+    await updateRoleMutation.mutateAsync({ id: userId, role });
+  };
+
+  const handleDeleteUser = async (userId: number) => {
     if (confirm("Are you sure you want to delete this user?")) {
-      // TODO: Implement user deletion mutation
-      toast.success("User deleted successfully");
+      await deleteUserMutation.mutateAsync({ id: userId });
     }
   };
 
@@ -80,13 +118,13 @@ export default function Users() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
-        return "border-glow text-purple-400";
+        return "border-purple-200 text-purple-700 bg-purple-50";
       case "manager":
-        return "border-glow-cyan text-cyan-400";
+        return "border-cyan-200 text-cyan-700 bg-cyan-50";
       case "user":
-        return "border-glow text-purple-300";
+        return "border-blue-200 text-blue-700 bg-blue-50";
       default:
-        return "border-glow-cyan text-cyan-300";
+        return "border-gray-200 text-gray-700 bg-gray-50";
     }
   };
 
@@ -97,69 +135,69 @@ export default function Users() {
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <Input
-              placeholder="Search users by name or email..."
+              placeholder="Buscar usuarios por nombre o email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-neon max-w-md"
+              className="max-w-md bg-white border-accent/20 focus:border-cyan-500 shadow-sm"
             />
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="btn-neon-cyan ml-4">
+              <Button className="ml-4 bg-cyan-600 hover:bg-cyan-700 text-white shadow-md transition-all hover:scale-105">
                 <Plus className="w-4 h-4 mr-2" />
-                Add User
+                Agregar Usuario
               </Button>
             </DialogTrigger>
-            <DialogContent className="card-neon border-glow">
+            <DialogContent className="bg-white border-accent/20">
               <DialogHeader>
-                <DialogTitle className="gradient-text">
-                  {editingUserId ? "Edit User" : "Create New User"}
+                <DialogTitle className="text-xl font-bold text-gray-900">
+                  {editingUserId ? "Editar Usuario" : "Crear Nuevo Usuario"}
                 </DialogTitle>
                 <DialogDescription className="text-muted-foreground">
                   {editingUserId
-                    ? "Update user information and permissions"
-                    : "Add a new user to the system"}
+                    ? "Actualiza la información y permisos del usuario"
+                    : "Añade un nuevo usuario al sistema"}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateUser} className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium glow-cyan mb-2 block">
-                    Full Name
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                    Nombre Completo
                   </label>
                   <Input
-                    placeholder="e.g., John Doe"
+                    placeholder="ej. Juan Pérez"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    className="input-neon"
+                    className="bg-gray-50 border-gray-200"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium glow-cyan mb-2 block">
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
                     Email
                   </label>
                   <Input
                     type="email"
-                    placeholder="e.g., john@example.com"
+                    placeholder="ej. juan@ejemplo.com"
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
                     }
-                    className="input-neon"
+                    className="bg-gray-50 border-gray-200"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium glow-cyan mb-2 block">
-                    Role
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                    Rol
                   </label>
                   <Select value={formData.role} onValueChange={(value: any) =>
                     setFormData({ ...formData, role: value })
                   }>
-                    <SelectTrigger className="input-neon">
+                    <SelectTrigger className="bg-gray-50 border-gray-200">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-card border-glow">
+                    <SelectContent className="bg-white border-gray-200">
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="manager">Manager</SelectItem>
                       <SelectItem value="user">User</SelectItem>
@@ -169,9 +207,9 @@ export default function Users() {
                 </div>
                 <Button
                   type="submit"
-                  className="btn-neon-cyan w-full"
+                  className="w-full bg-cyan-600 hover:bg-cyan-700 text-white"
                 >
-                  {editingUserId ? "Update User" : "Create User"}
+                  {editingUserId ? "Actualizar Usuario" : "Crear Usuario"}
                 </Button>
               </form>
             </DialogContent>
@@ -179,40 +217,40 @@ export default function Users() {
         </div>
 
         {/* Users Table */}
-        <div className="card-neon overflow-hidden">
+        <div className="bg-white rounded-xl border border-accent/20 overflow-hidden shadow-sm">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">
-              Loading users...
+              Cargando usuarios...
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="p-8 text-center">
-              <UsersIcon className="w-12 h-12 glow-cyan mx-auto mb-4 opacity-50" />
-              <p className="text-muted-foreground">No users found</p>
+              <UsersIcon className="w-12 h-12 text-cyan-200 mx-auto mb-4" />
+              <p className="text-muted-foreground">No se encontraron usuarios</p>
               <p className="text-sm text-muted-foreground mt-2">
-                Click "Add User" to create a new user account
+                Haz clic en "Agregar Usuario" para crear una nueva cuenta
               </p>
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-glow-cyan hover:bg-transparent">
-                  <TableHead className="glow-cyan">Name</TableHead>
-                  <TableHead className="glow-cyan">Email</TableHead>
-                  <TableHead className="glow-cyan">Role</TableHead>
-                  <TableHead className="glow-cyan">Status</TableHead>
-                  <TableHead className="glow-cyan">Last Login</TableHead>
-                  <TableHead className="glow-cyan text-right">Actions</TableHead>
+                <TableRow className="border-accent/10 hover:bg-transparent">
+                  <TableHead className="font-semibold text-gray-900">Nombre</TableHead>
+                  <TableHead className="font-semibold text-gray-900">Email</TableHead>
+                  <TableHead className="font-semibold text-gray-900">Rol</TableHead>
+                  <TableHead className="font-semibold text-gray-900">Estado</TableHead>
+                  <TableHead className="font-semibold text-gray-900">Último Acceso</TableHead>
+                  <TableHead className="font-semibold text-gray-900 text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.map((user: any) => (
                   <TableRow
                     key={user.id}
-                    className="border-glow-cyan/30 hover:bg-accent/10 transition-colors"
+                    className="border-accent/10 hover:bg-accent/5 transition-colors"
                   >
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center text-xs font-bold">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-xs font-bold text-white shadow-sm">
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         {user.name}
@@ -225,24 +263,31 @@ export default function Users() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span
-                        className={`px-3 py-1 rounded text-xs font-bold border-2 ${getRoleBadgeColor(
-                          user.role
-                        )}`}
+                      <Select
+                        defaultValue={user.role}
+                        onValueChange={(val) => handleUpdateRole(user.id, val)}
+                        disabled={updateRoleMutation.isPending}
                       >
-                        <Shield className="w-3 h-3 inline mr-1" />
-                        {user.role.toUpperCase()}
-                      </span>
+                        <SelectTrigger className={`w-[120px] h-8 text-[10px] font-bold border rounded-full px-3 uppercase tracking-wider ${getRoleBadgeColor(user.role)}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-accent/20">
+                          <SelectItem value="admin">ADMIN</SelectItem>
+                          <SelectItem value="manager">MANAGER</SelectItem>
+                          <SelectItem value="user">USER</SelectItem>
+                          <SelectItem value="viewer">VIEWER</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div
-                          className={`${
-                            user.isActive ? "status-online" : "status-offline"
+                          className={`w-2 h-2 rounded-full ${
+                            user.isActive ? "bg-green-500 animate-pulse" : "bg-gray-300"
                           }`}
                         ></div>
-                        <span className="text-sm">
-                          {user.isActive ? "Active" : "Inactive"}
+                        <span className="text-xs font-medium text-gray-600">
+                          {user.isActive ? "Activo" : "Inactivo"}
                         </span>
                       </div>
                     </TableCell>
@@ -261,7 +306,7 @@ export default function Users() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="hover:bg-accent/20"
+                          className="hover:bg-cyan-50 text-cyan-600"
                           onClick={() => {
                             setEditingUserId(user.id);
                             setFormData({
@@ -271,9 +316,9 @@ export default function Users() {
                             });
                             setIsDialogOpen(true);
                           }}
-                          title="Edit User"
+                          title="Editar Usuario"
                         >
-                          <Edit className="w-4 h-4 glow-cyan" />
+                          <Edit className="w-4 h-4" />
                         </Button>
                         <Button
                           size="sm"
@@ -295,46 +340,54 @@ export default function Users() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="card-neon-cyan">
+          <div className="bg-white p-5 rounded-2xl border border-accent/20 shadow-sm transition-all hover:shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-3xl font-bold glow-cyan">{users.length}</p>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Usuarios</p>
+                <p className="text-3xl font-extrabold text-gray-900 mt-1">{users.length}</p>
               </div>
-              <UsersIcon className="w-8 h-8 glow-cyan opacity-50" />
+              <div className="w-12 h-12 rounded-full bg-cyan-50 flex items-center justify-center">
+                <UsersIcon className="w-6 h-6 text-cyan-600" />
+              </div>
             </div>
           </div>
-          <div className="card-neon">
+          <div className="bg-white p-5 rounded-2xl border border-accent/20 shadow-sm transition-all hover:shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Admins</p>
-                <p className="text-3xl font-bold glow-purple">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Admins</p>
+                <p className="text-3xl font-extrabold text-gray-900 mt-1">
                   {users.filter((u: any) => u.role === "admin").length}
                 </p>
               </div>
-              <Shield className="w-8 h-8 glow-purple opacity-50" />
+              <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center">
+                <Shield className="w-6 h-6 text-purple-600" />
+              </div>
             </div>
           </div>
-          <div className="card-neon-cyan">
+          <div className="bg-white p-5 rounded-2xl border border-accent/20 shadow-sm transition-all hover:shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Active</p>
-                <p className="text-3xl font-bold">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Activos</p>
+                <p className="text-3xl font-extrabold text-gray-900 mt-1">
                   {users.filter((u: any) => u.isActive).length}
                 </p>
               </div>
-              <div className="status-online w-6 h-6"></div>
+              <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              </div>
             </div>
           </div>
-          <div className="card-neon">
+          <div className="bg-white p-5 rounded-2xl border border-accent/20 shadow-sm transition-all hover:shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Inactive</p>
-                <p className="text-3xl font-bold">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Inactivos</p>
+                <p className="text-3xl font-extrabold text-gray-900 mt-1">
                   {users.filter((u: any) => !u.isActive).length}
                 </p>
               </div>
-              <div className="status-offline w-6 h-6"></div>
+              <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center">
+                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+              </div>
             </div>
           </div>
         </div>

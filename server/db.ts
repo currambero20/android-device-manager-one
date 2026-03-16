@@ -100,6 +100,42 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(users).orderBy(desc(users.lastSignedIn));
+}
+
+export async function deleteUser(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(users).where(eq(users.id, id));
+}
+
+export async function updateUserRole(id: number, role: "admin" | "manager" | "user" | "viewer") {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ role }).where(eq(users.id, id));
+}
+
+export async function createUser(user: { name: string; email: string; role: string }): Promise<any> {
+  const db = await getDb();
+  if (!db) return;
+
+  const openId = `manual:${user.email}`;
+  const values: InsertUser = {
+    openId,
+    name: user.name,
+    email: user.email,
+    role: user.role as any,
+    loginMethod: "manual",
+    lastSignedIn: new Date(),
+  };
+
+  await db.insert(users).values(values);
+  return await getUserByOpenId(openId);
+}
+
 /**
  * Permission queries
  */

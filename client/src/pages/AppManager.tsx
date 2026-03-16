@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -103,26 +104,27 @@ export default function AppManager() {
   };
 
   return (
-    <div className="space-y-6">
+    <DashboardLayout title="Gestor de Aplicaciones">
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">
+          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700">
             Gestor de Aplicaciones
           </h1>
-          <p className="text-gray-400 mt-2">Gestiona aplicaciones instaladas en dispositivos</p>
+          <p className="text-muted-foreground mt-2">Gestiona aplicaciones instaladas en dispositivos</p>
         </div>
-        <AppWindowIcon className="w-12 h-12 text-purple-500" />
+        <AppWindowIcon className="w-12 h-12 text-primary opacity-80" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Selección de Dispositivo */}
-        <Card className="lg:col-span-1 bg-gray-900 border-purple-500/30">
+        <Card className="lg:col-span-1 border-accent/20 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Dispositivos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Select value={selectedDevice?.toString() || ""} onValueChange={(val) => setSelectedDevice(Number(val))}>
-              <SelectTrigger className="bg-gray-800 border-gray-700">
+              <SelectTrigger className="bg-secondary/50 border-accent/20">
                 <SelectValue placeholder="Selecciona dispositivo" />
               </SelectTrigger>
               <SelectContent>
@@ -135,20 +137,20 @@ export default function AppManager() {
             </Select>
 
             {selectedDevice && appStats && (
-              <div className="space-y-2 p-3 bg-gray-800 rounded-lg">
+              <div className="space-y-2 p-3 bg-secondary/30 rounded-lg border border-accent/10">
                 <div className="text-sm font-medium">Estadísticas</div>
-                <div className="space-y-1 text-xs text-gray-400">
+                <div className="space-y-1 text-xs text-muted-foreground">
                   <div className="flex justify-between">
                     <span>Total:</span>
-                    <span className="text-cyan-400 font-medium">{appStats.totalApps}</span>
+                    <span className="text-cyan-600 font-semibold">{appStats.totalApps}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Usuario:</span>
-                    <span className="text-purple-400 font-medium">{appStats.userApps}</span>
+                    <span className="text-primary font-semibold">{appStats.userApps}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Sistema:</span>
-                    <span className="text-gray-400 font-medium">{appStats.systemApps}</span>
+                    <span className="font-semibold">{appStats.systemApps}</span>
                   </div>
                 </div>
               </div>
@@ -160,18 +162,18 @@ export default function AppManager() {
         {selectedDevice ? (
           <div className="lg:col-span-3 space-y-4">
             {/* Barra de Búsqueda */}
-            <Card className="bg-gray-900 border-purple-500/30">
+            <Card className="border-accent/20 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg">Aplicaciones</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="relative">
-                  <Search className="absolute left-2 top-2.5 w-4 h-4 text-gray-500" />
+                  <Search className="absolute left-2 top-2.5 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Buscar aplicaciones..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 bg-gray-800 border-gray-700"
+                    className="pl-8 bg-secondary/50 border-accent/20"
                   />
                 </div>
 
@@ -181,47 +183,47 @@ export default function AppManager() {
                     id="systemApps"
                     checked={showSystemApps}
                     onChange={(e) => setShowSystemApps(e.target.checked)}
-                    className="rounded border-gray-700"
+                    className="rounded border-accent"
                   />
-                  <label htmlFor="systemApps" className="text-sm text-gray-400 cursor-pointer">
+                  <label htmlFor="systemApps" className="text-sm text-muted-foreground cursor-pointer">
                     Mostrar aplicaciones del sistema
                   </label>
                 </div>
 
-                <div className="text-xs text-gray-400">
-                  {filteredApps.length} de {installedApps?.total} aplicaciones
+                <div className="text-xs text-muted-foreground">
+                  {filteredApps.length} de {installedApps?.total || 0} aplicaciones
                   {isLoadingApps && <Loader2 className="w-3 h-3 animate-spin ml-2 inline" />}
                 </div>
               </CardContent>
             </Card>
 
             {/* Lista de Aplicaciones */}
-            <Card className="bg-gray-900 border-purple-500/30">
+            <Card className="border-accent/20 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Package className="w-5 h-5 text-cyan-400" />
+                  <Package className="w-5 h-5 text-cyan-600" />
                   Aplicaciones Instaladas
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-96 border border-gray-700 rounded-lg p-3">
+                <ScrollArea className="h-96 border border-accent/20 rounded-lg p-3">
                   <div className="space-y-2">
                     {filteredApps.map((app: any) => (
                       <div
-                        key={app.id}
-                        className="flex items-center justify-between p-3 bg-gray-800 rounded-lg border border-gray-700 hover:border-purple-500/50 transition-all group"
+                        key={app.id || app.packageName}
+                        className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-accent/10 hover:border-primary/30 transition-all group"
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm">{app.name}</div>
-                          <div className="text-xs text-gray-400 truncate">{app.packageName}</div>
+                          <div className="font-medium text-sm text-foreground">{app.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{app.packageName}</div>
                           <div className="flex gap-2 mt-1">
                             {app.version && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-[10px] h-4">
                                 v{app.version}
                               </Badge>
                             )}
                             {app.isSystemApp && (
-                              <Badge variant="outline" className="text-xs bg-gray-700">
+                              <Badge variant="outline" className="text-[10px] h-4 bg-muted/50 border-muted">
                                 Sistema
                               </Badge>
                             )}
@@ -238,7 +240,7 @@ export default function AppManager() {
                             }
                             variant="ghost"
                             size="sm"
-                            className="text-green-400 hover:bg-green-400/20"
+                            className="text-green-600 hover:bg-green-50"
                             disabled={launchAppMutation.isPending}
                             title="Lanzar"
                           >
@@ -253,7 +255,7 @@ export default function AppManager() {
                             }
                             variant="ghost"
                             size="sm"
-                            className="text-yellow-400 hover:bg-yellow-400/20"
+                            className="text-orange-600 hover:bg-orange-50"
                             disabled={stopAppMutation.isPending}
                             title="Detener"
                           >
@@ -268,7 +270,7 @@ export default function AppManager() {
                             }
                             variant="ghost"
                             size="sm"
-                            className="text-blue-400 hover:bg-blue-400/20"
+                            className="text-primary hover:bg-primary/5"
                             disabled={clearCacheMutation.isPending}
                             title="Limpiar caché"
                           >
@@ -284,7 +286,7 @@ export default function AppManager() {
                               }
                               variant="ghost"
                               size="sm"
-                              className="text-red-400 hover:bg-red-400/20"
+                              className="text-destructive hover:bg-destructive/5"
                               disabled={uninstallAppMutation.isPending}
                               title="Desinstalar"
                             >
@@ -300,16 +302,17 @@ export default function AppManager() {
             </Card>
           </div>
         ) : (
-          <Card className="lg:col-span-3 bg-gray-900 border-purple-500/30">
+          <Card className="lg:col-span-3 border-accent/20 bg-secondary/10 dashed">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center justify-center h-96 text-center">
-                <AppWindowIcon className="w-12 h-12 text-gray-500 mb-4" />
-                <p className="text-gray-400">Selecciona un dispositivo para gestionar aplicaciones</p>
+                <AppWindowIcon className="w-12 h-12 text-muted-foreground/30 mb-4" />
+                <p className="text-muted-foreground">Selecciona un dispositivo para gestionar aplicaciones</p>
               </div>
             </CardContent>
           </Card>
         )}
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

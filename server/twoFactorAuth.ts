@@ -1,5 +1,5 @@
 import speakeasy from "speakeasy";
-const QRCode = require("qrcode");
+import QRCode from "qrcode";
 import crypto from "crypto";
 import { getDb } from "./db";
 import { users } from "../drizzle/schema";

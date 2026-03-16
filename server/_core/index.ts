@@ -13,17 +13,34 @@ async function startServer() {
   const server = createServer(app);
 
   // ✅ CORS CONFIGURADO PARA VERCEL
-  app.use(cors({
-    origin: [
-      "https://repodeploy.vercel.app",
-      "http://localhost:3000",
-      "http://localhost:5173",
-      /\.vercel\.app$/
-    ],
+  const corsOptions = {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      const allowedOrigins = [
+        "https://repodeploy.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+      ];
+      // Allow requests with no origin (mobile apps, curl, etc) in development
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      // Check if origin matches any allowed pattern
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.match(/\.vercel\.app$/) ||
+        origin.match(/localhost/)
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
-  }));
+  };
+  app.use(cors(corsOptions));
 
   app.use(cookieParser());
   app.use(express.json({ limit: "50mb" }));

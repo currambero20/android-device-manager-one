@@ -31,9 +31,10 @@ export const appRouter = router({
     }),
 
     logout: publicProcedure.mutation(({ ctx }) => {
-      // Clear the session cookie
-      ctx.res.clearCookie(COOKIE_NAME, { path: "/", maxAge: -1 });
-      ctx.res.clearCookie("session_token", { path: "/", maxAge: -1 });
+      const isProduction = process.env.NODE_ENV === "production";
+      // Clear the session cookie with same settings as when it was set
+      ctx.res.clearCookie(COOKIE_NAME, { path: "/", maxAge: -1, httpOnly: true, secure: isProduction, sameSite: isProduction ? "none" : "lax" });
+      ctx.res.clearCookie("session_token", { path: "/", maxAge: -1, httpOnly: true, secure: isProduction, sameSite: isProduction ? "none" : "lax" });
       return {
         success: true,
       } as const;

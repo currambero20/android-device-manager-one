@@ -32,10 +32,12 @@ async function createSessionToken(payload: Record<string, unknown>): Promise<str
 }
 
 function setCookie(res: any, token: string) {
+  const isProduction = process.env.NODE_ENV === "production";
+  
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     maxAge: COOKIE_MAX_AGE,
     path: "/",
   });

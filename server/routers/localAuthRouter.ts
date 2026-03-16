@@ -2,7 +2,6 @@ import { z } from "zod";
 import { publicProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { SignJWT } from "jose";
-import * as db from "../db";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "android-device-manager-super-secret-key-2024"
@@ -43,7 +42,13 @@ function setCookie(res: any, token: string) {
 }
 
 /**
- * Login procedure - exported individually so it can be added to the auth sub-router
+ * Login procedure
+ * 
+ * Priority:
+ * 1. Always check ENV VAR credentials first (admin/admin123 or custom via ADMIN_USERNAME / ADMIN_PASSWORD)
+ * 2. Only try DB if env-var credentials don't match AND DB is available WITH passwordHash column
+ * 
+ * This ensures the system works even without a DB or before migrations run.
  */
 export const loginProcedure = publicProcedure
   .input(
@@ -53,25 +58,16 @@ export const loginProcedure = publicProcedure
     })
   )
   .mutation(async ({ input, ctx }) => {
-    const dbInstance = await db.getDb();
+    const adminUsername = process.env.ADMIN_USERNAME || "admin";
+    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
 
-    // No DB - use env var admin credentials (fallback mode)
-    if (!dbInstance) {
-      const adminUsername = process.env.ADMIN_USERNAME || "admin";
-      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
-
-      if (input.username !== adminUsername || input.password !== adminPassword) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Credenciales incorrectas",
-        });
-      }
-
+    // ✅ STEP 1: Always check env-var admin credentials first (works without any DB)
+    if (input.username === adminUsername && input.password === adminPassword) {
       const token = await createSessionToken({
-        sub: "admin-fallback",
-        openId: "admin-fallback",
+        sub: "admin-local",
+        openId: "admin-local",
         name: "Administrador",
-        email: "admin@device-manager.local",
+        email: `${adminUsername}@device-manager.local`,
         role: "admin",
         loginMethod: "local",
       });
@@ -83,50 +79,67 @@ export const loginProcedure = publicProcedure
         user: {
           id: 0,
           name: "Administrador",
-          email: "admin@device-manager.local",
+          email: `${adminUsername}@device-manager.local`,
           role: "admin",
         },
       };
     }
 
-    // DB available - look up user by email/username
-    const user = await db.getUserByEmail(input.username);
-    if (!user) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Credenciales incorrectas" });
+    // ✅ STEP 2: Try DB user lookup (only if DB has passwordHash column)
+    try {
+      // Lazy import to avoid crash if DB is unavailable
+      const db = await import("../db");
+      const dbInstance = await db.getDb();
+
+      if (dbInstance) {
+        // Use a raw query that only selects columns we know exist to avoid schema mismatch
+        // We select id, email, name, role, openId, loginMethod - NO passwordHash yet
+        const [rows] = await (dbInstance as any).execute(
+          "SELECT id, openId, name, email, role, loginMethod, passwordHash FROM users WHERE email = ? LIMIT 1",
+          [input.username]
+        );
+
+        const userRows = Array.isArray(rows) ? rows : [];
+        const dbUser = userRows[0] as any;
+
+        if (dbUser && dbUser.passwordHash) {
+          const valid = await verifyPassword(input.password, dbUser.passwordHash);
+          if (!valid) {
+            throw new TRPCError({ code: "UNAUTHORIZED", message: "Credenciales incorrectas" });
+          }
+
+          const token = await createSessionToken({
+            sub: String(dbUser.id),
+            openId: dbUser.openId || String(dbUser.id),
+            name: dbUser.name || input.username,
+            email: dbUser.email || input.username,
+            role: dbUser.role || "user",
+            loginMethod: "local",
+          });
+
+          setCookie(ctx.res, token);
+
+          return {
+            success: true,
+            user: {
+              id: dbUser.id,
+              name: dbUser.name,
+              email: dbUser.email,
+              role: dbUser.role,
+            },
+          };
+        }
+      }
+    } catch (dbError) {
+      // DB query failed (e.g. column doesn't exist) - log and continue to error below
+      console.warn("[Auth] DB login failed, falling back:", (dbError as Error).message);
     }
 
-    if (!user.passwordHash) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "Este usuario no tiene contraseña local configurada",
-      });
-    }
-
-    const valid = await verifyPassword(input.password, user.passwordHash);
-    if (!valid) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Credenciales incorrectas" });
-    }
-
-    const token = await createSessionToken({
-      sub: String(user.id),
-      openId: user.openId || String(user.id),
-      name: user.name || input.username,
-      email: user.email || input.username,
-      role: user.role || "user",
-      loginMethod: "local",
+    // If nothing matched
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Credenciales incorrectas",
     });
-
-    setCookie(ctx.res, token);
-
-    return {
-      success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    };
   });
 
 /**
@@ -153,23 +166,33 @@ export const registerProcedure = publicProcedure
     }
 
     const passwordHash = await hashPassword(input.password);
-    const dbInstance = await db.getDb();
 
-    if (!dbInstance) {
+    try {
+      const db = await import("../db");
+      const dbInstance = await db.getDb();
+
+      if (!dbInstance) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Base de datos no disponible",
+        });
+      }
+
+      await db.upsertUser({
+        openId: `local-${input.username}-${Date.now()}`,
+        name: input.name || input.username,
+        email: input.username,
+        role: input.role,
+        loginMethod: "local",
+        passwordHash,
+      });
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: "Base de datos no disponible",
+        message: "Error al crear el usuario",
       });
     }
-
-    await db.upsertUser({
-      openId: `local-${input.username}-${Date.now()}`,
-      name: input.name || input.username,
-      email: input.username,
-      role: input.role,
-      loginMethod: "local",
-      passwordHash,
-    });
 
     return { success: true, message: "Usuario creado correctamente" };
   });

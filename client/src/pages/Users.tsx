@@ -172,7 +172,7 @@ export default function Users() {
   };
 
   return (
-    <DashboardLayout title="User Management">
+    <DashboardLayout title="User Management v1.0.1-final">
       <div className="space-y-6">
         {/* Header with Actions */}
         <div className="flex items-center justify-between">

@@ -1,5 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { migrate } from "drizzle-orm/mysql2/migrator";
 import {
   InsertUser,
   users,
@@ -25,6 +26,22 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+export async function runMigrations() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot run migrations: database not available");
+    return;
+  }
+  console.log("[Database] Running migrations...");
+  try {
+    await migrate(db, { migrationsFolder: "./drizzle" });
+    console.log("[Database] Migrations completed successfully");
+  } catch (error) {
+    console.error("[Database] Migrations failed:", error);
+    // Don't throw to avoid crashing the server if migrations fail
+  }
 }
 
 export async function upsertUser(user: InsertUser): Promise<any> {

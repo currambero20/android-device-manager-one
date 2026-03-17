@@ -7,8 +7,12 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { runMigrations } from "../db";
 
 async function startServer() {
+  // Run database migrations on startup
+  await runMigrations();
+
   const app = express();
   const server = createServer(app);
 
@@ -60,7 +64,7 @@ async function startServer() {
 
   // Health check
   app.get("/", (req, res) => {
-    res.json({ message: "Backend is running (V3.2 - Forced Redeploy)" });
+    res.json({ message: "Backend is running (V3.3 - Auto-Migrations)" });
   });
 
   const port = process.env.PORT || 3000;

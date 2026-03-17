@@ -1,6 +1,6 @@
 import { eq, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
+import mysql from "mysql2";
 import {
   InsertUser,
   users,
@@ -19,12 +19,7 @@ let _migrationLog: string[] = [];
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _pool = mysql.createPool({
-        uri: process.env.DATABASE_URL,
-        connectionLimit: 10,
-        enableKeepAlive: true,
-        keepAliveInitialDelay: 0,
-      });
+      _pool = mysql.createPool(process.env.DATABASE_URL);
       _db = drizzle(_pool);
     } catch (error: any) {
       console.warn("[Database] Failed to connect:", error);
@@ -55,14 +50,13 @@ export async function runMigrations() {
   for (const repair of repairs) {
     try {
       await db.execute(sql.raw(repair.sql));
-      _migrationLog.push(`SUCCESS: Added/Modified ${repair.name}`);
-      console.log(`[Database] Repair SUCCESS: ${repair.name}`);
+      _migrationLog.push(`SUCCESS: ${repair.name}`);
     } catch (error: any) {
-      if (error.message.includes("Duplicate column name") || error.message.includes("already exists")) {
-        _migrationLog.push(`SKIPPED: ${repair.name} (Already exists)`);
+      const msg = error.message.toLowerCase();
+      if (msg.includes("duplicate column") || msg.includes("already exists")) {
+        _migrationLog.push(`EXISTS: ${repair.name}`);
       } else {
-        _migrationLog.push(`FAILED: ${repair.name} - ${error.message}`);
-        console.error(`[Database] Repair FAILED: ${repair.name}`, error.message);
+        _migrationLog.push(`FAILED: ${repair.name} (${error.message})`);
       }
     }
   }
@@ -73,23 +67,20 @@ export async function getHealthStatus() {
   if (!db) return { status: "disconnected", error: "No DB instance" };
   
   try {
+    const start = Date.now();
     await db.execute(sql`SELECT 1`);
-    
-    // Try to get actual version for debug
-    const [versionRes] = await db.execute(sql`SELECT VERSION() as v`);
-    const version = (versionRes as any[])[0]?.v || "unknown";
+    const latency = Date.now() - start;
 
     return {
       status: "connected",
-      mysqlVersion: version,
+      latency: `${latency}ms`,
       migrationLog: _migrationLog,
     };
   } catch (error: any) {
     return { 
       status: "error", 
       error: error.message, 
-      migrationLog: _migrationLog,
-      dbUrlPresence: !!process.env.DATABASE_URL
+      migrationLog: _migrationLog 
     };
   }
 }

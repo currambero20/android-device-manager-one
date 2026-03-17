@@ -137,6 +137,18 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
             </button>
           </form>
 
+          {/* Help hint */}
+          <div className="mt-6 p-3 bg-blue-50/50 rounded-xl border border-blue-100/50 flex items-start gap-3">
+            <div className="mt-0.5 p-1 bg-blue-100 rounded-lg text-blue-600">
+              <Shield className="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-blue-800">Credenciales por defecto</p>
+              <p className="text-[10px] text-blue-600/80 leading-relaxed font-medium">
+                Admin: <span className="font-bold">admin</span> | Pass: <span className="font-bold">admin123</span>
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}

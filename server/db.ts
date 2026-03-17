@@ -1,6 +1,8 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { migrate } from "drizzle-orm/mysql2/migrator";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   InsertUser,
   users,
@@ -13,7 +15,11 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 let _db: ReturnType<typeof drizzle> | null = null;
+let _migrationError: string | null = null;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
@@ -31,16 +37,37 @@ export async function getDb() {
 export async function runMigrations() {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot run migrations: database not available");
+    _migrationError = "Database not available";
     return;
   }
-  console.log("[Database] Running migrations...");
+  
+  // The drizzle folder is at the root, and this file is in server/
+  const migrationsPath = path.resolve(__dirname, "../../drizzle");
+  console.log(`[Database] Running migrations from: ${migrationsPath}`);
+  
   try {
-    await migrate(db, { migrationsFolder: "./drizzle" });
+    await migrate(db, { migrationsFolder: migrationsPath });
     console.log("[Database] Migrations completed successfully");
-  } catch (error) {
+    _migrationError = null;
+  } catch (error: any) {
+    _migrationError = error.message || "Unknown migration error";
     console.error("[Database] Migrations failed:", error);
-    // Don't throw to avoid crashing the server if migrations fail
+  }
+}
+
+export async function getHealthStatus() {
+  const db = await getDb();
+  if (!db) return { status: "disconnected", error: "DB instance null" };
+  
+  try {
+    const columns = await db.execute(sql`SHOW COLUMNS FROM users`);
+    return {
+      status: "connected",
+      migrationError: _migrationError,
+      columns: (columns[0] as any[]).map(c => c.Field)
+    };
+  } catch (error: any) {
+    return { status: "error", error: error.message, migrationError: _migrationError };
   }
 }
 

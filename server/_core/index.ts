@@ -63,8 +63,12 @@ async function startServer() {
   );
 
   // Health check
-  app.get("/", (req, res) => {
-    res.json({ message: "Backend is running (V3.3 - Auto-Migrations)" });
+  app.get("/", async (req, res) => {
+    const dbStatus = await (await import("../db")).getHealthStatus();
+    res.json({ 
+      message: "Backend is running (V3.4 - Diagnostics)",
+      database: dbStatus 
+    });
   });
 
   const port = process.env.PORT || 3000;

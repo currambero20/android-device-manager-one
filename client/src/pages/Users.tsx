@@ -33,6 +33,10 @@ import {
   Shield,
   Mail,
   Calendar,
+  Key,
+  Eye,
+  EyeOff,
+  RefreshCw,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -48,6 +52,18 @@ export default function Users() {
     password: "",
     role: "user" as "admin" | "manager" | "user" | "viewer",
   });
+  const [showPassword, setShowPassword] = useState(false);
+
+  const generatePassword = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let pwd = "";
+    for (let i = 0; i < 12; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setFormData(prev => ({ ...prev, password: pwd }));
+    setShowPassword(true);
+    toast.info(`Contraseña generada: ${pwd}`, { duration: 5000 });
+  };
 
   const { data: users = [], isLoading, refetch } = trpc.users.getAll.useQuery();
 
@@ -116,7 +132,13 @@ export default function Users() {
         toast.error("La contraseña debe tener al menos 6 caracteres");
         return;
       }
-      await createUserMutation.mutateAsync(formData);
+      // Construir el objeto explícitamente para evitar que campos undefined causen errores en Zod
+      await createUserMutation.mutateAsync({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+      });
     }
   };
 
@@ -220,35 +242,77 @@ export default function Users() {
                   />
                 </div>
                 {!editingUserId && (
-                  <div>
-                    <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                      Contraseña *
-                    </label>
-                    <Input
-                      type="password"
-                      placeholder="Mínimo 6 caracteres"
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
-                      className="bg-gray-50 border-gray-200"
-                    />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-semibold text-gray-700">
+                        Contraseña *
+                      </label>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 text-cyan-600 hover:bg-cyan-50"
+                        onClick={generatePassword}
+                      >
+                        <RefreshCw className="w-3 h-3 mr-1" />
+                        Generar
+                      </Button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Mínimo 6 caracteres"
+                        value={formData.password}
+                        onChange={(e) =>
+                          setFormData({ ...formData, password: e.target.value })
+                        }
+                        className="bg-gray-50 border-gray-200 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 )}
                 {editingUserId && (
-                  <div>
-                    <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                      Nueva Contraseña <span className="text-xs font-normal text-gray-400">(dejar en blanco para no cambiar)</span>
-                    </label>
-                    <Input
-                      type="password"
-                      placeholder="Nueva contraseña (opcional)"
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
-                      className="bg-gray-50 border-gray-200"
-                    />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-semibold text-gray-700">
+                        Nueva Contraseña <span className="text-xs font-normal text-gray-400">(dejar en blanco para no cambiar)</span>
+                      </label>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 text-cyan-600 hover:bg-cyan-50"
+                        onClick={generatePassword}
+                      >
+                        <RefreshCw className="w-3 h-3 mr-1" />
+                        Generar
+                      </Button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Nueva contraseña (opcional)"
+                        value={formData.password}
+                        onChange={(e) =>
+                          setFormData({ ...formData, password: e.target.value })
+                        }
+                        className="bg-gray-50 border-gray-200 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 )}
                 <div>

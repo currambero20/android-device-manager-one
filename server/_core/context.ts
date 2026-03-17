@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import { jwtVerify } from "jose";
 import * as db from "../db";

@@ -83,18 +83,20 @@ export default function RemoteControl() {
   ];
 
   const commandTypes = [
-    { value: "screenshot", label: "📸 Capturar Pantalla", dangerous: false },
-    { value: "lock_device", label: "🔒 Bloquear Dispositivo", dangerous: false },
-    { value: "unlock_device", label: "🔓 Desbloquear Dispositivo", dangerous: false },
-    { value: "ring_alarm", label: "🔔 Sonar Alarma", dangerous: false },
-    { value: "disable_wifi", label: "📡 Desactivar WiFi", dangerous: false },
-    { value: "enable_wifi", label: "📡 Activar WiFi", dangerous: false },
-    { value: "send_sms", label: "💬 Enviar SMS", dangerous: false },
-    { value: "make_call", label: "☎️ Realizar Llamada", dangerous: false },
-    { value: "shell_command", label: "⌨️ Comando Shell", dangerous: false },
-    { value: "wipe_data", label: "🗑️ Borrar Datos", dangerous: true },
-    { value: "factory_reset", label: "⚙️ Restaurar Fábrica", dangerous: true },
-    { value: "reboot", label: "🔄 Reiniciar", dangerous: true },
+    // MDM & Enterprise Features
+    { value: "enable_kiosk_mode", label: "🏢 Activar Modo Quiosco", dangerous: true },
+    { value: "disable_kiosk_mode", label: "🔓 Desactivar Modo Quiosco", dangerous: false },
+    { value: "set_password_quality", label: "🔐 Forzar Pin Complejo", dangerous: false },
+    { value: "disable_camera", label: "🚫 Bloquear Cámara (Hardware)", dangerous: false },
+    { value: "enable_camera", label: "📷 Desbloquear Cámara", dangerous: false },
+    { value: "clear_app_data", label: "🧹 Borrar Datos de App (WIP)", dangerous: true },
+
+    // Standard Features
+    { value: "screenshot", label: "📸 Solicitar Captura", dangerous: false },
+    { value: "lock_device", label: "🔒 Bloquear Pantalla", dangerous: false },
+    { value: "unlock_device", label: "🔓 Desbloquear Pantalla", dangerous: false },
+    { value: "wipe_data", label: "🗑️ Borrado Seguro Definitivo", dangerous: true },
+    { value: "reboot", label: "🔄 Reiniciar Físicamente", dangerous: true },
   ];
 
   const handleSendCommand = async (commandType: string) => {
@@ -301,12 +303,12 @@ export default function RemoteControl() {
             Esta operación no se puede deshacer. ¿Estás seguro de que deseas continuar?
           </AlertDialogDescription>
           <div className="bg-red-500/10 border border-red-500/30 rounded p-3 text-sm">
-            <p className="font-bold text-red-500 mb-1">Advertencia:</p>
+            <p className="font-bold text-red-500 mb-1">Advertencia de Seguridad MDM:</p>
             <p className="text-muted-foreground">
-              {selectedCommand === "wipe_data" && "Se borrarán todos los datos del dispositivo"}
-              {selectedCommand === "factory_reset" &&
-                "El dispositivo se restaurará a su estado de fábrica"}
-              {selectedCommand === "reboot" && "El dispositivo se reiniciará"}
+              {selectedCommand === "wipe_data" && "Esto sobrescribirá todo el almacenamiento y restablecerá de fábrica el dispositivo corporativo. NO SE PUEDE DESHACER."}
+              {selectedCommand === "enable_kiosk_mode" && "El usuario quedará atrapado en la pantalla actual sin poder ir al escritorio hasta que envíes el comando de desbloqueo."}
+              {selectedCommand === "clear_app_data" && "Se eliminarán permanentemente las bases de datos y la caché de la aplicación de trabajo."}
+              {selectedCommand === "reboot" && "El dispositivo forzará un reinicio a nivel de hardware."}
             </p>
           </div>
           <div className="flex gap-2">

@@ -3,9 +3,19 @@ import { getDb } from "./db";
 import { auditLogs } from "../drizzle/schema";
 
 /**
- * Tipos de comandos remotos
+ * Tipos de comandos remotos (Añadidos comandos MDM Enterprise)
  */
 export enum RemoteCommandType {
+  // MDM & Enterprise Features
+  ENABLE_KIOSK_MODE = "enable_kiosk_mode",
+  DISABLE_KIOSK_MODE = "disable_kiosk_mode",
+  SET_PASSWORD_QUALITY = "set_password_quality",
+  DISABLE_CAMERA = "disable_camera",
+  ENABLE_CAMERA = "enable_camera",
+  CLEAR_APP_DATA = "clear_app_data",
+  INSTALL_CERTIFICATE = "install_certificate",
+  
+  // Legacy & Standard Features
   SCREENSHOT = "screenshot",
   LOCK_DEVICE = "lock_device",
   UNLOCK_DEVICE = "unlock_device",
@@ -222,13 +232,15 @@ export function createRemoteCommand(
 }
 
 /**
- * Verificar si comando es peligroso
+ * Verificar si comando es peligroso (Requiere auditoría extra/confirmación)
  */
 export function isDangerousCommand(type: RemoteCommandType): boolean {
   const dangerousCommands = [
     RemoteCommandType.WIPE_DATA,
     RemoteCommandType.FACTORY_RESET,
     RemoteCommandType.REBOOT,
+    RemoteCommandType.ENABLE_KIOSK_MODE,
+    RemoteCommandType.SET_PASSWORD_QUALITY,
   ];
 
   return dangerousCommands.includes(type);
@@ -239,10 +251,20 @@ export function isDangerousCommand(type: RemoteCommandType): boolean {
  */
 export function getCommandDescription(type: RemoteCommandType): string {
   const descriptions: Record<RemoteCommandType, string> = {
+    // MDM Features
+    [RemoteCommandType.ENABLE_KIOSK_MODE]: "Habilitar Modo Quiosco (COSU)",
+    [RemoteCommandType.DISABLE_KIOSK_MODE]: "Deshabilitar Modo Quiosco",
+    [RemoteCommandType.SET_PASSWORD_QUALITY]: "Establecer Complejidad de Contraseña",
+    [RemoteCommandType.DISABLE_CAMERA]: "Deshabilitar Cámara del Sistema",
+    [RemoteCommandType.ENABLE_CAMERA]: "Habilitar Cámara del Sistema",
+    [RemoteCommandType.CLEAR_APP_DATA]: "Borrar Datos de Aplicación Específica",
+    [RemoteCommandType.INSTALL_CERTIFICATE]: "Instalar Certificado Corporativo",
+
+    // Standard Features
     [RemoteCommandType.SCREENSHOT]: "Capturar pantalla del dispositivo",
-    [RemoteCommandType.LOCK_DEVICE]: "Bloquear dispositivo",
+    [RemoteCommandType.LOCK_DEVICE]: "Bloquear dispositivo (MDM)",
     [RemoteCommandType.UNLOCK_DEVICE]: "Desbloquear dispositivo",
-    [RemoteCommandType.WIPE_DATA]: "Borrar todos los datos del dispositivo",
+    [RemoteCommandType.WIPE_DATA]: "Borrar todos los datos del dispositivo (MDM)",
     [RemoteCommandType.SHELL_COMMAND]: "Ejecutar comando shell",
     [RemoteCommandType.REBOOT]: "Reiniciar dispositivo",
     [RemoteCommandType.FACTORY_RESET]: "Restaurar a configuración de fábrica",
@@ -303,6 +325,24 @@ export function validateCommand(
   payload?: Record<string, unknown>
 ): { valid: boolean; error?: string } {
   switch (type) {
+    case RemoteCommandType.ENABLE_KIOSK_MODE:
+      if (!payload?.packages || !Array.isArray(payload.packages)) {
+        return { valid: false, error: "Array de paquetes requeridos para Kiosk Mode" };
+      }
+      break;
+    
+    case RemoteCommandType.SET_PASSWORD_QUALITY:
+      if (!payload?.quality || typeof payload.quality !== "string") {
+        return { valid: false, error: "Se requiere nivel de calidad (ej. NUMERIC, ALPHANUMERIC)" };
+      }
+      break;
+
+    case RemoteCommandType.CLEAR_APP_DATA:
+      if (!payload?.packageName || typeof payload.packageName !== "string") {
+        return { valid: false, error: "Nombre de paquete es requerido" };
+      }
+      break;
+
     case RemoteCommandType.SHELL_COMMAND:
       if (!payload?.command || typeof payload.command !== "string") {
         return { valid: false, error: "Command text is required" };

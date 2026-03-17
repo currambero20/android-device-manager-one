@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
 import { Lock, Smartphone, Zap, Shield, Activity, Code } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useEffect } from "react";
 
 export default function Home() {
   const { user, isAuthenticated, logout } = useAuth();

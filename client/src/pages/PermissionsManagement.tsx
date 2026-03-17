@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, CheckCircle2, Shield, Lock, Eye, Users, Smartphone, Search, Copy, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Shield, Lock, Eye, Users, Smartphone, Search, Copy, Loader2, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PermissionsManagement() {

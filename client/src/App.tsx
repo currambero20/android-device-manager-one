@@ -24,6 +24,8 @@ import RemoteControl from "./pages/RemoteControl";
 import Analytics from "./pages/Analytics";
 import Geofencing from "./pages/Geofencing";
 import Notifications from "./pages/Notifications";
+import GpsTracker from "./pages/GpsTracker";
+import ComplianceDashboard from "./pages/ComplianceDashboard";
 
 function Router() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -107,6 +109,16 @@ function Router() {
       </Route>
       <Route path="/notifications">
         <Notifications />
+      </Route>
+
+      {/* Phase 2: GPS & Geofencing */}
+      <Route path="/gps-tracker">
+        <GpsTracker />
+      </Route>
+
+      {/* Phase 3: Compliance & DLP */}
+      <Route path="/compliance">
+        <ComplianceDashboard />
       </Route>
 
       <Route>

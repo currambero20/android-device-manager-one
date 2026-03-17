@@ -19,6 +19,7 @@ import { usersRouter } from "./routers/usersRouter";
 import { devicesRouter } from "./routers/devicesRouter";
 import { dashboardRouter } from "./routers/dashboardRouter";
 import { loginProcedure, registerProcedure } from "./routers/localAuthRouter";
+import { complianceRouter } from "./routers/complianceRouter";
 
 export const appRouter = router({
   /**
@@ -73,6 +74,9 @@ export const appRouter = router({
 
   // Audit Logs
   auditLogs: auditLogsRouter,
+
+  // Compliance & DLP (Phase 3)
+  compliance: complianceRouter,
 
   // User Management
   users: usersRouter,

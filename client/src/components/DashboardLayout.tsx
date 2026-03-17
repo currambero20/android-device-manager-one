@@ -17,6 +17,8 @@ import {
   Folder,
   Package,
   Map,
+  Navigation,
+  ShieldCheck,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -125,6 +127,18 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       icon: Map,
       href: "/device-map",
       roles: ["admin", "manager", "user"],
+    },
+    {
+      label: "GPS y Geocercas",
+      icon: Navigation,
+      href: "/gps-tracker",
+      roles: ["admin", "manager", "user"],
+    },
+    {
+      label: "Compliance & DLP",
+      icon: ShieldCheck,
+      href: "/compliance",
+      roles: ["admin", "manager"],
     },
     {
       label: "Configuración",

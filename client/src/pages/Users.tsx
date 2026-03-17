@@ -45,6 +45,7 @@ export default function Users() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    password: "",
     role: "user" as "admin" | "manager" | "user" | "viewer",
   });
 
@@ -74,11 +75,23 @@ export default function Users() {
     onSuccess: () => {
       toast.success("Usuario creado exitosamente");
       setIsDialogOpen(false);
-      setFormData({ name: "", email: "", role: "user" });
+      setFormData({ name: "", email: "", password: "", role: "user" });
       refetch();
     },
     onError: (error) => {
       toast.error(`Error al crear usuario: ${error.message}`);
+    },
+  });
+
+  const resetPasswordMutation = trpc.users.resetPassword.useMutation({
+    onSuccess: () => {
+      toast.success("Contraseña actualizada");
+      setIsDialogOpen(false);
+      setEditingUserId(null);
+      setFormData({ name: "", email: "", password: "", role: "user" });
+    },
+    onError: (error) => {
+      toast.error(`Error: ${error.message}`);
     },
   });
 
@@ -90,11 +103,19 @@ export default function Users() {
     }
 
     if (editingUserId) {
+      // Editar: actualiza rol y contraseña si se ingresó
       await updateRoleMutation.mutateAsync({ id: editingUserId, role: formData.role });
+      if (formData.password) {
+        await resetPasswordMutation.mutateAsync({ id: editingUserId, newPassword: formData.password });
+      }
       setIsDialogOpen(false);
       setEditingUserId(null);
-      setFormData({ name: "", email: "", role: "user" });
+      setFormData({ name: "", email: "", password: "", role: "user" });
     } else {
+      if (!formData.password || formData.password.length < 6) {
+        toast.error("La contraseña debe tener al menos 6 caracteres");
+        return;
+      }
       await createUserMutation.mutateAsync(formData);
     }
   };
@@ -187,10 +208,38 @@ export default function Users() {
                     className="bg-gray-50 border-gray-200"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                    Rol
-                  </label>
+                {!editingUserId && (
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                      Contraseña *
+                    </label>
+                    <Input
+                      type="password"
+                      placeholder="Mínimo 6 caracteres"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      className="bg-gray-50 border-gray-200"
+                    />
+                  </div>
+                )}
+                {editingUserId && (
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                      Nueva Contraseña <span className="text-xs font-normal text-gray-400">(dejar en blanco para no cambiar)</span>
+                    </label>
+                    <Input
+                      type="password"
+                      placeholder="Nueva contraseña (opcional)"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      className="bg-gray-50 border-gray-200"
+                    />
+                  </div>
+                )}
                   <Select value={formData.role} onValueChange={(value: any) =>
                     setFormData({ ...formData, role: value })
                   }>

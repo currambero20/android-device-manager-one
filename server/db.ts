@@ -64,9 +64,6 @@ export async function upsertUser(user: InsertUser): Promise<any> {
     if (user.role !== undefined) {
       values.role = user.role;
       updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = "admin";
-      updateSet.role = "admin";
     }
 
     if (!values.lastSignedIn) {
@@ -125,9 +122,9 @@ export async function updateUserRole(id: number, role: "admin" | "manager" | "us
   await db.update(users).set({ role }).where(eq(users.id, id));
 }
 
-export async function createUser(user: { name: string; email: string; role: string }): Promise<any> {
+export async function createUser(user: { name: string; email: string; role: string; passwordHash?: string }): Promise<any> {
   const db = await getDb();
-  if (!db) return;
+  if (!db) throw new Error("Database not available");
 
   const openId = `manual:${user.email}`;
   const values: InsertUser = {
@@ -135,12 +132,19 @@ export async function createUser(user: { name: string; email: string; role: stri
     name: user.name,
     email: user.email,
     role: user.role as any,
-    loginMethod: "manual",
+    loginMethod: "local",
+    passwordHash: user.passwordHash ?? null,
     lastSignedIn: new Date(),
   };
 
   await db.insert(users).values(values);
   return await getUserByOpenId(openId);
+}
+
+export async function updateUserPassword(id: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ passwordHash }).where(eq(users.id, id));
 }
 
 /**

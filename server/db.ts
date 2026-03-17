@@ -137,7 +137,14 @@ export async function createUser(user: { name: string; email: string; role: stri
     lastSignedIn: new Date(),
   };
 
-  await db.insert(users).values(values);
+  await db.insert(users).values(values).onDuplicateKeyUpdate({
+    set: {
+      name: values.name,
+      role: values.role,
+      passwordHash: values.passwordHash,
+      lastSignedIn: values.lastSignedIn
+    }
+  });
   return await getUserByOpenId(openId);
 }
 

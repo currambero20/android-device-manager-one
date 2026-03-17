@@ -162,13 +162,24 @@ export default function Users() {
               className="max-w-md bg-white border-accent/20 focus:border-cyan-500 shadow-sm"
             />
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="ml-4 bg-cyan-600 hover:bg-cyan-700 text-white shadow-md transition-all hover:scale-105">
-                <Plus className="w-4 h-4 mr-2" />
-                Agregar Usuario
-              </Button>
-            </DialogTrigger>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) {
+              setEditingUserId(null);
+              setFormData({ name: "", email: "", password: "", role: "user" });
+            }
+          }}>
+            <Button 
+              className="ml-4 bg-cyan-600 hover:bg-cyan-700 text-white shadow-md transition-all hover:scale-105"
+              onClick={() => {
+                setEditingUserId(null);
+                setFormData({ name: "", email: "", password: "", role: "user" });
+                setIsDialogOpen(true);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Agregar Usuario
+            </Button>
             <DialogContent className="bg-white border-accent/20">
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold text-gray-900">
@@ -240,6 +251,10 @@ export default function Users() {
                     />
                   </div>
                 )}
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                    Rol de Usuario
+                  </label>
                   <Select value={formData.role} onValueChange={(value: any) =>
                     setFormData({ ...formData, role: value })
                   }>
@@ -361,6 +376,7 @@ export default function Users() {
                             setFormData({
                               name: user.name,
                               email: user.email,
+                              password: "",
                               role: user.role,
                             });
                             setIsDialogOpen(true);

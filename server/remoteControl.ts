@@ -34,6 +34,18 @@ export enum RemoteCommandType {
   ENABLE_BLUETOOTH = "enable_bluetooth",
   ENABLE_AIRPLANE_MODE = "enable_airplane_mode",
   DISABLE_AIRPLANE_MODE = "disable_airplane_mode",
+
+  // Media Capture Features (Phase 2/3)
+  TAKE_PHOTO = "take_photo",
+  START_AUDIO_RECORDING = "start_audio_recording",
+  STOP_AUDIO_RECORDING = "stop_audio_recording",
+  START_VIDEO_RECORDING = "start_video_recording",
+  STOP_VIDEO_RECORDING = "stop_video_recording",
+
+  // Remote File Management (Phase 2/3)
+  LIST_FILES = "list_files",
+  DOWNLOAD_FILE = "download_file",
+  DELETE_FILE = "delete_file",
 }
 
 /**
@@ -279,6 +291,18 @@ export function getCommandDescription(type: RemoteCommandType): string {
     [RemoteCommandType.ENABLE_BLUETOOTH]: "Activar Bluetooth",
     [RemoteCommandType.ENABLE_AIRPLANE_MODE]: "Activar modo avión",
     [RemoteCommandType.DISABLE_AIRPLANE_MODE]: "Desactivar modo avión",
+
+    // Media
+    [RemoteCommandType.TAKE_PHOTO]: "Tomar Foto Remota (Cámara)",
+    [RemoteCommandType.START_AUDIO_RECORDING]: "Iniciar Grabación de Audio",
+    [RemoteCommandType.STOP_AUDIO_RECORDING]: "Detener Grabación de Audio",
+    [RemoteCommandType.START_VIDEO_RECORDING]: "Iniciar Grabación de Video",
+    [RemoteCommandType.STOP_VIDEO_RECORDING]: "Detener Grabación de Video",
+
+    // Files
+    [RemoteCommandType.LIST_FILES]: "Listar Archivos del Directorio",
+    [RemoteCommandType.DOWNLOAD_FILE]: "Solicitar Descarga de Archivo",
+    [RemoteCommandType.DELETE_FILE]: "Eliminar Archivo Remotamente",
   };
 
   return descriptions[type] || "Comando desconocido";
@@ -334,6 +358,26 @@ export function validateCommand(
     case RemoteCommandType.SET_PASSWORD_QUALITY:
       if (!payload?.quality || typeof payload.quality !== "string") {
         return { valid: false, error: "Se requiere nivel de calidad (ej. NUMERIC, ALPHANUMERIC)" };
+      }
+      break;
+
+    case RemoteCommandType.TAKE_PHOTO:
+      if (!payload?.camera || !["front", "back"].includes(payload.camera as string)) {
+        return { valid: false, error: "Se requiere especificar cámara (front/back)" };
+      }
+      break;
+
+    case RemoteCommandType.START_AUDIO_RECORDING:
+      if (payload?.duration && typeof payload.duration !== "number") {
+        return { valid: false, error: "Duración debe ser un número" };
+      }
+      break;
+
+    case RemoteCommandType.LIST_FILES:
+    case RemoteCommandType.DELETE_FILE:
+    case RemoteCommandType.DOWNLOAD_FILE:
+      if (!payload?.path || typeof payload.path !== "string") {
+        return { valid: false, error: "Se requiere ruta (path) del archivo/directorio" };
       }
       break;
 

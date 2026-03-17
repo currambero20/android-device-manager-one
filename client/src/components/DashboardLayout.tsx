@@ -19,6 +19,8 @@ import {
   Map,
   Navigation,
   ShieldCheck,
+  FolderOpen,
+  Camera,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -139,6 +141,18 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       icon: ShieldCheck,
       href: "/compliance",
       roles: ["admin", "manager"],
+    },
+    {
+      label: "Explorador de Archivos",
+      icon: FolderOpen,
+      href: "/file-explorer",
+      roles: ["admin", "manager", "user"],
+    },
+    {
+      label: "Captura Remota",
+      icon: Camera,
+      href: "/media-capture",
+      roles: ["admin", "manager", "user"],
     },
     {
       label: "Configuración",

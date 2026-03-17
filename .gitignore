@@ -11,6 +11,8 @@ node_modules/
 # Builds
 dist/
 build/
+builds/
+apk-builds/
 .vite/
 
 # Base de datos

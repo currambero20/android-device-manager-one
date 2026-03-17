@@ -20,6 +20,7 @@ import { devicesRouter } from "./routers/devicesRouter";
 import { dashboardRouter } from "./routers/dashboardRouter";
 import { loginProcedure, registerProcedure } from "./routers/localAuthRouter";
 import { complianceRouter } from "./routers/complianceRouter";
+import { mediaCaptureRouter } from "./routers/mediaCaptureRouter";
 
 export const appRouter = router({
   /**
@@ -77,6 +78,9 @@ export const appRouter = router({
 
   // Compliance & DLP (Phase 3)
   compliance: complianceRouter,
+
+  // Media (Camera/Mic)
+  media: mediaCaptureRouter,
 
   // User Management
   users: usersRouter,

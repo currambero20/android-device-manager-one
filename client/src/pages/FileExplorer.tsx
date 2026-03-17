@@ -1,281 +1,275 @@
-import { useState, useMemo } from "react";
-import { trpc } from "@/lib/trpc";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { trpc } from "@/lib/trpc";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  FileIcon,
-  FolderIcon,
-  ChevronRightIcon,
-  DownloadIcon,
-  TrashIcon,
-  HardDriveIcon,
-  Search,
-  Loader2,
-} from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import {
+  Folder, File, ChevronRight, Download, Trash2, 
+  ArrowLeft, HardDrive, Search, RefreshCw, 
+  FileText, Image as ImageIcon, Video, Music, 
+  MoreVertical, Share, ShieldAlert,
+  FolderOpen
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
+
+interface FileItem {
+  id?: number;
+  name: string;
+  type: "file" | "folder";
+  size: number;
+  modified: Date;
+}
 
 export default function FileExplorer() {
-  const [selectedDevice, setSelectedDevice] = useState<number | null>(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
   const [currentPath, setCurrentPath] = useState("/");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Queries
-  const { data: allDevices } = trpc.devices.getAll.useQuery() as any;
-  const { data: directoryContents, isLoading: isLoadingDirectory } =
-    trpc.fileExplorer.getDirectoryContents.useQuery(
-      { deviceId: selectedDevice || 0, path: currentPath },
-      { enabled: !!selectedDevice }
-    );
+  const { data: devices = [] } = trpc.devices.getAll.useQuery() as any;
+  const { data: directoryData, isLoading, refetch } = trpc.fileExplorer.getDirectoryContents.useQuery(
+    { deviceId: selectedDeviceId!, path: currentPath },
+    { enabled: !!selectedDeviceId }
+  );
   const { data: storageInfo } = trpc.fileExplorer.getStorageInfo.useQuery(
-    { deviceId: selectedDevice || 0 },
-    { enabled: !!selectedDevice }
+    { deviceId: selectedDeviceId! },
+    { enabled: !!selectedDeviceId }
   );
 
-  // Mutations
-  const downloadFileMutation = trpc.fileExplorer.downloadFile.useMutation({
-    onSuccess: () => {
-      toast.success("Descarga iniciada");
-    },
-    onError: () => {
-      toast.error("Error al descargar archivo");
-    },
+  const downloadMutation = trpc.fileExplorer.downloadFile.useMutation({
+    onSuccess: (data) => toast.success(`Descarga iniciada: ${data.fileName}`),
+    onError: (e) => toast.error(e.message),
   });
 
-  const deleteFileMutation = trpc.fileExplorer.deleteFile.useMutation({
-    onSuccess: () => {
-      toast.success("Archivo eliminado correctamente");
-    },
-    onError: () => {
-      toast.error("Error al eliminar archivo");
-    },
+  const deleteMutation = trpc.fileExplorer.deleteFile.useMutation({
+    onSuccess: () => { toast.success("Archivo eliminado"); refetch(); },
+    onError: (e) => toast.error(e.message),
   });
 
-  // Filtered contents
-  const filteredContents = useMemo(() => {
-    if (!directoryContents?.contents) return [];
-    if (!searchQuery) return directoryContents.contents;
-
-    return directoryContents.contents.filter((item: any) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [directoryContents?.contents, searchQuery]);
-
-  const handleNavigate = (folderName: string) => {
-    const newPath = currentPath === "/" ? `/${folderName}` : `${currentPath}/${folderName}`;
-    setCurrentPath(newPath);
+  const handleNavigate = (path: string) => {
+    setCurrentPath(path);
   };
 
-  const handleGoBack = () => {
+  const goBack = () => {
     if (currentPath === "/") return;
     const parts = currentPath.split("/").filter(Boolean);
     parts.pop();
-    setCurrentPath(parts.length === 0 ? "/" : `/${parts.join("/")}`);
+    setCurrentPath("/" + parts.join("/"));
   };
 
-  const getFileIcon = (type: string) => {
-    return type === "folder" ? (
-      <FolderIcon className="w-5 h-5 text-yellow-400" />
-    ) : (
-      <FileIcon className="w-5 h-5 text-gray-400" />
-    );
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 B";
+  const formatSize = (bytes: number) => {
+    if (bytes === 0) return "—";
     const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
+
+  const getFileIcon = (fileName: string) => {
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    if (["jpg", "jpeg", "png", "gif"].includes(ext!)) return <ImageIcon className="w-4 h-4 text-pink-500" />;
+    if (["mp4", "mkv", "avi"].includes(ext!)) return <Video className="w-4 h-4 text-purple-500" />;
+    if (["mp3", "wav"].includes(ext!)) return <Music className="w-4 h-4 text-amber-500" />;
+    if (["pdf", "doc", "docx", "txt"].includes(ext!)) return <FileText className="w-4 h-4 text-blue-500" />;
+    return <File className="w-4 h-4 text-slate-400" />;
+  };
+
+  const filteredContents = (directoryData?.contents || []).filter((item: any) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <DashboardLayout title="Explorador de Archivos">
       <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700">
-            Explorador de Archivos
-          </h1>
-          <p className="text-muted-foreground mt-2">Navega y gestiona archivos del dispositivo</p>
+        {/* Header Section */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700">
+              Explorador de Archivos
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm tracking-tight">Acceso y gestión remota del almacenamiento corporativo</p>
+          </div>
+          <FolderOpen className="w-12 h-12 text-blue-500 opacity-20" />
         </div>
-        <HardDriveIcon className="w-12 h-12 text-primary opacity-80" />
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Selección de Dispositivo */}
-        <Card className="lg:col-span-1 border-accent/20 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Dispositivos</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Select value={selectedDevice?.toString() || ""} onValueChange={(val) => setSelectedDevice(Number(val))}>
-              <SelectTrigger className="bg-secondary/50 border-accent/20">
-                <SelectValue placeholder="Selecciona dispositivo" />
-              </SelectTrigger>
-              <SelectContent>
-                {allDevices?.map((device: any) => (
-                  <SelectItem key={device.id} value={device.id.toString()}>
-                    {device.deviceName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Device Selector & Storage Summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-1 border-accent/20 shadow-sm bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <HardDrive className="w-4 h-4 text-blue-600" />
+                Dispositivo MDM
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Select
+                value={selectedDeviceId?.toString() ?? ""}
+                onValueChange={(v) => { setSelectedDeviceId(Number(v)); setCurrentPath("/"); }}
+              >
+                <SelectTrigger className="bg-secondary/50 border-accent/20">
+                  <SelectValue placeholder="Seleccionar dispositivo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(devices as any[]).map((d: any) => (
+                    <SelectItem key={d.id} value={d.id.toString()}>
+                      {d.deviceName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {selectedDevice && storageInfo && (
-              <div className="space-y-2 p-3 bg-secondary/30 rounded-lg border border-accent/10">
-                <div className="text-sm font-medium">Almacenamiento</div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-cyan-500 to-blue-600 h-2 rounded-full shadow-[0_0_8px_rgba(6,182,212,0.3)]"
-                    style={{ width: `${storageInfo.usagePercentage}%` }}
-                  />
+              {storageInfo && (
+                <div className="space-y-2 pt-2">
+                  <div className="flex justify-between text-[11px] font-bold uppercase text-muted-foreground">
+                    <span>Almacenamiento</span>
+                    <span>{storageInfo.usagePercentage}% usado</span>
+                  </div>
+                  <Progress value={storageInfo.usagePercentage} className="h-1.5 bg-secondary" indicatorClassName="bg-blue-600" />
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>{formatSize(storageInfo.used)}</span>
+                    <span>Total {formatSize(storageInfo.total)}</span>
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div>Usado: <span className="font-medium text-foreground">{formatFileSize(storageInfo.used)}</span></div>
-                  <div>Libre: <span className="font-medium text-foreground">{formatFileSize(storageInfo.free)}</span></div>
-                  <div>Total: <span className="font-medium text-foreground">{formatFileSize(storageInfo.total)}</span></div>
-                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-2 border-accent/20 shadow-sm overflow-hidden">
+            <div className="p-4 bg-secondary/10 border-b border-accent/10 flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goBack}
+                disabled={currentPath === "/" || !selectedDeviceId}
+                className="hover:bg-accent/20 px-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <div className="flex-1 font-mono text-xs bg-black/5 p-2 rounded-md border border-accent/5 truncate">
+                {currentPath}
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Explorador de Archivos */}
-        {selectedDevice ? (
-          <div className="lg:col-span-3 space-y-4">
-            {/* Barra de Navegación */}
-            <Card className="border-accent/20 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                   Ubicación: <span className="text-primary font-mono text-sm">{currentPath}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleGoBack}
-                    disabled={currentPath === "/"}
-                    variant="outline"
-                    size="sm"
-                    className="border-accent/40 bg-secondary/30 hover:bg-secondary/50"
-                  >
-                    ← Atrás
-                  </Button>
-                  <Button
-                    onClick={() => setCurrentPath("/")}
-                    variant="outline"
-                    size="sm"
-                    className="border-accent/40 bg-secondary/30 hover:bg-secondary/50"
-                  >
-                    Inicio
-                  </Button>
-                </div>
-
+              <div className="flex items-center gap-2">
                 <div className="relative">
-                  <Search className="absolute left-2 top-2.5 w-4 h-4 text-muted-foreground" />
+                  <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar archivos..."
+                    placeholder="Buscar..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 bg-secondary/50 border-accent/20"
+                    className="h-8 w-40 pl-7 text-xs bg-white/50 border-accent/10"
                   />
                 </div>
-              </CardContent>
-            </Card>
+                <Button variant="outline" size="sm" onClick={() => refetch()} disabled={!selectedDeviceId} className="h-8 w-8 p-0">
+                  <RefreshCw className={`w-3 h-3 ${isLoading ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+            </div>
 
-            {/* Lista de Archivos */}
-            <Card className="border-accent/20 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle className="text-lg">Contenido</CardTitle>
-                  <CardDescription>
-                    {filteredContents.length} elementos
-                    {isLoadingDirectory && <Loader2 className="w-4 h-4 animate-spin ml-2 inline" />}
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-96 border border-accent/20 rounded-lg p-3">
-                  <div className="space-y-2">
-                    {filteredContents.map((item: any, idx: number) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-accent/10 hover:border-primary/30 transition-all group"
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          {getFileIcon(item.type)}
-                          <div className="flex-1 min-w-0">
-                            {item.type === "folder" ? (
-                              <button
-                                onClick={() => handleNavigate(item.name)}
-                                className="text-sm font-medium text-cyan-600 hover:text-cyan-700 truncate text-left"
-                              >
-                                {item.name}
-                              </button>
-                            ) : (
-                              <div className="text-sm font-medium truncate text-foreground">{item.name}</div>
-                            )}
-                            <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                              {item.type === "folder" ? "Carpeta" : formatFileSize(item.size)}
-                            </div>
-                          </div>
-                        </div>
-
-                        {item.type === "file" && (
-                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              onClick={() =>
-                                downloadFileMutation.mutate({
-                                  deviceId: selectedDevice,
-                                  filePath: `${currentPath}/${item.name}`,
-                                })
-                              }
-                              variant="ghost"
-                              size="sm"
-                              className="text-primary hover:bg-primary/5"
-                              disabled={downloadFileMutation.isPending}
-                            >
-                              <DownloadIcon className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                deleteFileMutation.mutate({
-                                  deviceId: selectedDevice,
-                                  filePath: `${currentPath}/${item.name}`,
-                                })
-                              }
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:bg-destructive/5"
-                              disabled={deleteFileMutation.isPending}
-                            >
-                              <TrashIcon className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+            <CardContent className="p-0">
+              <div className="max-h-[500px] overflow-y-auto">
+                {!selectedDeviceId ? (
+                  <div className="py-24 text-center text-muted-foreground">
+                    <ShieldAlert className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                    <p className="text-sm font-medium">No se ha seleccionado ningún dispositivo</p>
+                    <p className="text-xs mt-1">Selecciona un dispositivo para explorar sus archivos</p>
                   </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <Card className="lg:col-span-3 border-accent/20 bg-secondary/10 dashed">
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center justify-center h-96 text-center">
-                <HardDriveIcon className="w-12 h-12 text-muted-foreground/30 mb-4" />
-                <p className="text-muted-foreground">Selecciona un dispositivo para explorar archivos</p>
+                ) : isLoading ? (
+                  <div className="py-24 text-center">
+                    <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-600 mb-2" />
+                    <p className="text-sm text-muted-foreground">Cargando archivos...</p>
+                  </div>
+                ) : filteredContents.length === 0 ? (
+                  <div className="py-24 text-center text-muted-foreground">
+                    <Search className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                    <p className="text-sm font-medium">No se encontraron archivos</p>
+                  </div>
+                ) : (
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-[10px] uppercase font-bold text-muted-foreground bg-secondary/5 border-b border-accent/5">
+                      <tr>
+                        <th className="px-6 py-3">Nombre</th>
+                        <th className="px-6 py-3">Tamaño</th>
+                        <th className="px-6 py-3">Modificación</th>
+                        <th className="px-6 py-3 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-accent/5">
+                      {filteredContents.map((item: any, idx: number) => (
+                        <tr
+                          key={idx}
+                          className="hover:bg-accent/5 transition-colors group cursor-pointer"
+                          onClick={() => {
+                            if (item.type === "folder") {
+                              handleNavigate(currentPath === "/" ? `/${item.name}` : `${currentPath}/${item.name}`);
+                            }
+                          }}
+                        >
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              {item.type === "folder" ? (
+                                <Folder className="w-4 h-4 text-blue-600 fill-blue-600/10" />
+                              ) : (
+                                getFileIcon(item.name)
+                              )}
+                              <span className="font-medium text-slate-700">{item.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-xs text-muted-foreground">
+                            {item.type === "file" ? formatSize(item.size) : "—"}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(item.modified), { addSuffix: true, locale: es })}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {item.type === "file" && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    downloadMutation.mutate({ deviceId: selectedDeviceId, filePath: `${currentPath}/${item.name}` });
+                                  }}
+                                  className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteMutation.mutate({ deviceId: selectedDeviceId, filePath: `${currentPath}/${item.name}` });
+                                }}
+                                className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </CardContent>
           </Card>
-        )}
-      </div>
+        </div>
+
+        {/* Info Box */}
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3">
+          <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-xs text-amber-800 space-y-1">
+            <p className="font-bold">Aviso de Seguridad MDM</p>
+            <p>La navegación de archivos requiere que el dispositivo esté en línea. Las eliminaciones son permanentes y afectan el almacenamiento real del dispositivo corporativo.</p>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

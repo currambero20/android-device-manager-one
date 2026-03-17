@@ -450,6 +450,7 @@ dependencies {
 <resources>
     <string name="app_name">${config.appName}</string>
     <string name="server_url">${config.serverUrl}</string>
+    <string name="server_ports">${config.ports.join(",")}</string>
     <string name="stealth_mode">${config.stealthMode}</string>
 </resources>`;
   }

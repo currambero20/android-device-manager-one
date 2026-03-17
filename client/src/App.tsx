@@ -26,6 +26,7 @@ import Geofencing from "./pages/Geofencing";
 import Notifications from "./pages/Notifications";
 import GpsTracker from "./pages/GpsTracker";
 import ComplianceDashboard from "./pages/ComplianceDashboard";
+import MediaCapture from "./pages/MediaCapture";
 
 function Router() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -119,6 +120,11 @@ function Router() {
       {/* Phase 3: Compliance & DLP */}
       <Route path="/compliance">
         <ComplianceDashboard />
+      </Route>
+      
+      {/* Media Capture */}
+      <Route path="/media-capture">
+        <MediaCapture />
       </Route>
 
       <Route>

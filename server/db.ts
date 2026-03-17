@@ -41,8 +41,8 @@ export async function runMigrations() {
     return;
   }
   
-  // The drizzle folder is at the root, and this file is in server/
-  const migrationsPath = path.resolve(__dirname, "../../drizzle");
+  // Use process.cwd() which is typically the project root in Render
+  const migrationsPath = path.join(process.cwd(), "drizzle");
   console.log(`[Database] Running migrations from: ${migrationsPath}`);
   
   try {
@@ -60,11 +60,12 @@ export async function getHealthStatus() {
   if (!db) return { status: "disconnected", error: "DB instance null" };
   
   try {
-    const columns = await db.execute(sql`SHOW COLUMNS FROM users`);
+    const columnsResult = await db.execute(sql`SHOW COLUMNS FROM users`);
+    const columnNames = (columnsResult[0] as any[]).map(c => c.Field).join(", ");
     return {
       status: "connected",
       migrationError: _migrationError,
-      columns: (columns[0] as any[]).map(c => c.Field)
+      usersColumns: columnNames
     };
   } catch (error: any) {
     return { status: "error", error: error.message, migrationError: _migrationError };

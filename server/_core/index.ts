@@ -66,7 +66,7 @@ async function startServer() {
   app.get("/", async (req, res) => {
     const dbStatus = await (await import("../db")).getHealthStatus();
     res.json({ 
-      message: "Backend is running (V3.4 - Diagnostics)",
+      message: "Backend is running (V3.5 - Root Path Fix)",
       database: dbStatus 
     });
   });

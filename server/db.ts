@@ -52,11 +52,12 @@ export async function runMigrations() {
       await db.execute(sql.raw(repair.sql));
       _migrationLog.push(`SUCCESS: ${repair.name}`);
     } catch (error: any) {
-      const msg = error.message.toLowerCase();
+      const msg = error.message ? error.message.toLowerCase() : "";
       if (msg.includes("duplicate column") || msg.includes("already exists")) {
         _migrationLog.push(`EXISTS: ${repair.name}`);
       } else {
-        _migrationLog.push(`FAILED: ${repair.name} (${error.message})`);
+        const fullErr = error.cause ? String(error.cause) : JSON.stringify(error, Object.getOwnPropertyNames(error));
+        _migrationLog.push(`FAILED: ${repair.name} (${error.message}) -> ${fullErr}`);
       }
     }
   }
@@ -77,9 +78,11 @@ export async function getHealthStatus() {
       migrationLog: _migrationLog,
     };
   } catch (error: any) {
+    const fullErr = error.cause ? String(error.cause) : JSON.stringify(error, Object.getOwnPropertyNames(error));
     return { 
       status: "error", 
-      error: error.message, 
+      error: error.message,
+      fullErrorDetails: fullErr,
       migrationLog: _migrationLog 
     };
   }

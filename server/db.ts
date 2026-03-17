@@ -1,8 +1,6 @@
 import { eq, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { migrate } from "drizzle-orm/mysql2/migrator";
-import path from "path";
-import { fileURLToPath } from "url";
+import mysql from "mysql2/promise";
 import {
   InsertUser,
   users,
@@ -13,20 +11,22 @@ import {
   auditLogs,
   InsertAuditLog,
 } from "../drizzle/schema";
-import { ENV } from "./_core/env";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+let _pool: mysql.Pool | null = null;
 let _db: ReturnType<typeof drizzle> | null = null;
-let _migrationError: string | null = null;
+let _migrationLog: string[] = [];
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
+      _pool = mysql.createPool({
+        uri: process.env.DATABASE_URL,
+        connectionLimit: 10,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0,
+      });
+      _db = drizzle(_pool);
+    } catch (error: any) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
     }
@@ -37,65 +37,60 @@ export async function getDb() {
 export async function runMigrations() {
   const db = await getDb();
   if (!db) {
-    _migrationError = "Database not available";
+    _migrationLog.push("Database not available for migrations");
     return;
   }
   
-  console.log("[Database] Checking for required columns in 'users'...");
-  try {
-    // 1. Check existing columns
-    const [rows] = await db.execute(sql`
-      SELECT COLUMN_NAME 
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_NAME = 'users' AND TABLE_SCHEMA = DATABASE()
-    `);
-    
-    const existingColumns = (rows as any[]).map(r => r.COLUMN_NAME.toLowerCase());
-    const requiredColumns = [
-      { name: "passwordHash", sql: "ALTER TABLE `users` ADD COLUMN `passwordHash` varchar(255)" },
-      { name: "twoFactorEnabled", sql: "ALTER TABLE `users` ADD COLUMN `twoFactorEnabled` boolean DEFAULT false NOT NULL" },
-      { name: "twoFactorSecret", sql: "ALTER TABLE `users` ADD COLUMN `twoFactorSecret` varchar(255)" },
-      { name: "isActive", sql: "ALTER TABLE `users` ADD COLUMN `isActive` boolean DEFAULT true NOT NULL" }
-    ];
+  const repairs = [
+    { name: "passwordHash", sql: "ALTER TABLE `users` ADD COLUMN `passwordHash` varchar(255)" },
+    { name: "twoFactorEnabled", sql: "ALTER TABLE `users` ADD COLUMN `twoFactorEnabled` boolean DEFAULT false NOT NULL" },
+    { name: "twoFactorSecret", sql: "ALTER TABLE `users` ADD COLUMN `twoFactorSecret` varchar(255)" },
+    { name: "isActive", sql: "ALTER TABLE `users` ADD COLUMN `isActive` boolean DEFAULT true NOT NULL" },
+    { name: "role_enum", sql: "ALTER TABLE `users` MODIFY COLUMN `role` enum('admin','manager','user','viewer') NOT NULL DEFAULT 'viewer'" }
+  ];
 
-    for (const col of requiredColumns) {
-      if (!existingColumns.includes(col.name.toLowerCase())) {
-        console.log(`[Database] Adding missing column: ${col.name}`);
-        await db.execute(sql.raw(col.sql));
+  _migrationLog = [];
+  console.log("[Database] Starting manual schema repair...");
+  
+  for (const repair of repairs) {
+    try {
+      await db.execute(sql.raw(repair.sql));
+      _migrationLog.push(`SUCCESS: Added/Modified ${repair.name}`);
+      console.log(`[Database] Repair SUCCESS: ${repair.name}`);
+    } catch (error: any) {
+      if (error.message.includes("Duplicate column name") || error.message.includes("already exists")) {
+        _migrationLog.push(`SKIPPED: ${repair.name} (Already exists)`);
+      } else {
+        _migrationLog.push(`FAILED: ${repair.name} - ${error.message}`);
+        console.error(`[Database] Repair FAILED: ${repair.name}`, error.message);
       }
     }
-    
-    console.log("[Database] Schema check/repair completed");
-    _migrationError = null;
-  } catch (error: any) {
-    _migrationError = `Repair failed: ${error.message}`;
-    console.error("[Database] Schema repair failed:", error);
   }
 }
 
 export async function getHealthStatus() {
   const db = await getDb();
-  if (!db) return { status: "disconnected", error: "DB instance null" };
+  if (!db) return { status: "disconnected", error: "No DB instance" };
   
   try {
-    // Simple query to verify connection
     await db.execute(sql`SELECT 1`);
     
-    // Get column names for diagnostics
-    const [rows] = await db.execute(sql`
-      SELECT COLUMN_NAME 
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_NAME = 'users' AND TABLE_SCHEMA = DATABASE()
-    `);
-    const columnNames = (rows as any[]).map(r => r.COLUMN_NAME).join(", ");
-    
+    // Try to get actual version for debug
+    const [versionRes] = await db.execute(sql`SELECT VERSION() as v`);
+    const version = (versionRes as any[])[0]?.v || "unknown";
+
     return {
       status: "connected",
-      migrationError: _migrationError,
-      usersColumns: columnNames
+      mysqlVersion: version,
+      migrationLog: _migrationLog,
     };
   } catch (error: any) {
-    return { status: "error", error: error.message, migrationError: _migrationError };
+    return { 
+      status: "error", 
+      error: error.message, 
+      migrationLog: _migrationLog,
+      dbUrlPresence: !!process.env.DATABASE_URL
+    };
   }
 }
 

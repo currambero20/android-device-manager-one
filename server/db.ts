@@ -41,17 +41,35 @@ export async function runMigrations() {
     return;
   }
   
-  // Use process.cwd() which is typically the project root in Render
-  const migrationsPath = path.join(process.cwd(), "drizzle");
-  console.log(`[Database] Running migrations from: ${migrationsPath}`);
-  
+  console.log("[Database] Checking for required columns in 'users'...");
   try {
-    await migrate(db, { migrationsFolder: migrationsPath });
-    console.log("[Database] Migrations completed successfully");
+    // 1. Check existing columns
+    const [rows] = await db.execute(sql`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_NAME = 'users' AND TABLE_SCHEMA = DATABASE()
+    `);
+    
+    const existingColumns = (rows as any[]).map(r => r.COLUMN_NAME.toLowerCase());
+    const requiredColumns = [
+      { name: "passwordHash", sql: "ALTER TABLE `users` ADD COLUMN `passwordHash` varchar(255)" },
+      { name: "twoFactorEnabled", sql: "ALTER TABLE `users` ADD COLUMN `twoFactorEnabled` boolean DEFAULT false NOT NULL" },
+      { name: "twoFactorSecret", sql: "ALTER TABLE `users` ADD COLUMN `twoFactorSecret` varchar(255)" },
+      { name: "isActive", sql: "ALTER TABLE `users` ADD COLUMN `isActive` boolean DEFAULT true NOT NULL" }
+    ];
+
+    for (const col of requiredColumns) {
+      if (!existingColumns.includes(col.name.toLowerCase())) {
+        console.log(`[Database] Adding missing column: ${col.name}`);
+        await db.execute(sql.raw(col.sql));
+      }
+    }
+    
+    console.log("[Database] Schema check/repair completed");
     _migrationError = null;
   } catch (error: any) {
-    _migrationError = error.message || "Unknown migration error";
-    console.error("[Database] Migrations failed:", error);
+    _migrationError = `Repair failed: ${error.message}`;
+    console.error("[Database] Schema repair failed:", error);
   }
 }
 
@@ -60,8 +78,17 @@ export async function getHealthStatus() {
   if (!db) return { status: "disconnected", error: "DB instance null" };
   
   try {
-    const columnsResult = await db.execute(sql`SHOW COLUMNS FROM users`);
-    const columnNames = (columnsResult[0] as any[]).map(c => c.Field).join(", ");
+    // Simple query to verify connection
+    await db.execute(sql`SELECT 1`);
+    
+    // Get column names for diagnostics
+    const [rows] = await db.execute(sql`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_NAME = 'users' AND TABLE_SCHEMA = DATABASE()
+    `);
+    const columnNames = (rows as any[]).map(r => r.COLUMN_NAME).join(", ");
+    
     return {
       status: "connected",
       migrationError: _migrationError,

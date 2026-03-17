@@ -60,7 +60,7 @@ async function startServer() {
 
   // Health check
   app.get("/", (req, res) => {
-    res.json({ message: "Backend is running" });
+    res.json({ message: "Backend is running (V3.2 - Forced Redeploy)" });
   });
 
   const port = process.env.PORT || 3000;

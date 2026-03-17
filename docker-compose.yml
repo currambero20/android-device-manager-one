@@ -5,7 +5,7 @@ services:
     build:
       context: .
       args:
-        - VITE_API_URL=/api
+        - VITE_API_URL=/api/trpc
         - VITE_WEBSOCKET_URL=ws://localhost/ws
     ports:
       - "80:80"
@@ -38,7 +38,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "3307:3306"
 
 volumes:
   mysql_data:

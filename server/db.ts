@@ -20,9 +20,14 @@ export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
       // PlanetScale requires explicit SSL configuration when using createPool
+      // But local Docker/localhost development often doesn't have SSL configured
+      const isLocal = process.env.DATABASE_URL.includes("localhost") || 
+                      process.env.DATABASE_URL.includes("127.0.0.1") ||
+                      process.env.DATABASE_URL.includes("@mysql:"); // Docker service name
+
       _pool = mysql.createPool({
         uri: process.env.DATABASE_URL,
-        ssl: {
+        ssl: isLocal ? undefined : {
           rejectUnauthorized: true
         },
         connectionLimit: 10,
@@ -112,41 +117,29 @@ export async function upsertUser(user: InsertUser): Promise<any> {
   try {
     const values: InsertUser = {
       openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
+      name: user.name ?? null,
+      email: user.email ?? null,
+      loginMethod: user.loginMethod ?? "local",
+      role: user.role ?? "user",
+      twoFactorEnabled: user.twoFactorEnabled ?? false,
+      twoFactorSecret: user.twoFactorSecret ?? null,
+      passwordHash: user.passwordHash ?? null,
+      isActive: user.isActive ?? true,
+      lastSignedIn: user.lastSignedIn ?? new Date(),
     };
 
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
+    console.log("[DB] DEBUG: upsertUser values keys:", Object.keys(values));
+    console.log("[DB] DEBUG: upsertUser values openId:", values.openId);
 
     await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
+      set: {
+        name: values.name,
+        email: values.email,
+        role: values.role,
+        passwordHash: values.passwordHash,
+        lastSignedIn: values.lastSignedIn,
+        isActive: values.isActive,
+      },
     });
 
     return await getUserByOpenId(user.openId);
@@ -205,6 +198,9 @@ export async function createUser(user: { name: string; email: string; role: stri
     role: user.role as any,
     loginMethod: "local",
     passwordHash: user.passwordHash ?? null,
+    twoFactorEnabled: false,
+    twoFactorSecret: null,
+    isActive: true,
     lastSignedIn: new Date(),
   };
 
@@ -213,7 +209,8 @@ export async function createUser(user: { name: string; email: string; role: stri
       name: values.name,
       role: values.role,
       passwordHash: values.passwordHash,
-      lastSignedIn: values.lastSignedIn
+      lastSignedIn: values.lastSignedIn,
+      isActive: values.isActive,
     }
   });
   return await getUserByOpenId(openId);

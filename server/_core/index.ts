@@ -59,6 +59,9 @@ async function startServer() {
     createExpressMiddleware({
       router: appRouter,
       createContext,
+      onError: ({ path, error }) => {
+        console.error(`[tRPC Error] Path: ${path}`, error);
+      },
     })
   );
 
@@ -66,14 +69,15 @@ async function startServer() {
   app.get("/", async (req, res) => {
     const dbStatus = await (await import("../db")).getHealthStatus();
     res.json({ 
-      message: "Backend is running (V3.10 - SSL Enforced)",
+      message: "Backend is running (V3.11 - SSL Conditional Fix)",
       database: dbStatus 
     });
   });
 
   const port = process.env.PORT || 3000;
   server.listen(port, "0.0.0.0", () => {
-    console.log(`Server running on port ${port}`);
+    console.log(`[Server] Backend V3.11 started on port ${port}`);
+    console.log(`[Server] Database URL: ${process.env.DATABASE_URL?.substring(0, 15)}...`);
   });
 }
 

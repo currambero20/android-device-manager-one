@@ -1,6 +1,6 @@
 import { eq, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2";
+import mysql from "mysql2/promise";
 import {
   InsertUser,
   users,
@@ -19,7 +19,16 @@ let _migrationLog: string[] = [];
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _pool = mysql.createPool(process.env.DATABASE_URL);
+      // PlanetScale requires explicit SSL configuration when using createPool
+      _pool = mysql.createPool({
+        uri: process.env.DATABASE_URL,
+        ssl: {
+          rejectUnauthorized: true
+        },
+        connectionLimit: 10,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0,
+      });
       _db = drizzle(_pool);
     } catch (error: any) {
       console.warn("[Database] Failed to connect:", error);
@@ -81,9 +90,10 @@ export async function getHealthStatus() {
     const fullErr = error.cause ? String(error.cause) : JSON.stringify(error, Object.getOwnPropertyNames(error));
     return { 
       status: "error", 
-      error: error.message,
+      error: String(error.message),
       fullErrorDetails: fullErr,
-      migrationLog: _migrationLog 
+      migrationLog: _migrationLog,
+      dbUriPrefix: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 15) + "..." : "none"
     };
   }
 }

@@ -200,11 +200,18 @@ export default function Permissions() {
   );
 }
 
-function UserPermissionCard({ user, allPermissions, assignMutation, revokeMutation }) {
+interface UserPermissionCardProps {
+  user: any;
+  allPermissions: any[];
+  assignMutation: any;
+  revokeMutation: any;
+}
+
+function UserPermissionCard({ user, allPermissions, assignMutation, revokeMutation }: UserPermissionCardProps) {
   const { data: userPerms = [], isLoading } = trpc.permissions.getUserPermissions.useQuery({ userId: user.id });
   const userPermCodes = userPerms.map(p => p.code);
 
-  const toggle = (code) => {
+  const toggle = (code: string) => {
     if (userPermCodes.includes(code)) {
       revokeMutation.mutate({ userId: user.id, permission: code });
     } else {

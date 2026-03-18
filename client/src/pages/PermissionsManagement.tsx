@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -128,7 +127,7 @@ export default function PermissionsManagement() {
       updatePermissionMatrixMutation.mutate({
         userId: selectedUser,
         deviceId,
-        permissions: Array.from(newPerms),
+        permissions: Array.from(newPerms) as any,
       });
     },
     [selectedUser, permissionMatrix, updatePermissionMatrixMutation]
@@ -218,7 +217,7 @@ export default function PermissionsManagement() {
                     </CardHeader>
                     <CardContent className="flex flex-wrap gap-2 pt-0">
                       <Button
-                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "admin" })}
+                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "admin" as any })}
                         variant="outline"
                         size="sm"
                         className="border-destructive/30 hover:bg-destructive/10 text-destructive text-xs font-bold"
@@ -227,7 +226,7 @@ export default function PermissionsManagement() {
                         Administrador (Full)
                       </Button>
                       <Button
-                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "manager" })}
+                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "manager" as any })}
                         variant="outline"
                         size="sm"
                         className="border-amber-500/30 hover:bg-amber-500/10 text-amber-600 text-xs font-bold"
@@ -236,7 +235,7 @@ export default function PermissionsManagement() {
                         Gestor (Manager)
                       </Button>
                       <Button
-                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "user" })}
+                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "user" as any })}
                         variant="outline"
                         size="sm"
                         className="border-primary/30 hover:bg-primary/10 text-primary text-xs font-bold"
@@ -245,7 +244,7 @@ export default function PermissionsManagement() {
                         Usuario Estándar
                       </Button>
                       <Button
-                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "viewer" })}
+                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "viewer" as any })}
                         variant="outline"
                         size="sm"
                         className="border-muted-foreground/30 hover:bg-secondary text-muted-foreground text-xs font-bold"
@@ -300,12 +299,12 @@ export default function PermissionsManagement() {
                                       if (checked) {
                                         assignPermissionMutation.mutate({
                                           userId: selectedUser,
-                                          permission: perm.code,
+                                          permission: perm.code as any,
                                         });
                                       } else {
                                         revokePermissionMutation.mutate({
                                           userId: selectedUser,
-                                          permission: perm.code,
+                                          permission: perm.code as any,
                                         });
                                       }
                                     }}

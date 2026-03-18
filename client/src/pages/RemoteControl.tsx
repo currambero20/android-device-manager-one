@@ -188,7 +188,7 @@ export default function RemoteControl() {
                             cmd.status === "success" ? "bg-green-500/20 text-green-400" : 
                             cmd.status === "failure" ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"
                           }`}>
-                            {cmd.status === "pending" ? "Pendiente" : cmd.status === "success" ? "Ejecutado" : "Fallido"}
+                            {(cmd.status as any) === "pending" ? "Pendiente" : (cmd.status as any) === "success" ? "Ejecutado" : "Fallido"}
                           </span>
                         </div>
                       ))

@@ -109,10 +109,10 @@ export default function Users() {
   const handleCreateOrUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingUserId) {
-      updateRoleMutation.mutate({ id: editingUserId, role: formData.role });
+      updateRoleMutation.mutate({ id: editingUserId, role: formData.role as any });
       setIsDialogOpen(false);
     } else {
-      createUserMutation.mutate(formData);
+      createUserMutation.mutate(formData as any);
     }
   };
 

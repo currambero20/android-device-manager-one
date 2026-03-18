@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -32,7 +31,7 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
         window.location.reload();
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "Error al iniciar sesión");
       setLoading(false);
     },
@@ -43,7 +42,7 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
       toast.success("¡Verificación exitosa!");
       window.location.reload();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "Código incorrecto o expirado");
       setLoading(false);
     },
@@ -54,7 +53,7 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
       setStep("reset-sent");
       setLoading(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "Error al enviar el correo");
       setLoading(false);
     },

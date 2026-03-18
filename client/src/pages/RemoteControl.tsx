@@ -44,7 +44,7 @@ export default function RemoteControl() {
     },
   });
 
-  const selectedDevice = devices.find(d => d.id === selectedDeviceId);
+  const selectedDevice = devices.find((d: any) => d.id === selectedDeviceId);
 
   const commandTypes = [
     { value: "screenshot", label: "📸 Captura de Pantalla", dangerous: false },
@@ -103,7 +103,7 @@ export default function RemoteControl() {
           <div className="p-2 max-h-[600px] overflow-y-auto space-y-2">
             {isLoadingDevices && <p className="text-center text-xs py-4">Cargando unidades...</p>}
             {!isLoadingDevices && devices.length === 0 && <p className="text-center text-xs py-4 text-muted-foreground">No hay dispositivos vinculados</p>}
-            {devices.map((device) => (
+            {devices.map((device: any) => (
               <button
                 key={device.id}
                 onClick={() => setSelectedDeviceId(device.id)}

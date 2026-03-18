@@ -30,84 +30,77 @@ import { trpc } from "@/lib/trpc";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
-// Datos de ejemplo para los gráficos
-const locationTrendData = [
-  { time: "00:00", devices: 2 },
-  { time: "04:00", devices: 3 },
-  { time: "08:00", devices: 5 },
-  { time: "12:00", devices: 8 },
-  { time: "16:00", devices: 6 },
-  { time: "20:00", devices: 4 },
-  { time: "23:59", devices: 3 },
-];
-
-const deviceStatusData = [
-  { name: "En Línea", value: 8, color: "#06b6d4" },
-  { name: "Desconectado", value: 5, color: "#94a3b8" },
-  { name: "Inactivo", value: 2, color: "#f59e0b" },
-];
-
-const activityData = [
-  { date: "Lun", ingresos: 12, acciones: 45 },
-  { date: "Mar", ingresos: 15, acciones: 52 },
-  { date: "Mie", ingresos: 10, acciones: 38 },
-  { date: "Jue", ingresos: 18, acciones: 61 },
-  { date: "Vie", ingresos: 20, acciones: 72 },
-  { date: "Sab", ingresos: 8, acciones: 28 },
-  { date: "Dom", ingresos: 5, acciones: 15 },
-];
-
-const permissionData = [
-  { name: "REGISTRO_GPS", value: 15 },
-  { name: "MENSAJES_SMS", value: 12 },
-  { name: "LLAMADAS", value: 10 },
-  { name: "ARCHIVOS", value: 8 },
-  { name: "PORTAPAPELES", value: 7 },
-  { name: "PANTALLA", value: 5 },
-];
-
 export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
+  const utils = trpc.useUtils();
 
-  // In real implementation these would be used
-  const { data: overview } = trpc.dashboard.getOverview.useQuery();
-  const { data: metrics } = trpc.dashboard.getMetrics.useQuery();
+  // Real data fetching
+  const { data: overview, isLoading: loadingOverview } = trpc.dashboard.getOverview.useQuery(undefined, {
+    refetchInterval: 30000, 
+  });
+  const { data: metrics = [], isLoading: loadingMetrics } = trpc.dashboard.getMetrics.useQuery(undefined, {
+    refetchInterval: 60000,
+  });
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    await Promise.all([
+      utils.dashboard.getOverview.invalidate(),
+      utils.dashboard.getMetrics.invalidate(),
+    ]);
+    setRefreshing(false);
+    toast.success("Datos sincronizados");
   };
+
+  const chartScale = Math.max(...metrics.map(d => d.activeDevices || 0), 10);
 
   const stats = [
     {
       label: "Dispositivos Totales",
-      value: "15",
+      value: overview?.totalDevices?.toString() || "0",
       icon: Smartphone,
       color: "text-cyan-600",
-      trend: "+2 esta semana",
+      trend: `${overview?.activeDevices || 0} activos ahora`,
     },
     {
-      label: "Usuarios Activos",
-      value: "8",
+      label: "Usuarios en Sistema",
+      value: overview?.totalUsers?.toString() || overview?.totalDevices?.toString() || "0",
       icon: Users,
       color: "text-violet-600",
-      trend: "+1 hoy",
+      trend: "Registrados",
     },
     {
-      label: "Actividad del Sistema",
-      value: "342",
+      label: "Comandos Ejecutados",
+      value: overview?.totalCommands?.toString() || "0",
       icon: Activity,
       color: "text-cyan-600",
-      trend: "+45 hoy",
+      trend: "Total histórico",
     },
     {
       label: "Tasa de Éxito",
-      value: "98.5%",
+      value: overview?.successRate ? `${overview.successRate.toFixed(1)}%` : "0%",
       icon: TrendingUp,
       color: "text-violet-600",
-      trend: "+0.3% esta semana",
+      trend: "Estabilidad global",
     },
   ];
+
+  const deviceStatusData = [
+    { name: "En Línea", value: overview?.deviceStatus?.online || 0, color: "#06b6d4" },
+    { name: "Desconectado", value: overview?.deviceStatus?.offline || 0, color: "#94a3b8" },
+    { name: "Inactivo", value: overview?.deviceStatus?.inactive || 0, color: "#f59e0b" },
+  ];
+
+  const activityData = metrics.map(m => ({
+    date: m.date,
+    ingresos: m.activeDevices,
+    acciones: m.totalCommands,
+  }));
+
+  const locationTrendData = metrics.map(m => ({
+    time: m.date,
+    devices: m.activeDevices,
+  }));
 
   return (
     <DashboardLayout title="Panel de Control">
@@ -274,22 +267,11 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Top Permissions */}
           <div className="bg-white p-6 rounded-2xl border border-accent/20 shadow-sm lg:col-span-2">
-            <h3 className="text-lg font-bold mb-6 text-slate-800">Permisos más Utilizados</h3>
-            <div className="space-y-4">
-              {permissionData.map((perm, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-600">{perm.name}</span>
-                    <span className="text-slate-400 font-bold">{perm.value} usos</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-cyan-500 to-blue-600"
-                      style={{ width: `${(perm.value / 15) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
+            <h3 className="text-lg font-bold mb-6 text-slate-800">Uso del Sistema</h3>
+            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+              <Activity className="w-12 h-12 mb-4 opacity-20" />
+              <p>Esperando telemetría de dispositivos...</p>
+              <p className="text-xs">Los datos aparecerán aquí automáticamente al detectar actividad real.</p>
             </div>
           </div>
 

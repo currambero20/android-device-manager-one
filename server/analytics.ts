@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import { auditLogs, devices, locationHistory } from "../drizzle/schema";
+import { auditLogs, devices, locationHistory, users } from "../drizzle/schema";
 import { eq, gte, lte, count, sql } from "drizzle-orm";
 
 /**
@@ -201,7 +201,7 @@ export async function getBatteryStats(): Promise<BatteryStats[]> {
   try {
     const allDevices = await db.select().from(devices);
 
-    return allDevices.map((device) => ({
+    return allDevices.map((device: any) => ({
       deviceId: device.id,
       deviceName: device.deviceName,
       currentBattery: device.batteryLevel || 0,
@@ -235,7 +235,7 @@ export async function getDeviceStatusStats(): Promise<DeviceStatusStats> {
       total: allDevices.length,
     };
 
-    allDevices.forEach((device) => {
+    allDevices.forEach((device: any) => {
       if (device.status === "online") stats.online++;
       else if (device.status === "offline") stats.offline++;
       else if (device.status === "inactive") stats.inactive++;
@@ -266,6 +266,7 @@ export async function getSystemStats() {
 
   try {
     const deviceCount = await db.select({ count: count() }).from(devices);
+    const userCount = await db.select({ count: count() }).from(users);
     const commandStats = await db
       .select({
         total: count(),
@@ -274,7 +275,7 @@ export async function getSystemStats() {
       .from(auditLogs);
 
     const allDevices = await db.select().from(devices);
-    const activeDevices = allDevices.filter((d) => d.status === "online").length;
+    const activeDevices = allDevices.filter((d: any) => d.status === "online").length;
 
     const stats = commandStats[0] || { total: 0, successful: 0 };
     const totalCommands = Number(stats.total) || 0;
@@ -282,6 +283,7 @@ export async function getSystemStats() {
 
     return {
       totalDevices: deviceCount[0]?.count || 0,
+      totalUsers: userCount[0]?.count || 0,
       totalCommands,
       successRate: totalCommands > 0 ? (successfulCommands / totalCommands) * 100 : 0,
       activeDevices,

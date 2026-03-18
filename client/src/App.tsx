@@ -12,6 +12,7 @@ import Devices from "./pages/Devices";
 import Users from "./pages/Users";
 import Permissions from "./pages/Permissions";
 import ApkBuilder from "./pages/ApkBuilder";
+import Profile from "./pages/Profile";
 import AuditLogs from "./pages/AuditLogs";
 import Settings from "./pages/Settings";
 import DeviceMap from "./pages/DeviceMap";
@@ -80,6 +81,9 @@ function Router() {
       </Route>
       <Route path="/settings">
         <Settings />
+      </Route>
+      <Route path="/profile">
+        <Profile />
       </Route>
       <Route path="/device-map">
         <DeviceMap />

@@ -143,12 +143,6 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       roles: ["admin", "manager"],
     },
     {
-      label: "Explorador de Archivos",
-      icon: FolderOpen,
-      href: "/file-explorer",
-      roles: ["admin", "manager", "user"],
-    },
-    {
       label: "Captura Remota",
       icon: Camera,
       href: "/media-capture",
@@ -158,6 +152,12 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       label: "Configuración",
       icon: Settings,
       href: "/settings",
+      roles: ["admin", "manager", "user", "viewer"],
+    },
+    {
+      label: "Mi Perfil",
+      icon: Users,
+      href: "/profile",
       roles: ["admin", "manager", "user", "viewer"],
     },
   ];

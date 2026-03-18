@@ -7,13 +7,23 @@ import {
   permissions,
   userPermissions,
   devices,
+  devicePermissions,
   locationHistory,
+  smsLogs,
+  callLogs,
+  contacts,
+  installedApps,
+  clipboardLogs,
+  notificationLogs,
+  mediaFiles,
   auditLogs,
+  geofences,
+  geofenceEvents,
   InsertAuditLog,
 } from "../drizzle/schema";
 
 let _pool: mysql.Pool | null = null;
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: any = null;
 let _migrationLog: string[] = [];
 
 export async function getDb() {
@@ -34,7 +44,7 @@ export async function getDb() {
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
       });
-      _db = drizzle(_pool);
+      _db = drizzle(_pool) as any;
     } catch (error: any) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -147,10 +157,51 @@ export async function getAllUsers() {
   return await db.select().from(users).orderBy(desc(users.lastSignedIn));
 }
 
+/**
+ * Delete a user and all their related data (manual cascading).
+ */
 export async function deleteUser(id: number) {
   const db = await getDb();
   if (!db) return;
+
+  // Manual cascading deletes (to avoid foreign key constraints errors)
+  await db.delete(userPermissions).where(eq(userPermissions.userId, id));
+  await db.delete(devicePermissions).where(eq(devicePermissions.userId, id));
+  // Delete audit logs for this user to clean up simulation/old data
+  await db.delete(auditLogs).where(eq(auditLogs.userId, id));
+
+  // Also handle devices owned by this user
+  const userDevices = await db.select().from(devices).where(eq(devices.ownerId, id));
+  for (const device of userDevices) {
+    await deleteDevice(device.id);
+  }
+
   await db.delete(users).where(eq(users.id, id));
+}
+
+/**
+ * Delete a device and all its related monitoring data (manual cascading).
+ */
+export async function deleteDevice(id: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  // Delete all device-related monitoring data
+  await db.delete(locationHistory).where(eq(locationHistory.deviceId, id));
+  await db.delete(smsLogs).where(eq(smsLogs.deviceId, id));
+  await db.delete(callLogs).where(eq(callLogs.deviceId, id));
+  await db.delete(contacts).where(eq(contacts.deviceId, id));
+  await db.delete(installedApps).where(eq(installedApps.deviceId, id));
+  await db.delete(clipboardLogs).where(eq(clipboardLogs.deviceId, id));
+  await db.delete(notificationLogs).where(eq(notificationLogs.deviceId, id));
+  await db.delete(mediaFiles).where(eq(mediaFiles.deviceId, id));
+  await db.delete(devicePermissions).where(eq(devicePermissions.deviceId, id));
+  await db.delete(geofences).where(eq(geofences.deviceId, id));
+  await db.delete(geofenceEvents).where(eq(geofenceEvents.deviceId, id));
+  await db.delete(auditLogs).where(eq(auditLogs.deviceId, id));
+
+  // Finally delete the device itself
+  await db.delete(devices).where(eq(devices.id, id));
 }
 
 export async function updateUserRole(id: number, role: "admin" | "manager" | "user" | "viewer") {
@@ -242,6 +293,36 @@ export async function getAllDevices() {
   return await db.select().from(devices);
 }
 
+export async function registerDevice(device: { 
+  deviceId: string; 
+  deviceName: string; 
+  manufacturer?: string; 
+  model?: string; 
+  androidVersion?: string; 
+  ownerId: number 
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const values = {
+    deviceId: device.deviceId,
+    deviceName: device.deviceName,
+    manufacturer: device.manufacturer ?? null,
+    model: device.model ?? null,
+    androidVersion: device.androidVersion ?? null,
+    ownerId: device.ownerId,
+    status: "inactive" as const,
+    lastSeen: new Date(),
+  };
+
+  await db.insert(devices).values(values as any).onDuplicateKeyUpdate({
+    set: {
+      deviceName: values.deviceName,
+      lastSeen: values.lastSeen,
+    }
+  });
+}
+
 /**
  * Location history queries
  */
@@ -263,7 +344,7 @@ export async function getLatestLocationByDeviceId(deviceId: number) {
 export async function createAuditLog(log: InsertAuditLog) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(auditLogs).values(log);
+  await db.insert(auditLogs).values(log as any);
 }
 
 export async function getAuditLogsByUserId(userId: number, limit: number = 50) {

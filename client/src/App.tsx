@@ -1,4 +1,4 @@
-// v3.14 - Real Control & Modular Menu 2026-03-18
+// v3.15.1 - Security & Stability 2026-03-18
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -148,7 +148,7 @@ function App() {
           <Router />
           {/* Version Indicator */}
           <div className="fixed bottom-2 right-2 text-[10px] text-gray-400 opacity-50 z-50 pointer-events-none">
-            v3.14 - Control Real
+            v3.15.1 - Security & Stability
           </div>
         </TooltipProvider>
       </ThemeProvider>

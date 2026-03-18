@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,22 +24,25 @@ import {
   Check,
 } from "lucide-react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Settings() {
+  const { user, refresh } = useAuth();
   const [copied, setCopied] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [settings, setSettings] = useState({
     // General
     appName: "Android Device Manager",
-    appUrl: "https://adm.example.com",
+    appUrl: "https://repodeploy.vercel.app",
     
     // Security
-    enableTwoFactor: true,
+    enableTwoFactor: false,
     sessionTimeout: 30,
     maxLoginAttempts: 5,
     forceHttps: true,
     enableApiKey: true,
-    apiKey: "sk_live_51234567890abcdef",
+    apiKey: "sk_live_v3_15_adm_default_key",
     
     // Notifications
     emailNotifications: true,
@@ -59,20 +61,45 @@ export default function Settings() {
     compactMode: false,
   });
 
+  // Sync with real user 2FA state
+  useEffect(() => {
+    if (user) {
+      setSettings(prev => ({
+        ...prev,
+        enableTwoFactor: !!(user as any).twoFactorEnabled
+      }));
+    }
+  }, [user]);
+
+  const toggle2FAMutation = trpc.auth.toggleTwoFactor.useMutation({
+    onSuccess: () => {
+      toast.success("Seguridad actualizada correctamente");
+      refresh();
+    },
+    onError: (error) => {
+      toast.error("Error al actualizar seguridad: " + error.message);
+    }
+  });
+
   const handleCopyApiKey = () => {
     navigator.clipboard.writeText(settings.apiKey);
     setCopied(true);
-    toast.success("API Key copied to clipboard");
+    toast.success("API Key copiada al portapapeles");
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSaveSettings = () => {
-    toast.success("Settings saved successfully");
+    // Save 2FA to backend if changed
+    if (user && !!(user as any).twoFactorEnabled !== settings.enableTwoFactor) {
+      toggle2FAMutation.mutate({ enabled: settings.enableTwoFactor });
+    } else {
+      toast.success("Configuración guardada localmente");
+    }
   };
 
   const handleResetSettings = () => {
-    if (confirm("Are you sure you want to reset all settings to defaults?")) {
-      toast.success("Settings reset to defaults");
+    if (confirm("¿Estás seguro de que deseas restablecer todos los ajustes?")) {
+      toast.success("Ajustes restablecidos");
     }
   };
 
@@ -87,30 +114,30 @@ export default function Settings() {
             </TabsTrigger>
             <TabsTrigger value="security" className="data-[state=active]:bg-accent/20 text-xs">
               <Lock className="w-4 h-4 mr-1" />
-              Security
+              Seguridad
             </TabsTrigger>
             <TabsTrigger value="notifications" className="data-[state=active]:bg-accent/20 text-xs">
               <Bell className="w-4 h-4 mr-1" />
-              Notifications
+              Notificaciones
             </TabsTrigger>
             <TabsTrigger value="database" className="data-[state=active]:bg-accent/20 text-xs">
               <Database className="w-4 h-4 mr-1" />
-              Database
+              Base de Datos
             </TabsTrigger>
             <TabsTrigger value="appearance" className="data-[state=active]:bg-accent/20 text-xs">
               <Palette className="w-4 h-4 mr-1" />
-              Appearance
+              Apariencia
             </TabsTrigger>
           </TabsList>
 
           {/* General Settings */}
           <TabsContent value="general" className="space-y-6">
             <div className="card-neon">
-              <h3 className="text-lg font-bold mb-4 glow-cyan">Application Settings</h3>
+              <h3 className="text-lg font-bold mb-4 glow-cyan">Ajustes de Aplicación</h3>
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium glow-cyan mb-2 block">
-                    Application Name
+                    Nombre de la Aplicación
                   </label>
                   <Input
                     value={settings.appName}
@@ -122,7 +149,7 @@ export default function Settings() {
                 </div>
                 <div>
                   <label className="text-sm font-medium glow-cyan mb-2 block">
-                    Application URL
+                    URL de la Aplicación
                   </label>
                   <Input
                     value={settings.appUrl}
@@ -136,23 +163,23 @@ export default function Settings() {
             </div>
 
             <div className="card-neon-cyan">
-              <h3 className="text-lg font-bold mb-4 glow-cyan">System Information</h3>
+              <h3 className="text-lg font-bold mb-4 glow-cyan">Información del Sistema</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
-                  <span className="text-muted-foreground">Version:</span>
-                  <span className="font-bold">1.0.0</span>
+                  <span className="text-muted-foreground">Versión:</span>
+                  <span className="font-bold text-cyan-400">v3.15.1</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
-                  <span className="text-muted-foreground">Build:</span>
-                  <span className="font-mono text-xs">build-20250122</span>
+                  <span className="text-muted-foreground">Estado:</span>
+                  <span className="text-green-400 font-bold">Estable</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
-                  <span className="text-muted-foreground">Environment:</span>
-                  <span className="font-bold">Production</span>
+                  <span className="text-muted-foreground">Entorno:</span>
+                  <span className="font-bold">Producción</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
-                  <span className="text-muted-foreground">Last Updated:</span>
-                  <span className="font-mono text-xs">2025-01-22 18:30:00</span>
+                  <span className="text-muted-foreground">Última Actualización:</span>
+                  <span className="font-mono text-xs">2024-03-18 (Security Update)</span>
                 </div>
               </div>
             </div>
@@ -163,13 +190,13 @@ export default function Settings() {
             <div className="card-neon">
               <h3 className="text-lg font-bold mb-4 glow-cyan flex items-center gap-2">
                 <Shield className="w-5 h-5" />
-                Security Options
+                Opciones de Seguridad
               </h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-accent/10 rounded">
                   <div>
-                    <p className="font-medium">Two-Factor Authentication</p>
-                    <p className="text-sm text-muted-foreground">Require 2FA for all users</p>
+                    <p className="font-medium">Autenticación de Dos Factores (2FA)</p>
+                    <p className="text-sm text-muted-foreground">Requerir código OTP vía Email (Gmail Service)</p>
                   </div>
                   <Switch
                     checked={settings.enableTwoFactor}

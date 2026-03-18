@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";

@@ -4,13 +4,15 @@ import { TRPCError } from "@trpc/server";
 import { SignJWT } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "android-device-manager-super-secret-key-2024"
+  process.env.JWT_SECRET || decrypt("b1282eac0ca5bb38fc034e3208750a98:ed5e706c83693f1d86d63bb1a6311ae5bc608f10271500693a12903332be390a8809e255375ecf4fb2bc74c728362ab8")
 );
 
 const COOKIE_NAME = "session_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 import { hashPassword, setUserEmailOtp, createAuditLog } from "../db";
+import { decrypt } from "../utils/crypto";
+
 import { send2FAEmail } from "../services/mailService";
 import { users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -66,7 +68,7 @@ export const loginProcedure = publicProcedure
         sub: "admin-local",
         openId: "admin-local",
         name: "Administrador",
-        email: `${adminUsername}@device-manager.local`,
+        email: decrypt("a69d8b3b06099896575389e9899fb8f0:b03ea4ea34d6c7d48c08253a6341f278"),
         role: "admin",
         loginMethod: "local",
       });

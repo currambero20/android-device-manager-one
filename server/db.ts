@@ -1,4 +1,5 @@
-import { eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, sql } from "drizzle-orm";
+import { decrypt } from "./utils/crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { createHash } from "crypto";
@@ -30,7 +31,7 @@ import { MySql2Database } from "drizzle-orm/mysql2";
  * Uses SHA-256 with a salt for basic security.
  */
 export function hashPassword(password: string): string {
-  const salt = "salt-adm-2024";
+  const salt = decrypt("5f5ca22693e9eea44c06f125368a49c2:a08f205aad63aa31a7c88b9a117df7df");
   return createHash("sha256").update(password + salt).digest("hex");
 }
 

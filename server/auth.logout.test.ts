@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { appRouter } from "./routers";
+import { TRPCError } from "@trpc/server";
+import { decrypt } from "./utils/crypto";
+import { appRouter, type AppRouter } from "./routers";
 import { COOKIE_NAME } from "../shared/const";
 import type { TrpcContext } from "./_core/context";
 
@@ -16,7 +18,7 @@ function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] }
   const user: AuthenticatedUser = {
     id: 1,
     openId: "sample-user",
-    email: "sample@example.com",
+    email: decrypt("a69d8b3b06099896575389e9899fb8f0:b03ea4ea34d6c7d48c08253a6341f278"),
     name: "Sample User",
     loginMethod: "manus",
     role: "user",

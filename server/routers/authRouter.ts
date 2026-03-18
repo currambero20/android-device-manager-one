@@ -8,16 +8,18 @@ import {
   updateUserPassword,
   getDb,
   clearUserEmailOtp,
-  createAuditLog
+  createAuditLog,
+  getAuditLogsByUserId
 } from "../db";
+import { decrypt } from "../utils/crypto";
+
 import { sendResetEmail } from "../services/mailService";
 import { users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { SignJWT } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "android-device-manager-super-secret-key-2024"
-);
+const jwtSecret = process.env.JWT_SECRET || decrypt("b1282eac0ca5bb38fc034e3208750a98:ed5e706c83693f1d86d63bb1a6311ae5bc608f10271500693a12903332be390a8809e255375ecf4fb2bc74c728362ab8");
+const JWT_SECRET = new TextEncoder().encode(jwtSecret);
 
 async function createSessionToken(payload: Record<string, unknown>): Promise<string> {
   return new SignJWT(payload)

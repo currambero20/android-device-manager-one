@@ -138,7 +138,7 @@ export default function RemoteControl() {
             <div className="p-6">
               {!selectedDeviceId ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  < स्मार्टफोन className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                  <Smartphone className="w-12 h-12 mx-auto mb-4 opacity-20" />
                   <p>Selecciona un dispositivo para interactuar</p>
                 </div>
               ) : (

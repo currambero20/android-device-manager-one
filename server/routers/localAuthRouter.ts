@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { SignJWT } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || decrypt("b1282eac0ca5bb38fc034e3208750a98:ed5e706c83693f1d86d63bb1a6311ae5bc608f10271500693a12903332be390a8809e255375ecf4fb2bc74c728362ab8")
+  process.env.JWT_SECRET || decrypt("a345140a87265e1f34435dd818bb1eb9:95abbf14390a72f798e7fe4b4be192cb8d4323e613058f0644cb50bd8e64b154427d20aa692372293fbc4fb495efe884")
 );
 
 const COOKIE_NAME = "session_token";
@@ -59,8 +59,8 @@ export const loginProcedure = publicProcedure
     })
   )
   .mutation(async ({ input, ctx }) => {
-    const adminUsername = process.env.ADMIN_USERNAME || "admin";
-    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+    const adminUsername = process.env.ADMIN_USERNAME || "Dylan2017";
+    const adminPassword = process.env.ADMIN_PASSWORD || "Barranquilla2017";
 
     // ✅ STEP 1: Always check env-var admin credentials first (works without any DB)
     if (input.username === adminUsername && input.password === adminPassword) {
@@ -68,7 +68,7 @@ export const loginProcedure = publicProcedure
         sub: "admin-local",
         openId: "admin-local",
         name: "Administrador",
-        email: decrypt("a69d8b3b06099896575389e9899fb8f0:b03ea4ea34d6c7d48c08253a6341f278"),
+        email: decrypt("428455f9eec64b3d0f0f00e59583cf92:0cb8969aa8e03995287d2bd2095cdcc7b320b420be55e647a21164ea905eccd9"),
         role: "admin",
         loginMethod: "local",
       });
@@ -187,7 +187,7 @@ export const registerProcedure = publicProcedure
     })
   )
   .mutation(async ({ input }) => {
-    const expectedAdminKey = process.env.ADMIN_REGISTRATION_KEY || "adm-register-2024";
+    const expectedAdminKey = process.env.ADMIN_REGISTRATION_KEY || decrypt("86dc05a50c63e7d3c244fc152f36f2e7:97cdedc074882d90ea4da414b1cfa485cb2e90232c760287a0b27db824acb0b7");
 
     if (input.adminKey !== expectedAdminKey) {
       throw new TRPCError({

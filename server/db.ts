@@ -31,7 +31,7 @@ import { MySql2Database } from "drizzle-orm/mysql2";
  * Uses SHA-256 with a salt for basic security.
  */
 export function hashPassword(password: string): string {
-  const salt = decrypt("5f5ca22693e9eea44c06f125368a49c2:a08f205aad63aa31a7c88b9a117df7df");
+  const salt = decrypt("0f54de789b0083c0e7bfcc12b3ad593c:879ee2fd7bcf12b8f537c51c5d07d050");
   return createHash("sha256").update(password + salt).digest("hex");
 }
 

@@ -18,7 +18,7 @@ import { users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { SignJWT } from "jose";
 
-const jwtSecret = process.env.JWT_SECRET || decrypt("b1282eac0ca5bb38fc034e3208750a98:ed5e706c83693f1d86d63bb1a6311ae5bc608f10271500693a12903332be390a8809e255375ecf4fb2bc74c728362ab8");
+const jwtSecret = process.env.JWT_SECRET || decrypt("a345140a87265e1f34435dd818bb1eb9:95abbf14390a72f798e7fe4b4be192cb8d4323e613058f0644cb50bd8e64b154427d20aa692372293fbc4fb495efe884");
 const JWT_SECRET = new TextEncoder().encode(jwtSecret);
 
 async function createSessionToken(payload: Record<string, unknown>): Promise<string> {

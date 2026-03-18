@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Users as UsersIcon,
@@ -34,10 +32,11 @@ import {
   Shield,
   Mail,
   Calendar,
-  Key,
   Eye,
   EyeOff,
   RefreshCw,
+  Layout,
+  Check,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -46,481 +45,199 @@ import { formatDistanceToNow } from "date-fns";
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPermsDialogOpen, setIsPermsDialogOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [managingUserId, setManagingUserId] = useState<number | null>(null);
+  
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    role: "user" as "admin" | "manager" | "user" | "viewer",
+    role: "user",
   });
   const [showPassword, setShowPassword] = useState(false);
 
-  const generatePassword = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let pwd = "";
-    for (let i = 0; i < 12; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setFormData(prev => ({ ...prev, password: pwd }));
-    setShowPassword(true);
-    toast.info(`Contraseña generada: ${pwd}`, { duration: 5000 });
-  };
-
   const { data: users = [], isLoading, refetch } = trpc.users.getAll.useQuery();
+  const { data: allPermissions = [] } = trpc.permissions.getAllPermissions.useQuery();
+  const { data: userPerms = [], refetch: refetchUserPerms } = trpc.permissions.getUserPermissions.useQuery(
+    { userId: managingUserId || 0 },
+    { enabled: !!managingUserId }
+  );
+
+  const syncPermsMutation = trpc.permissions.syncUserPermissions.useMutation({
+    onSuccess: () => {
+      toast.success("Permisos actualizados correctamente");
+      refetchUserPerms();
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   const updateRoleMutation = trpc.users.updateRole.useMutation({
-    onSuccess: () => {
-      toast.success("User role updated successfully");
-      refetch();
-    },
-    onError: (error) => {
-      toast.error(`Failed to update role: ${error.message}`);
-    },
+    onSuccess: () => { toast.success("Rol actualizado"); refetch(); },
+    onError: (err) => toast.error(err.message),
   });
 
   const deleteUserMutation = trpc.users.delete.useMutation({
-    onSuccess: () => {
-      toast.success("User deleted successfully");
-      refetch();
-    },
-    onError: (error) => {
-      toast.error(`Failed to delete user: ${error.message}`);
-    },
+    onSuccess: () => { toast.success("Usuario eliminado"); refetch(); },
+    onError: (err) => toast.error(err.message),
   });
 
   const createUserMutation = trpc.users.create.useMutation({
     onSuccess: () => {
-      toast.success("Usuario creado exitosamente");
+      toast.success("Usuario creado");
       setIsDialogOpen(false);
-      setFormData({ name: "", email: "", password: "", role: "user" });
       refetch();
     },
-    onError: (error) => {
-      toast.error(`Error al crear usuario: ${error.message}`);
-    },
+    onError: (err) => toast.error(err.message),
   });
 
-  const resetPasswordMutation = trpc.users.resetPassword.useMutation({
-    onSuccess: () => {
-      toast.success("Contraseña actualizada");
-      setIsDialogOpen(false);
-      setEditingUserId(null);
-      setFormData({ name: "", email: "", password: "", role: "user" });
-    },
-    onError: (error) => {
-      toast.error(`Error: ${error.message}`);
-    },
-  });
-
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.email) {
-      toast.error("Nombre y Email son requeridos");
-      return;
-    }
-
-    if (editingUserId) {
-      // Editar: actualiza rol y contraseña si se ingresó
-      await updateRoleMutation.mutateAsync({ id: editingUserId, role: formData.role });
-      if (formData.password) {
-        await resetPasswordMutation.mutateAsync({ id: editingUserId, newPassword: formData.password });
-      }
-      setIsDialogOpen(false);
-      setEditingUserId(null);
-      setFormData({ name: "", email: "", password: "", role: "user" });
-    } else {
-      if (!formData.password || formData.password.length < 6) {
-        toast.error("La contraseña debe tener al menos 6 caracteres");
-        return;
-      }
-      // Construir el objeto explícitamente para evitar que campos undefined causen errores en Zod
-      await createUserMutation.mutateAsync({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-      });
-    }
+  const togglePermission = (permCode: string) => {
+    if (!managingUserId) return;
+    const currentCodes = userPerms.map(p => p.code);
+    const newCodes = currentCodes.includes(permCode)
+      ? currentCodes.filter(c => c !== permCode)
+      : [...currentCodes, permCode];
+    
+    syncPermsMutation.mutate({ userId: managingUserId, permissions: newCodes });
   };
 
-  const handleUpdateRole = async (userId: number, role: any) => {
-    await updateRoleMutation.mutateAsync({ id: userId, role });
-  };
-
-  const handleDeleteUser = async (userId: number) => {
-    if (confirm("Are you sure you want to delete this user?")) {
-      await deleteUserMutation.mutateAsync({ id: userId });
-    }
-  };
-
-  const filteredUsers: any[] = users.filter(
-    (user: any) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "border-purple-200 text-purple-700 bg-purple-50";
-      case "manager":
-        return "border-cyan-200 text-cyan-700 bg-cyan-50";
-      case "user":
-        return "border-blue-200 text-blue-700 bg-blue-50";
-      default:
-        return "border-gray-200 text-gray-700 bg-gray-50";
+  const handleCreateOrUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingUserId) {
+      updateRoleMutation.mutate({ id: editingUserId, role: formData.role });
+      setIsDialogOpen(false);
+    } else {
+      createUserMutation.mutate(formData);
     }
   };
 
   return (
-    <DashboardLayout title="User Management V3.3">
+    <DashboardLayout title="Gestión de Usuarios V3.14">
       <div className="space-y-6">
-        {/* Header with Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <Input
-              placeholder="Buscar usuarios por nombre o email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md bg-white border-accent/20 focus:border-cyan-500 shadow-sm"
-            />
-          </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) {
-              setEditingUserId(null);
-              setFormData({ name: "", email: "", password: "", role: "user" });
-            }
-          }}>
-            <Button 
-              className="ml-4 bg-cyan-600 hover:bg-cyan-700 text-white shadow-md transition-all hover:scale-105"
-              onClick={() => {
-                setEditingUserId(null);
-                setFormData({ name: "", email: "", password: "", role: "user" });
-                setIsDialogOpen(true);
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Agregar Usuario
-            </Button>
-            <DialogContent className="bg-white border-accent/20">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-gray-900">
-                  {editingUserId ? "Editar Usuario" : "Crear Nuevo Usuario"}
-                </DialogTitle>
-                <DialogDescription className="text-muted-foreground">
-                  {editingUserId
-                    ? "Actualiza la información y permisos del usuario"
-                    : "Añade un nuevo usuario al sistema"}
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleCreateUser} className="space-y-4">
-                <div>
-                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                    Nombre Completo
-                  </label>
-                  <Input
-                    placeholder="ej. Juan Pérez"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="bg-gray-50 border-gray-200"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                    Email
-                  </label>
-                  <Input
-                    type="email"
-                    placeholder="ej. juan@ejemplo.com"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="bg-gray-50 border-gray-200"
-                  />
-                </div>
-                {!editingUserId && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-semibold text-gray-700">
-                        Contraseña *
-                      </label>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-7 text-cyan-600 hover:bg-cyan-50"
-                        onClick={generatePassword}
-                      >
-                        <RefreshCw className="w-3 h-3 mr-1" />
-                        Generar
-                      </Button>
-                    </div>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Mínimo 6 caracteres"
-                        value={formData.password}
-                        onChange={(e) =>
-                          setFormData({ ...formData, password: e.target.value })
-                        }
-                        className="bg-gray-50 border-gray-200 pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {editingUserId && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-semibold text-gray-700">
-                        Nueva Contraseña <span className="text-xs font-normal text-gray-400">(dejar en blanco para no cambiar)</span>
-                      </label>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-7 text-cyan-600 hover:bg-cyan-50"
-                        onClick={generatePassword}
-                      >
-                        <RefreshCw className="w-3 h-3 mr-1" />
-                        Generar
-                      </Button>
-                    </div>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Nueva contraseña (opcional)"
-                        value={formData.password}
-                        onChange={(e) =>
-                          setFormData({ ...formData, password: e.target.value })
-                        }
-                        className="bg-gray-50 border-gray-200 pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                <div>
-                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                    Rol de Usuario
-                  </label>
-                  <Select value={formData.role} onValueChange={(value: any) =>
-                    setFormData({ ...formData, role: value })
-                  }>
-                    <SelectTrigger className="bg-gray-50 border-gray-200">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-gray-200">
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="viewer">Viewer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-cyan-600 hover:bg-cyan-700 text-white"
-                >
-                  {editingUserId ? "Actualizar Usuario" : "Crear Usuario"}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+        <div className="flex items-center justify-between gap-4">
+          <Input 
+            placeholder="Buscar por nombre o email..." 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md bg-white/50 border-cyan-500/20"
+          />
+          <Button onClick={() => setIsDialogOpen(true)} className="bg-cyan-600 hover:bg-cyan-700">
+            <Plus className="w-4 h-4 mr-2" /> Nuevo Usuario
+          </Button>
         </div>
 
-        {/* Users Table */}
         <div className="bg-white rounded-xl border border-accent/20 overflow-hidden shadow-sm">
-          {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">
-              Cargando usuarios...
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="p-8 text-center">
-              <UsersIcon className="w-12 h-12 text-cyan-200 mx-auto mb-4" />
-              <p className="text-muted-foreground">No se encontraron usuarios</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Haz clic en "Agregar Usuario" para crear una nueva cuenta
-              </p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-accent/10 hover:bg-transparent">
-                  <TableHead className="font-semibold text-gray-900">Nombre</TableHead>
-                  <TableHead className="font-semibold text-gray-900">Email</TableHead>
-                  <TableHead className="font-semibold text-gray-900">Rol</TableHead>
-                  <TableHead className="font-semibold text-gray-900">Estado</TableHead>
-                  <TableHead className="font-semibold text-gray-900">Último Acceso</TableHead>
-                  <TableHead className="font-semibold text-gray-900 text-right">Acciones</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50/50">
+                <TableHead>Usuario</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Rol</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                  <TableCell>
+                    <span className="px-2 py-1 rounded-full text-[10px] font-bold border uppercase bg-accent/10">
+                      {user.role}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                       <div className={`w-2 h-2 rounded-full ${user.isActive ? "bg-green-500" : "bg-gray-300"}`} />
+                       <span className="text-xs">{user.isActive ? "Online" : "Offline"}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button variant="ghost" size="sm" onClick={() => { setManagingUserId(user.id); setIsPermsDialogOpen(true); }}>
+                      <Layout className="w-4 h-4 text-purple-600" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => { setEditingUserId(user.id); setFormData({ ...user }); setIsDialogOpen(true); }}>
+                      <Edit className="w-4 h-4 text-cyan-600" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => deleteUserMutation.mutate({ id: user.id })} className="text-red-500">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user: any) => (
-                  <TableRow
-                    key={user.id}
-                    className="border-accent/10 hover:bg-accent/5 transition-colors"
-                  >
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-xs font-bold text-white shadow-sm">
-                          {user.name.charAt(0).toUpperCase()}
-                        </div>
-                        {user.name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4" />
-                        {user.email}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        defaultValue={user.role}
-                        onValueChange={(val) => handleUpdateRole(user.id, val)}
-                        disabled={updateRoleMutation.isPending}
-                      >
-                        <SelectTrigger className={`w-[120px] h-8 text-[10px] font-bold border rounded-full px-3 uppercase tracking-wider ${getRoleBadgeColor(user.role)}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border-accent/20">
-                          <SelectItem value="admin">ADMIN</SelectItem>
-                          <SelectItem value="manager">MANAGER</SelectItem>
-                          <SelectItem value="user">USER</SelectItem>
-                          <SelectItem value="viewer">VIEWER</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            user.isActive ? "bg-green-500 animate-pulse" : "bg-gray-300"
-                          }`}
-                        ></div>
-                        <span className="text-xs font-medium text-gray-600">
-                          {user.isActive ? "Activo" : "Inactivo"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        {user.lastSignedIn
-                          ? formatDistanceToNow(new Date(user.lastSignedIn), {
-                              addSuffix: true,
-                            })
-                          : "Never"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="hover:bg-cyan-50 text-cyan-600"
-                          onClick={() => {
-                            setEditingUserId(user.id);
-                            setFormData({
-                              name: user.name,
-                              email: user.email,
-                              password: "",
-                              role: user.role,
-                            });
-                            setIsDialogOpen(true);
-                          }}
-                          title="Editar Usuario"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="hover:text-destructive"
-                          onClick={() => handleDeleteUser(user.id)}
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+              ))}
+            </TableBody>
+          </Table>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-accent/20 shadow-sm transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Usuarios</p>
-                <p className="text-3xl font-extrabold text-gray-900 mt-1">{users.length}</p>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-cyan-50 flex items-center justify-center">
-                <UsersIcon className="w-6 h-6 text-cyan-600" />
-              </div>
+        {/* Dialogo de Usuario */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingUserId ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleCreateOrUpdate} className="space-y-4">
+              <Input placeholder="Nombre" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              <Input placeholder="Email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} type="email" />
+              {!editingUserId && <Input placeholder="Contraseña" type="password" onChange={e => setFormData({...formData, password: e.target.value})} />}
+              <Select value={formData.role} onValueChange={v => setFormData({...formData, role: v})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button type="submit" className="w-full bg-cyan-600">Guardar</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialogo de Permisos (HERRAMIENTAS) */}
+        <Dialog open={isPermsDialogOpen} onOpenChange={setIsPermsDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-purple-500" />
+                Herramientas Permitidas para {users.find(u => u.id === managingUserId)?.name}
+              </DialogTitle>
+              <DialogDescription>
+                Selecciona qué módulos y herramientas podrá visualizar este usuario en su menú lateral.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto p-2">
+              {allPermissions.filter(p => p.code.startsWith("MENU_") || p.category === "security").map((perm) => {
+                const isGranted = userPerms.some(up => up.code === perm.code);
+                return (
+                  <button
+                    key={perm.code}
+                    onClick={() => togglePermission(perm.code)}
+                    disabled={syncPermsMutation.isPending}
+                    className={`flex items-center justify-between p-3 rounded-lg border text-left transition-all ${
+                      isGranted 
+                        ? "border-purple-500 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.2)]" 
+                        : "border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    <div>
+                      <p className="text-xs font-bold truncate">{perm.code.replace("MENU_", "").replace("_", " ")}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">{perm.description}</p>
+                    </div>
+                    {isGranted && <Check className="w-4 h-4 text-purple-500" />}
+                  </button>
+                );
+              })}
             </div>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border border-accent/20 shadow-sm transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Admins</p>
-                <p className="text-3xl font-extrabold text-gray-900 mt-1">
-                  {users.filter((u: any) => u.role === "admin").length}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center">
-                <Shield className="w-6 h-6 text-purple-600" />
-              </div>
+            <div className="pt-4 flex justify-end">
+              <Button onClick={() => setIsPermsDialogOpen(false)} variant="outline">Cerrar</Button>
             </div>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border border-accent/20 shadow-sm transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Activos</p>
-                <p className="text-3xl font-extrabold text-gray-900 mt-1">
-                  {users.filter((u: any) => u.isActive).length}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border border-accent/20 shadow-sm transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Inactivos</p>
-                <p className="text-3xl font-extrabold text-gray-900 mt-1">
-                  {users.filter((u: any) => !u.isActive).length}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center">
-                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

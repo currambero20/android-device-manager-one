@@ -293,4 +293,29 @@ export const permissionsRouter = router({
         });
       }
     }),
+
+  /**
+   * Sync all user permissions at once
+   */
+  syncUserPermissions: protectedProcedure
+    .input(z.object({ userId: z.number(), permissions: z.array(z.string()) }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      try {
+        await permissionsManager.clearUserPermissions(input.userId);
+        for (const perm of input.permissions) {
+          await permissionsManager.assignUserPermission(input.userId, perm as any);
+        }
+        return { success: true };
+      } catch (error) {
+        console.error("[PermissionsRouter] Error syncing user permissions:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Error al sincronizar permisos de usuario",
+        });
+      }
+    }),
 });

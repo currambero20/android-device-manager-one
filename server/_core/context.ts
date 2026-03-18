@@ -30,6 +30,7 @@ export async function createContext(opts: CreateExpressContextOptions) {
               email: dbUser.email || (payload.email as string),
               role: dbUser.role || (payload.role as string) || "user",
               loginMethod: dbUser.loginMethod || "local",
+              permissions: await db.getUserPermissions(dbUser.id),
             };
           }
         }
@@ -46,6 +47,7 @@ export async function createContext(opts: CreateExpressContextOptions) {
           email: (payload.email as string) || "",
           role: (payload.role as string) || "user",
           loginMethod: (payload.loginMethod as string) || "local",
+          permissions: (payload.permissions as string[]) || [],
         };
       }
     } catch (error) {

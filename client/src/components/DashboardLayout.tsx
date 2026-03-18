@@ -39,12 +39,14 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       icon: LayoutDashboard,
       href: "/dashboard",
       roles: ["admin", "manager", "user", "viewer"],
+      permission: "MENU_DASHBOARD",
     },
     {
       label: "Dispositivos",
       icon: Smartphone,
       href: "/devices",
       roles: ["admin", "manager", "user"],
+      permission: "MENU_DEVICES",
     },
     {
       label: "Usuarios",
@@ -63,6 +65,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       icon: Zap,
       href: "/apk-builder",
       roles: ["admin", "manager", "user"],
+      permission: "MENU_APK_BUILDER",
     },
     {
       label: "Registros de Auditoría",
@@ -75,12 +78,14 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       icon: Smartphone,
       href: "/monitoring",
       roles: ["admin", "manager", "user"],
+      permission: "MENU_DEVICES",
     },
     {
       label: "Control Remoto",
       icon: Zap,
       href: "/remote-control",
       roles: ["admin", "manager", "user"],
+      permission: "MENU_REMOTE_CONTROL",
     },
     {
       label: "Análisis y Métricas",
@@ -93,12 +98,14 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       icon: Shield,
       href: "/geofencing",
       roles: ["admin", "manager", "user"],
+      permission: "MENU_LOCATION",
     },
     {
       label: "Notificaciones",
       icon: Bell,
       href: "/notifications",
       roles: ["admin", "manager", "user", "viewer"],
+      permission: "MENU_NOTIFICATIONS",
     },
     {
       label: "Monitoreo Avanzado",
@@ -117,24 +124,28 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       icon: Folder,
       href: "/file-explorer",
       roles: ["admin", "manager", "user"],
+      permission: "MENU_FILE_EXPLORER",
     },
     {
       label: "Gestor de Aplicaciones",
       icon: Package,
       href: "/app-manager",
       roles: ["admin", "manager", "user"],
+      permission: "MENU_APPS",
     },
     {
       label: "Mapa de Dispositivos",
       icon: Map,
       href: "/device-map",
       roles: ["admin", "manager", "user"],
+      permission: "MENU_LOCATION",
     },
     {
       label: "GPS y Geocercas",
       icon: Navigation,
       href: "/gps-tracker",
       roles: ["admin", "manager", "user"],
+      permission: "MENU_LOCATION",
     },
     {
       label: "Compliance & DLP",
@@ -162,7 +173,12 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
     },
   ];
 
-  const visibleItems = navigationItems.filter((item) => item.roles.includes(user?.role || "viewer"));
+  const visibleItems = navigationItems.filter((item: any) => {
+    if (user?.role === "admin") return true;
+    const hasRole = item.roles.includes(user?.role || "viewer");
+    const hasPermission = !item.permission || user?.permissions?.includes(item.permission);
+    return hasRole && hasPermission;
+  });
 
   return (
     <div className="flex h-screen bg-background text-foreground">

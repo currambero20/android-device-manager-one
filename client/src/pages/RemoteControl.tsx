@@ -1,9 +1,7 @@
-// @ts-nocheck
-import { useState } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useState, useEffect } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -14,320 +12,217 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Smartphone,
-  Lock,
-  Trash2,
-  Monitor,
   Zap,
   AlertTriangle,
   CheckCircle,
   Clock,
   XCircle,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
-
-interface Device {
-  id: number;
-  deviceName: string;
-  status: "online" | "offline";
-  battery: number;
-  signal: number;
-}
-
-interface Command {
-  commandId: string;
-  type: string;
-  status: "pending" | "sent" | "executing" | "success" | "failed";
-  createdAt: Date;
-  result?: unknown;
-}
+import { trpc } from "@/lib/trpc";
 
 export default function RemoteControl() {
-  const { user } = useAuth();
-  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-  const [commands, setCommands] = useState<Command[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedCommand, setSelectedCommand] = useState<string | null>(null);
-  const [commandPayload, setCommandPayload] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const { data: devices = [], isLoading: isLoadingDevices, refetch: refetchDevices } = trpc.devices.getMyDevices.useQuery();
+  const { data: commands = [], isLoading: isLoadingLogs, refetch: refetchLogs } = trpc.auditLogs.getByDevice.useQuery(
+    { deviceId: selectedDeviceId || 0 },
+    { enabled: !!selectedDeviceId }
+  );
 
-  // Mock devices
-  const devices: Device[] = [
-    {
-      id: 1,
-      deviceName: "Samsung Galaxy S21",
-      status: "online",
-      battery: 85,
-      signal: 4,
+  const sendCommandMutation = trpc.devices.sendCommand.useMutation({
+    onSuccess: () => {
+      toast.success("Comando enviado satisfactoriamente");
+      refetchLogs();
     },
-    {
-      id: 2,
-      deviceName: "iPhone 13 Pro",
-      status: "online",
-      battery: 45,
-      signal: 3,
+    onError: (err) => {
+      toast.error("Error: " + err.message);
     },
-    {
-      id: 3,
-      deviceName: "Pixel 6",
-      status: "offline",
-      battery: 0,
-      signal: 0,
-    },
-  ];
+  });
+
+  const selectedDevice = devices.find(d => d.id === selectedDeviceId);
 
   const commandTypes = [
-    // MDM & Enterprise Features
-    { value: "enable_kiosk_mode", label: "🏢 Activar Modo Quiosco", dangerous: true },
-    { value: "disable_kiosk_mode", label: "🔓 Desactivar Modo Quiosco", dangerous: false },
-    { value: "set_password_quality", label: "🔐 Forzar Pin Complejo", dangerous: false },
-    { value: "disable_camera", label: "🚫 Bloquear Cámara (Hardware)", dangerous: false },
-    { value: "enable_camera", label: "📷 Desbloquear Cámara", dangerous: false },
-    { value: "clear_app_data", label: "🧹 Borrar Datos de App (WIP)", dangerous: true },
-
-    // Standard Features
-    { value: "screenshot", label: "📸 Solicitar Captura", dangerous: false },
+    { value: "screenshot", label: "📸 Captura de Pantalla", dangerous: false },
     { value: "lock_device", label: "🔒 Bloquear Pantalla", dangerous: false },
-    { value: "unlock_device", label: "🔓 Desbloquear Pantalla", dangerous: false },
-    { value: "wipe_data", label: "🗑️ Borrado Seguro Definitivo", dangerous: true },
-    { value: "reboot", label: "🔄 Reiniciar Físicamente", dangerous: true },
+    { value: "vibrate", label: "📳 Hacer Vibrar", dangerous: false },
+    { value: "reboot", label: "🔄 Reiniciar Dispositivo", dangerous: true },
+    { value: "wipe_data", label: "🗑️ Borrado de Fábrica", dangerous: true },
+    { value: "enable_stealth", label: "👻 Activar Modo Oculto", dangerous: false },
+    { value: "disable_stealth", label: "👁️ Desactivar Modo Oculto", dangerous: false },
   ];
 
-  const handleSendCommand = async (commandType: string) => {
-    if (!selectedDevice) {
-      toast.error("Selecciona un dispositivo");
-      return;
-    }
-
-    const isDangerous = commandTypes.find((c) => c.value === commandType)?.dangerous;
-
+  const handleSendCommand = (commandType: string) => {
+    if (!selectedDeviceId) return;
+    const isDangerous = commandTypes.find(c => c.value === commandType)?.dangerous;
+    
     if (isDangerous) {
       setSelectedCommand(commandType);
       setShowConfirmation(true);
       return;
     }
-
-    await executeCommand(commandType);
+    
+    execute(commandType);
   };
 
-  const executeCommand = async (commandType: string) => {
-    if (!selectedDevice) return;
-
-    try {
-      setIsLoading(true);
-
-      // TODO: Call tRPC mutation
-      const newCommand: Command = {
-        commandId: `cmd-${Date.now()}`,
-        type: commandType,
-        status: "pending",
-        createdAt: new Date(),
-      };
-
-      setCommands((prev) => [newCommand, ...prev]);
-      toast.success("Comando enviado");
-
-      // Simulate command execution
-      setTimeout(() => {
-        setCommands((prev) =>
-          prev.map((cmd) =>
-            cmd.commandId === newCommand.commandId
-              ? { ...cmd, status: "success" as const }
-              : cmd
-          )
-        );
-      }, 2000);
-    } catch (error) {
-      toast.error("Error al enviar comando");
-    } finally {
-      setIsLoading(false);
-    }
+  const execute = (commandType: string) => {
+    if (!selectedDeviceId) return;
+    sendCommandMutation.mutate({
+      deviceId: selectedDeviceId,
+      command: commandType,
+    });
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "pending":
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      case "success":
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case "failed":
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />;
+      case "pending": return <Clock className="w-4 h-4 text-yellow-500" />;
+      case "success": return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case "failure": return <XCircle className="w-4 h-4 text-red-500" />;
+      default: return <Clock className="w-4 h-4 text-gray-500" />;
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Zap className="w-8 h-8 glow-cyan" />
-          <h1 className="text-3xl font-bold glow-cyan">Control Remoto</h1>
-        </div>
-      </div>
-
+    <DashboardLayout title="Control Remoto">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Dispositivos */}
-        <div className="lg:col-span-1">
-          <Card className="card-neon-cyan">
-            <div className="p-6">
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <Smartphone className="w-5 h-5" />
-                Dispositivos
-              </h2>
+        {/* Dispositivos Reales */}
+        <Card className="card-neon overflow-hidden lg:col-span-1">
+          <div className="p-4 border-b border-glow-cyan/20 flex justify-between items-center">
+            <h2 className="font-bold flex items-center gap-2">
+              <Smartphone className="w-4 h-4 text-cyan-400" />
+              Dispositivos
+            </h2>
+            <Button variant="ghost" size="icon" onClick={() => refetchDevices()} disabled={isLoadingDevices}>
+              <RefreshCw className={`w-4 h-4 ${isLoadingDevices ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
+          <div className="p-2 max-h-[600px] overflow-y-auto space-y-2">
+            {isLoadingDevices && <p className="text-center text-xs py-4">Cargando unidades...</p>}
+            {!isLoadingDevices && devices.length === 0 && <p className="text-center text-xs py-4 text-muted-foreground">No hay dispositivos vinculados</p>}
+            {devices.map((device) => (
+              <button
+                key={device.id}
+                onClick={() => setSelectedDeviceId(device.id)}
+                className={`w-full p-3 rounded-lg border transition-all text-left ${
+                  selectedDeviceId === device.id
+                    ? "border-cyan-500 bg-cyan-500/10 shadow-[0_0_10px_rgba(6,182,212,0.3)]"
+                    : "border-border hover:border-cyan-500/50 hover:bg-accent/50"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-sm truncate">{device.deviceName}</span>
+                  <div className={`w-2 h-2 rounded-full ${device.status === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+                </div>
+                <div className="text-[10px] text-muted-foreground grid grid-cols-2 gap-1 uppercase tracking-tighter">
+                  <span>🔋 {device.batteryLevel ?? "N/A"}%</span>
+                  <span className="text-right">OS {device.androidVersion}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </Card>
 
-              <div className="space-y-2">
-                {devices.map((device) => (
-                  <button
-                    key={device.id}
-                    onClick={() => setSelectedDevice(device)}
-                    className={`w-full p-3 rounded border-2 transition text-left ${
-                      selectedDevice?.id === device.id
-                        ? "border-glow-cyan bg-glow-cyan/10"
-                        : "border-border hover:border-glow-cyan"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-sm">{device.deviceName}</span>
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          device.status === "online" ? "bg-green-500" : "bg-red-500"
-                        }`}
-                      />
-                    </div>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div>🔋 Batería: {device.battery}%</div>
-                      <div>📶 Señal: {device.signal}/4</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+        {/* Panel de Comandos */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="card-neon-magenta overflow-hidden">
+            <div className="p-4 border-b border-glow-magenta/20">
+              <h2 className="font-bold flex items-center gap-2">
+                <Zap className="w-4 h-4 text-magenta-400" />
+                Acciones de Control
+              </h2>
             </div>
-          </Card>
-        </div>
-
-        {/* Panel de Control */}
-        <div className="lg:col-span-2">
-          <Card className="card-neon-magenta">
             <div className="p-6">
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5" />
-                Comandos Disponibles
-              </h2>
-
-              {selectedDevice ? (
-                <Tabs defaultValue="control" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="control">Control</TabsTrigger>
-                    <TabsTrigger value="history">Historial</TabsTrigger>
+              {!selectedDeviceId ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  < स्मार्टफोन className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                  <p>Selecciona un dispositivo para interactuar</p>
+                </div>
+              ) : (
+                <Tabs defaultValue="control">
+                  <TabsList className="grid w-full grid-cols-2 mb-6 bg-accent/20">
+                    <TabsTrigger value="control">Comandos</TabsTrigger>
+                    <TabsTrigger value="history">Historial Real</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="control" className="space-y-3 mt-4">
-                    <div className="grid grid-cols-2 gap-2">
-                      {commandTypes.map((cmd) => (
-                        <Button
-                          key={cmd.value}
-                          onClick={() => handleSendCommand(cmd.value)}
-                          disabled={isLoading || selectedDevice.status === "offline"}
-                          variant={cmd.dangerous ? "destructive" : "default"}
-                          className={`h-auto py-2 text-xs ${
-                            cmd.dangerous ? "btn-neon-red" : "btn-neon-cyan"
-                          }`}
-                        >
-                          {cmd.label}
-                        </Button>
-                      ))}
-                    </div>
+                  <TabsContent value="control" className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {commandTypes.map((cmd) => (
+                      <Button
+                        key={cmd.value}
+                        onClick={() => handleSendCommand(cmd.value)}
+                        disabled={sendCommandMutation.isPending || selectedDevice?.status === "offline"}
+                        variant={cmd.dangerous ? "destructive" : "outline"}
+                        className={`h-20 flex-col gap-2 text-[10px] font-bold uppercase transition-all ${
+                          cmd.dangerous ? "hover:bg-red-600 hover:border-red-400" : "hover:border-cyan-500 hover:text-cyan-400"
+                        }`}
+                      >
+                        {cmd.label}
+                        {selectedDevice?.status === "offline" && <span className="opacity-50 text-[8px]">(Offline)</span>}
+                      </Button>
+                    ))}
                   </TabsContent>
 
-                  <TabsContent value="history" className="space-y-2 mt-4">
+                  <TabsContent value="history" className="space-y-2">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold">Últimos Registros</span>
+                      <Button variant="ghost" size="sm" onClick={() => refetchLogs()} disabled={isLoadingLogs}>
+                        <RefreshCw className={`w-3 h-3 ${isLoadingLogs ? "animate-spin" : ""}`} />
+                      </Button>
+                    </div>
                     {commands.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Sin comandos ejecutados
-                      </p>
+                      <p className="text-center py-8 text-xs text-muted-foreground">Sin actividad registrada para este dispositivo</p>
                     ) : (
                       commands.map((cmd) => (
-                        <div
-                          key={cmd.commandId}
-                          className="flex items-center justify-between p-3 bg-accent/10 rounded border border-border"
-                        >
-                          <div className="flex items-center gap-2">
+                        <div key={cmd.id} className="p-2 bg-accent/5 rounded border border-border flex items-center justify-between">
+                          <div className="flex items-center gap-3">
                             {getStatusIcon(cmd.status)}
-                            <div className="text-sm">
-                              <p className="font-bold capitalize">{cmd.type.replace(/_/g, " ")}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(cmd.createdAt).toLocaleTimeString()}
-                              </p>
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-widest">{cmd.action.replace("_", " ")}</p>
+                              <p className="text-[9px] text-muted-foreground">{new Date(cmd.timestamp).toLocaleString()}</p>
                             </div>
                           </div>
-                          <span
-                            className={`text-xs font-bold px-2 py-1 rounded ${
-                              cmd.status === "success"
-                                ? "bg-green-500/20 text-green-400"
-                                : cmd.status === "failed"
-                                  ? "bg-red-500/20 text-red-400"
-                                  : "bg-yellow-500/20 text-yellow-400"
-                            }`}
-                          >
-                            {cmd.status}
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                            cmd.status === "success" ? "bg-green-500/20 text-green-400" : 
+                            cmd.status === "failure" ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"
+                          }`}>
+                            {cmd.status === "pending" ? "Pendiente" : cmd.status === "success" ? "Ejecutado" : "Fallido"}
                           </span>
                         </div>
                       ))
                     )}
                   </TabsContent>
                 </Tabs>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  Selecciona un dispositivo para enviar comandos
-                </p>
               )}
             </div>
           </Card>
         </div>
       </div>
 
-      {/* Confirmación de Comando Peligroso */}
+      {/* Alerta de Peligro */}
       <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <AlertDialogContent className="border-2 border-red-500/50">
-          <AlertDialogTitle className="flex items-center gap-2 text-red-500">
+        <AlertDialogContent className="border border-red-500 bg-black/95">
+          <AlertDialogTitle className="text-red-500 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5" />
-            Operación Peligrosa
+            Acción Crítica
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            Esta operación no se puede deshacer. ¿Estás seguro de que deseas continuar?
+          <AlertDialogDescription className="text-muted-foreground">
+            Estás a punto de enviar un comando de alto riesgo: <span className="text-white font-bold underline">{selectedCommand}</span>. 
+            Esta acción se ejecutará en cuanto el dispositivo se conecte y podría ser irreversible.
           </AlertDialogDescription>
-          <div className="bg-red-500/10 border border-red-500/30 rounded p-3 text-sm">
-            <p className="font-bold text-red-500 mb-1">Advertencia de Seguridad MDM:</p>
-            <p className="text-muted-foreground">
-              {selectedCommand === "wipe_data" && "Esto sobrescribirá todo el almacenamiento y restablecerá de fábrica el dispositivo corporativo. NO SE PUEDE DESHACER."}
-              {selectedCommand === "enable_kiosk_mode" && "El usuario quedará atrapado en la pantalla actual sin poder ir al escritorio hasta que envíes el comando de desbloqueo."}
-              {selectedCommand === "clear_app_data" && "Se eliminarán permanentemente las bases de datos y la caché de la aplicación de trabajo."}
-              {selectedCommand === "reboot" && "El dispositivo forzará un reinicio a nivel de hardware."}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (selectedCommand) {
-                  executeCommand(selectedCommand);
-                }
-                setShowConfirmation(false);
-              }}
-              className="bg-red-600 hover:bg-red-700"
+          <div className="mt-4 flex gap-3">
+            <AlertDialogCancel className="flex-1">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => { execute(selectedCommand!); setShowConfirmation(false); }}
+              className="flex-1 bg-red-600 hover:bg-red-700"
             >
-              Confirmar
+              Confirmar Envío
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </DashboardLayout>
   );
 }

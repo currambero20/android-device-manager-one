@@ -93,4 +93,32 @@ export const devicesRouter = router({
         });
       }
     }),
+
+  /**
+   * Send a remote command to a device.
+   */
+  sendCommand: protectedProcedure
+    .input(z.object({
+      deviceId: z.number(),
+      command: z.string(),
+      payload: z.record(z.any()).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const { sendDeviceCommand } = await import("../db");
+        await sendDeviceCommand({
+          deviceId: input.deviceId,
+          userId: ctx.user.id,
+          action: input.command,
+          details: input.payload,
+        });
+        return { success: true };
+      } catch (error) {
+        console.error("[Devices Router] Error sending command:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to send command to device",
+        });
+      }
+    }),
 });

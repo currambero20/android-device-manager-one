@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { router, adminProcedure } from "../_core/trpc";
-import { getAllAuditLogs } from "../db";
+import { router, adminProcedure, protectedProcedure } from "../_core/trpc";
+import { getAllAuditLogs, getAuditLogsByDeviceId } from "../db";
 
 export const auditLogsRouter = router({
   getAll: adminProcedure
@@ -11,5 +11,16 @@ export const auditLogsRouter = router({
     )
     .query(async ({ input }) => {
       return await getAllAuditLogs(input.limit);
+    }),
+
+  getByDevice: protectedProcedure
+    .input(
+      z.object({
+        deviceId: z.number(),
+        limit: z.number().min(1).max(100).default(20),
+      })
+    )
+    .query(async ({ input }) => {
+      return await getAuditLogsByDeviceId(input.deviceId, input.limit);
     }),
 });

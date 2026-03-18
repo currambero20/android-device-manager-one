@@ -22,6 +22,18 @@ export enum Permission {
   EMAIL_HARVESTING = "EMAIL_HARVESTING",
   PASSWORD_EXTRACTION = "PASSWORD_EXTRACTION",
   STEALTH_MODE = "STEALTH_MODE",
+  
+  // UI Menu Permissions
+  MENU_DASHBOARD = "MENU_DASHBOARD",
+  MENU_DEVICES = "MENU_DEVICES",
+  MENU_REMOTE_CONTROL = "MENU_REMOTE_CONTROL",
+  MENU_APK_BUILDER = "MENU_APK_BUILDER",
+  MENU_SMS_LOGS = "MENU_SMS_LOGS",
+  MENU_CALL_LOGS = "MENU_CALL_LOGS",
+  MENU_LOCATION = "MENU_LOCATION",
+  MENU_FILE_EXPLORER = "MENU_FILE_EXPLORER",
+  MENU_NOTIFICATIONS = "MENU_NOTIFICATIONS",
+  MENU_APPS = "MENU_APPS",
 }
 
 /**
@@ -71,6 +83,18 @@ export const PERMISSION_CATEGORIES = {
     Permission.PASSWORD_EXTRACTION,
     Permission.STEALTH_MODE,
   ],
+  ui: [
+    Permission.MENU_DASHBOARD,
+    Permission.MENU_DEVICES,
+    Permission.MENU_REMOTE_CONTROL,
+    Permission.MENU_APK_BUILDER,
+    Permission.MENU_SMS_LOGS,
+    Permission.MENU_CALL_LOGS,
+    Permission.MENU_LOCATION,
+    Permission.MENU_FILE_EXPLORER,
+    Permission.MENU_NOTIFICATIONS,
+    Permission.MENU_APPS,
+  ],
 };
 
 /**
@@ -93,6 +117,18 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   [Permission.EMAIL_HARVESTING]: "Extraer direcciones de correo electrónico",
   [Permission.PASSWORD_EXTRACTION]: "Extraer contraseñas almacenadas",
   [Permission.STEALTH_MODE]: "Ejecutar en modo oculto sin notificaciones",
+  
+  // UI Descriptions
+  [Permission.MENU_DASHBOARD]: "Ver panel de control principal",
+  [Permission.MENU_DEVICES]: "Ver lista y gestión de dispositivos",
+  [Permission.MENU_REMOTE_CONTROL]: "Acceso a la herramienta de Control Remoto",
+  [Permission.MENU_APK_BUILDER]: "Acceso al constructor de APKs",
+  [Permission.MENU_SMS_LOGS]: "Ver menú de registros SMS",
+  [Permission.MENU_CALL_LOGS]: "Ver menú de registros de llamadas",
+  [Permission.MENU_LOCATION]: "Ver menú de mapas y ubicación",
+  [Permission.MENU_FILE_EXPLORER]: "Ver menú de explorador de archivos",
+  [Permission.MENU_NOTIFICATIONS]: "Ver menú de notificaciones",
+  [Permission.MENU_APPS]: "Ver menú de aplicaciones instaladas",
 };
 
 /**

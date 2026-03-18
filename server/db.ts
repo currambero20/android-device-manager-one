@@ -161,6 +161,24 @@ export async function getUserByEmail(email: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+/**
+ * Get all permission codes for a specific user.
+ */
+export async function getUserPermissions(userId: number): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      code: permissions.code,
+    })
+    .from(userPermissions)
+    .innerJoin(permissions, eq(userPermissions.permissionId, permissions.id))
+    .where(eq(userPermissions.userId, userId));
+
+  return result.map((p: { code: string }) => p.code);
+}
+
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
@@ -273,15 +291,6 @@ export async function getAllPermissions() {
 }
 
 /**
- * User permissions queries
- */
-export async function getUserPermissions(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return await db.select().from(userPermissions).where(eq(userPermissions.userId, userId));
-}
-
-/**
  * Device queries
  */
 export async function getDeviceById(deviceId: number) {
@@ -387,4 +396,28 @@ export async function getAllAuditLogs(limit: number = 50) {
     .from(auditLogs)
     .orderBy(desc(auditLogs.timestamp))
     .limit(limit);
+}
+
+/**
+ * Sends a command to a device by recording it in the audit log.
+ * The device will poll these logs to see what actions to perform.
+ */
+export async function sendDeviceCommand(params: {
+  deviceId: number;
+  userId: number;
+  action: string;
+  details?: any;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(auditLogs).values({
+    deviceId: params.deviceId,
+    userId: params.userId,
+    action: params.action,
+    actionType: "device_monitored", // Using device_monitored as a generic command type
+    status: "pending",
+    details: params.details || {},
+    timestamp: new Date(),
+  } as any);
 }

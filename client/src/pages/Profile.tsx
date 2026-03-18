@@ -9,13 +9,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { User, Lock, Save, Key } from "lucide-react";
+import { User, Lock, Save, Key, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
 export default function Profile() {
   const utils = trpc.useUtils();
-  const { data: user } = trpc.auth.getMe.useQuery();
+  const { data: user } = trpc.auth.me.useQuery();
   
   const [name, setName] = useState(user?.name || "");
   const [password, setPassword] = useState("");
@@ -26,7 +26,7 @@ export default function Profile() {
       toast.success("Profile updated successfully");
       setPassword("");
       setConfirmPassword("");
-      utils.auth.getMe.invalidate();
+      utils.auth.me.invalidate();
     },
     onError: (err) => {
       toast.error(err.message);

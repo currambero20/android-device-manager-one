@@ -21,7 +21,9 @@ import {
   geofences,
   geofenceEvents,
   InsertAuditLog,
+  User as UserRow,
 } from "../drizzle/schema";
+import { MySql2Database } from "drizzle-orm/mysql2";
 
 /**
  * Shared password hashing logic for local authentication.
@@ -33,10 +35,10 @@ export function hashPassword(password: string): string {
 }
 
 let _pool: mysql.Pool | null = null;
-let _db: any = null;
+let _db: MySql2Database | null = null;
 let _migrationLog: string[] = [];
 
-export async function getDb() {
+export async function getDb(): Promise<MySql2Database | null> {
   if (!_db && process.env.DATABASE_URL) {
     try {
       // PlanetScale requires explicit SSL configuration when using createPool
@@ -54,7 +56,7 @@ export async function getDb() {
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
       });
-      _db = drizzle(_pool) as any;
+      _db = drizzle(_pool);
     } catch (error: any) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -96,7 +98,7 @@ export async function getHealthStatus() {
   }
 }
 
-export async function upsertUser(user: InsertUser): Promise<any> {
+export async function upsertUser(user: InsertUser): Promise<UserRow | undefined> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
   }
@@ -238,7 +240,7 @@ export async function updateUserRole(id: number, role: "admin" | "manager" | "us
   await db.update(users).set({ role }).where(eq(users.id, id));
 }
 
-export async function createUser(user: { name: string; email: string; role: string; passwordHash?: string }): Promise<any> {
+export async function createUser(user: { name: string; email: string; role: string; passwordHash?: string }): Promise<UserRow | undefined> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 

@@ -12,6 +12,8 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 import { hashPassword, setUserEmailOtp } from "../db";
 import { send2FAEmail } from "../services/mailService";
+import { users } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return hashPassword(password) === hash;
@@ -27,13 +29,15 @@ async function createSessionToken(payload: Record<string, unknown>): Promise<str
 function setCookie(res: any, token: string) {
   const isProduction = process.env.NODE_ENV === "production";
   
-  res.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
-    maxAge: COOKIE_MAX_AGE,
-    path: "/",
-  });
+  if (res.cookie) {
+    res.cookie(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      maxAge: COOKIE_MAX_AGE,
+      path: "/",
+    });
+  }
 }
 
 /**
@@ -87,15 +91,13 @@ export const loginProcedure = publicProcedure
       const dbInstance = await db.getDb();
 
       if (dbInstance) {
-        // Use a raw query that only selects columns we know exist to avoid schema mismatch
-        // We select id, email, name, role, openId, loginMethod - NO passwordHash yet
-        const [rows] = await (dbInstance as any).execute(
-          "SELECT id, openId, name, email, role, loginMethod, passwordHash FROM users WHERE email = ? LIMIT 1",
-          [input.username]
-        );
+        const userRows = await dbInstance
+          .select()
+          .from(users)
+          .where(eq(users.email, input.username))
+          .limit(1);
 
-        const userRows = Array.isArray(rows) ? rows : [];
-        const dbUser = userRows[0] as any;
+        const dbUser = userRows[0];
 
         if (dbUser && dbUser.passwordHash) {
           const valid = await verifyPassword(input.password, dbUser.passwordHash);
@@ -107,7 +109,7 @@ export const loginProcedure = publicProcedure
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
             const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
             await setUserEmailOtp(dbUser.id, otp, expires);
-            await send2FAEmail(dbUser.email, otp);
+            await send2FAEmail(dbUser.email || "", otp);
             
             return {
               success: true,
@@ -132,9 +134,9 @@ export const loginProcedure = publicProcedure
             success: true,
             user: {
               id: dbUser.id,
-              name: dbUser.name,
-              email: dbUser.email,
-              role: dbUser.role,
+              name: dbUser.name || "",
+              email: dbUser.email || "",
+              role: dbUser.role || "user",
             },
           };
         }

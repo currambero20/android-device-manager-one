@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import { jwtVerify } from "jose";
 import * as db from "../db";
@@ -7,11 +6,22 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "android-device-manager-super-secret-key-2024"
 );
 
+export interface User {
+  id: number;
+  openId: string;
+  name: string;
+  email: string;
+  role: string;
+  loginMethod: string;
+  twoFactorEnabled: boolean;
+  permissions: string[];
+}
+
 export async function createContext(opts: CreateExpressContextOptions) {
   const { req, res } = opts;
   const sessionToken = req.cookies?.session_token;
 
-  let user = null;
+  let user: User | null = null;
 
   if (sessionToken) {
     try {
@@ -48,6 +58,7 @@ export async function createContext(opts: CreateExpressContextOptions) {
           email: (payload.email as string) || "",
           role: (payload.role as string) || "user",
           loginMethod: (payload.loginMethod as string) || "local",
+          twoFactorEnabled: (payload.twoFactorEnabled as boolean) ?? false,
           permissions: (payload.permissions as string[]) || [],
         };
       }

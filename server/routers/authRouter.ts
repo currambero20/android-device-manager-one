@@ -73,8 +73,10 @@ export const authRouter = router({
     .input(z.object({ userId: z.number(), otp: z.string().length(6) }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
-      const [userRows] = await db.execute("SELECT * FROM users WHERE id = ?", [input.userId]);
-      const user = (userRows as any[])[0];
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+
+      const userRows = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+      const user = userRows[0];
 
       if (!user || user.emailOtp !== input.otp || !user.emailOtpExpires || user.emailOtpExpires < new Date()) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Código inválido o expirado" });
@@ -84,10 +86,10 @@ export const authRouter = router({
       const token = await createSessionToken({
         sub: String(user.id),
         openId: user.openId,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        loginMethod: user.loginMethod,
+        name: user.name || "",
+        email: user.email || "",
+        role: user.role || "user",
+        loginMethod: user.loginMethod || "local",
       });
 
       const isProduction = process.env.NODE_ENV === "production";
@@ -106,9 +108,9 @@ export const authRouter = router({
         success: true,
         user: {
           id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
+          name: user.name || "",
+          email: user.email || "",
+          role: user.role || "user",
         },
       };
     }),
@@ -120,6 +122,7 @@ export const authRouter = router({
     .input(z.object({ enabled: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
       await db.update(users).set({ twoFactorEnabled: input.enabled }).where(eq(users.id, ctx.user.id));
       return { success: true };
     }),

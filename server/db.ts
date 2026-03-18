@@ -271,7 +271,45 @@ export async function createUser(user: { name: string; email: string; role: stri
 export async function updateUserPassword(id: number, passwordHash: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(users).set({ passwordHash }).where(eq(users.id, id));
+  await db.update(users).set({ 
+    passwordHash,
+    resetToken: null,
+    resetTokenExpires: null 
+  }).where(eq(users.id, id));
+}
+
+export async function setUserResetToken(email: string, token: string, expires: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ 
+    resetToken: token, 
+    resetTokenExpires: expires 
+  }).where(eq(users.email, email));
+}
+
+export async function getUserByResetToken(token: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.resetToken, token)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function setUserEmailOtp(userId: number, otp: string, expires: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ 
+    emailOtp: otp, 
+    emailOtpExpires: expires 
+  }).where(eq(users.id, userId));
+}
+
+export async function clearUserEmailOtp(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ 
+    emailOtp: null, 
+    emailOtpExpires: null 
+  }).where(eq(users.id, userId));
 }
 
 /**

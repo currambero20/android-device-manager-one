@@ -30,6 +30,7 @@ export async function createContext(opts: CreateExpressContextOptions) {
               email: dbUser.email || (payload.email as string),
               role: dbUser.role || (payload.role as string) || "user",
               loginMethod: dbUser.loginMethod || "local",
+              twoFactorEnabled: dbUser.twoFactorEnabled ?? false,
               permissions: await db.getUserPermissions(dbUser.id),
             };
           }

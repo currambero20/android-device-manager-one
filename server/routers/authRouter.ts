@@ -1,392 +1,126 @@
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
-import {
-  generateTwoFactorSecret,
-  verifyTOTPCode,
-  verifyBackupCode,
-  generateRecoveryToken,
-  hashRecoveryToken,
-  verifyRecoveryToken,
-  loginRateLimiter,
-  totpRateLimiter,
-  recoveryRateLimiter,
-  hashBackupCodes,
-} from "../twoFactorAuth";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
+import { 
+  getUserByEmail, 
+  setUserResetToken, 
+  getUserByResetToken, 
+  updateUserPassword,
+  getDb,
+  clearUserEmailOtp
+} from "../db";
+import { sendResetEmail } from "../services/mailService";
+import { users } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
+import { SignJWT } from "jose";
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "android-device-manager-super-secret-key-2024"
+);
+
+async function createSessionToken(payload: Record<string, unknown>): Promise<string> {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("30d")
+    .sign(JWT_SECRET);
+}
 
 export const authRouter = router({
   /**
-   * Setup 2FA for current user
+   * Request password reset link
    */
-  setupTwoFactor: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      const setup = await generateTwoFactorSecret(ctx.user.id, ctx.user.email || "user");
-
-      return {
-        success: true,
-        secret: setup.secret,
-        qrCode: setup.qrCode,
-        backupCodes: setup.backupCodes,
-      };
-    } catch (error) {
-      console.error("[Auth Router] 2FA setup error:", error);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to setup 2FA",
-      });
-    }
-  }),
-
-  /**
-   * Verify 2FA setup with TOTP code
-   */
-  verifyTwoFactorSetup: protectedProcedure
-    .input(
-      z.object({
-        secret: z.string(),
-        code: z.string().length(6),
-        backupCodes: z.array(z.string()),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      try {
-        // Check rate limit
-        if (!totpRateLimiter.isAllowed(`totp-verify-${ctx.user.id}`)) {
-          throw new TRPCError({
-            code: "TOO_MANY_REQUESTS",
-            message: "Too many verification attempts. Please try again later.",
-          });
-        }
-
-        // Verify TOTP code
-        const verification = verifyTOTPCode(input.secret, input.code);
-
-        if (!verification.valid) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Invalid verification code",
-          });
-        }
-
-        // TODO: Save 2FA settings to database
-        // - Store encrypted secret
-        // - Store hashed backup codes
-        // - Set twoFactorEnabled flag
-
-        return {
-          success: true,
-          message: "2FA enabled successfully",
-        };
-      } catch (error) {
-        console.error("[Auth Router] 2FA verification error:", error);
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Verification failed",
-        });
-      }
-    }),
-
-  /**
-   * Verify TOTP code during login
-   */
-  verifyTOTP: protectedProcedure
-    .input(z.object({ code: z.string().length(6) }))
-    .mutation(async ({ input, ctx }) => {
-      try {
-        // Check rate limit
-        if (!totpRateLimiter.isAllowed(`totp-login-${ctx.user.id}`)) {
-          throw new TRPCError({
-            code: "TOO_MANY_REQUESTS",
-            message: "Too many attempts. Please try again later.",
-          });
-        }
-
-        // TODO: Get user's 2FA secret from database
-        // For now, return error
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "2FA not configured",
-        });
-      } catch (error) {
-        console.error("[Auth Router] TOTP verification error:", error);
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Verification failed",
-        });
-      }
-    }),
-
-  /**
-   * Use backup code for login
-   */
-  useBackupCode: protectedProcedure
-    .input(z.object({ code: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      try {
-        // Check rate limit
-        if (!totpRateLimiter.isAllowed(`backup-${ctx.user.id}`)) {
-          throw new TRPCError({
-            code: "TOO_MANY_REQUESTS",
-            message: "Too many attempts. Please try again later.",
-          });
-        }
-
-        // TODO: Get user's backup codes from database
-        // Verify backup code
-        // Remove used code from database
-
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Backup codes not configured",
-        });
-      } catch (error) {
-        console.error("[Auth Router] Backup code error:", error);
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Backup code verification failed",
-        });
-      }
-    }),
-
-  /**
-   * Disable 2FA
-   */
-  disableTwoFactor: protectedProcedure
-    .input(z.object({ password: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      try {
-        // TODO: Verify password
-        // TODO: Remove 2FA settings from database
-
-        return {
-          success: true,
-          message: "2FA disabled successfully",
-        };
-      } catch (error) {
-        console.error("[Auth Router] Disable 2FA error:", error);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to disable 2FA",
-        });
-      }
-    }),
-
-  /**
-   * Request account recovery
-   */
-  requestRecovery: protectedProcedure
+  requestPasswordReset: publicProcedure
     .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ input }) => {
+      const user = await getUserByEmail(input.email);
+      if (!user) {
+        // Return success anyway for security (don't reveal if email exists)
+        return { success: true, message: "Si el correo está registrado, recibirá un enlace pronto." };
+      }
+
+      const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      
+      await setUserResetToken(input.email, token, expires);
+      await sendResetEmail(input.email, token);
+
+      return { success: true, message: "Enlace de recuperación enviado." };
+    }),
+
+  /**
+   * Reset password using token
+   */
+  resetPasswordWithToken: publicProcedure
+    .input(z.object({ token: z.string(), newPassword: z.string().min(6) }))
+    .mutation(async ({ input }) => {
+      const user = await getUserByResetToken(input.token);
+      
+      if (!user || !user.resetTokenExpires || user.resetTokenExpires < new Date()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Token inválido o expirado" });
+      }
+
+      const db = await import("../db");
+      const hashedPassword = db.hashPassword(input.newPassword);
+      await updateUserPassword(user.id, hashedPassword);
+
+      return { success: true, message: "Contraseña actualizada correctamente" };
+    }),
+
+  /**
+   * Verify Email OTP (2FA)
+   */
+  verifyEmail2FA: publicProcedure
+    .input(z.object({ userId: z.number(), otp: z.string().length(6) }))
     .mutation(async ({ input, ctx }) => {
-      try {
-        // Check rate limit
-        if (!recoveryRateLimiter.isAllowed(`recovery-${input.email}`)) {
-          throw new TRPCError({
-            code: "TOO_MANY_REQUESTS",
-            message: "Too many recovery requests. Please try again later.",
-          });
-        }
+      const db = await getDb();
+      const [userRows] = await db.execute("SELECT * FROM users WHERE id = ?", [input.userId]);
+      const user = (userRows as any[])[0];
 
-        // Generate recovery token
-        const recovery = generateRecoveryToken();
-        const hashedToken = hashRecoveryToken(recovery.token);
-
-        // TODO: Save recovery token to database
-        // TODO: Send recovery email with token
-
-        return {
-          success: true,
-          message: "Recovery email sent",
-          expiresAt: recovery.expiresAt,
-        };
-      } catch (error) {
-        console.error("[Auth Router] Recovery request error:", error);
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Recovery request failed",
-        });
+      if (!user || user.emailOtp !== input.otp || !user.emailOtpExpires || user.emailOtpExpires < new Date()) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Código inválido o expirado" });
       }
-    }),
 
-  /**
-   * Verify recovery token
-   */
-  verifyRecoveryToken: protectedProcedure
-    .input(z.object({ token: z.string() }))
-    .query(async ({ input, ctx }) => {
-      try {
-        // TODO: Get stored recovery token from database
-        // Verify token hasn't expired
-        // Verify token matches user
-
-        return {
-          valid: true,
-          message: "Token is valid",
-        };
-      } catch (error) {
-        console.error("[Auth Router] Token verification error:", error);
-        return {
-          valid: false,
-          message: "Invalid or expired token",
-        };
-      }
-    }),
-
-  /**
-   * Reset password with recovery token
-   */
-  resetPasswordWithToken: protectedProcedure
-    .input(
-      z.object({
-        token: z.string(),
-        newPassword: z.string().min(8),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      try {
-        // TODO: Verify recovery token
-        // TODO: Update user password
-        // TODO: Invalidate all sessions
-        // TODO: Clear recovery token
-
-        return {
-          success: true,
-          message: "Password reset successfully",
-        };
-      } catch (error) {
-        console.error("[Auth Router] Password reset error:", error);
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Password reset failed",
-        });
-      }
-    }),
-
-  /**
-   * Get 2FA status
-   */
-  getTwoFactorStatus: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      // TODO: Get 2FA status from database
-      return {
-        enabled: false,
-        backupCodesRemaining: 0,
-        lastVerified: null,
-      };
-    } catch (error) {
-      console.error("[Auth Router] Status error:", error);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to get 2FA status",
+      // Valid - Create session
+      const token = await createSessionToken({
+        sub: String(user.id),
+        openId: user.openId,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        loginMethod: user.loginMethod,
       });
-    }
-  }),
 
-  /**
-   * Generate new backup codes
-   */
-  generateNewBackupCodes: protectedProcedure
-    .input(z.object({ password: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      try {
-        // TODO: Verify password
-        // TODO: Generate new backup codes
-        // TODO: Update database
-
-        return {
-          success: true,
-          backupCodes: [],
-          message: "New backup codes generated",
-        };
-      } catch (error) {
-        console.error("[Auth Router] Generate backup codes error:", error);
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to generate backup codes",
-        });
-      }
-    }),
-
-  /**
-   * Get login history
-   */
-  getLoginHistory: protectedProcedure
-    .input(z.object({ limit: z.number().default(20) }))
-    .query(async ({ input, ctx }) => {
-      try {
-        // TODO: Get login history from audit logs
-        return [];
-      } catch (error) {
-        console.error("[Auth Router] Login history error:", error);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to get login history",
-        });
-      }
-    }),
-
-  /**
-   * Get active sessions
-   */
-  getActiveSessions: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      // TODO: Get active sessions from database
-      return [];
-    } catch (error) {
-      console.error("[Auth Router] Sessions error:", error);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to get sessions",
+      const isProduction = process.env.NODE_ENV === "production";
+      ctx.res.cookie("session_token", token, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        maxAge: 60 * 60 * 24 * 30,
+        path: "/",
       });
-    }
-  }),
 
-  /**
-   * Revoke session
-   */
-  revokeSession: protectedProcedure
-    .input(z.object({ sessionId: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      try {
-        // TODO: Revoke session in database
-        return {
-          success: true,
-          message: "Session revoked",
-        };
-      } catch (error) {
-        console.error("[Auth Router] Revoke session error:", error);
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to revoke session",
-        });
-      }
-    }),
+      // Clear OTP
+      await clearUserEmailOtp(user.id);
 
-  /**
-   * Revoke all sessions
-   */
-  revokeAllSessions: protectedProcedure.mutation(async ({ ctx }) => {
-    try {
-      // TODO: Revoke all sessions for user
       return {
         success: true,
-        message: "All sessions revoked",
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
       };
-    } catch (error) {
-      console.error("[Auth Router] Revoke all sessions error:", error);
-      if (error instanceof TRPCError) throw error;
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to revoke sessions",
-      });
-    }
-  }),
-});
+    }),
 
-export type AuthRouter = typeof authRouter;
+  /**
+   * Toggle 2FA in profile
+   */
+  toggleTwoFactor: protectedProcedure
+    .input(z.object({ enabled: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      await db.update(users).set({ twoFactorEnabled: input.enabled }).where(eq(users.id, ctx.user.id));
+      return { success: true };
+    }),
+});

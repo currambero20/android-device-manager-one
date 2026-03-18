@@ -10,7 +10,8 @@ const JWT_SECRET = new TextEncoder().encode(
 const COOKIE_NAME = "session_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
-import { hashPassword } from "../db";
+import { hashPassword, setUserEmailOtp } from "../db";
+import { send2FAEmail } from "../services/mailService";
 
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return hashPassword(password) === hash;
@@ -100,6 +101,20 @@ export const loginProcedure = publicProcedure
           const valid = await verifyPassword(input.password, dbUser.passwordHash);
           if (!valid) {
             throw new TRPCError({ code: "UNAUTHORIZED", message: "Credenciales incorrectas" });
+          }
+
+          if (dbUser.twoFactorEnabled) {
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+            await setUserEmailOtp(dbUser.id, otp, expires);
+            await send2FAEmail(dbUser.email, otp);
+            
+            return {
+              success: true,
+              requires2FA: true,
+              userId: dbUser.id,
+              message: "Código de verificación enviado a su correo"
+            };
           }
 
           const token = await createSessionToken({

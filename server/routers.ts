@@ -47,8 +47,13 @@ export const appRouter = router({
     login: loginProcedure,
     register: registerProcedure,
 
-    // Two-factor authentication  
-    twoFactor: authRouter,
+    // Password recovery
+    requestPasswordReset: authRouter.requestPasswordReset,
+    resetPasswordWithToken: authRouter.resetPasswordWithToken,
+
+    // Email-based 2FA
+    verifyEmail2FA: authRouter.verifyEmail2FA,
+    toggleTwoFactor: authRouter.toggleTwoFactor,
   }),
 
   // Devices

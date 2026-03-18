@@ -303,6 +303,14 @@ const statements = [
     \`recordedAt\` timestamp NOT NULL DEFAULT (now()),
     CONSTRAINT \`geofenceEvents_id\` PRIMARY KEY(\`id\`)
   )`,
+
+  // ──────────────────────────────────────────────
+  // V3.15 - ADD SECURITY COLUMNS TO USERS (IF NOT EXISTS)
+  // ──────────────────────────────────────────────
+  `ALTER TABLE \`users\` ADD COLUMN IF NOT EXISTS \`resetToken\` varchar(255)`,
+  `ALTER TABLE \`users\` ADD COLUMN IF NOT EXISTS \`resetTokenExpires\` timestamp NULL`,
+  `ALTER TABLE \`users\` ADD COLUMN IF NOT EXISTS \`emailOtp\` varchar(6)`,
+  `ALTER TABLE \`users\` ADD COLUMN IF NOT EXISTS \`emailOtpExpires\` timestamp NULL`,
 ];
 
 async function migrate() {

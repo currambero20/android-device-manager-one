@@ -102,8 +102,8 @@ export default function Users() {
   };
 
   const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleCreateOrUpdate = async (e: React.FormEvent) => {
@@ -145,8 +145,8 @@ export default function Users() {
             <TableBody>
               {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                  <TableCell className="font-medium">{user.name || "Sin nombre"}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{user.email || "Sin email"}</TableCell>
                   <TableCell>
                     <span className="px-2 py-1 rounded-full text-[10px] font-bold border uppercase bg-accent/10">
                       {user.role}
@@ -204,7 +204,7 @@ export default function Users() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-purple-500" />
-                Herramientas Permitidas para {users.find(u => u.id === managingUserId)?.name}
+                Herramientas Permitidas para {users.find(u => u.id === managingUserId)?.name || "Usuario"}
               </DialogTitle>
               <DialogDescription>
                 Selecciona qué módulos y herramientas podrá visualizar este usuario en su menú lateral.

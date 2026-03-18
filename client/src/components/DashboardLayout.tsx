@@ -224,7 +224,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
           {sidebarOpen && (
             <div className="bg-accent/5 border border-accent/10 rounded-lg p-3">
               <p className="text-[10px] font-bold text-cyan-600 uppercase tracking-wider mb-1">Usuario Actual</p>
-              <p className="text-sm font-medium truncate">{user?.name}</p>
+              <p className="text-sm font-medium truncate">{user?.name || "Usuario"}</p>
               <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
             </div>
           )}

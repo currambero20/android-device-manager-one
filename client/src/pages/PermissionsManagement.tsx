@@ -20,22 +20,22 @@ export default function PermissionsManagement() {
   const [selectedPreset, setSelectedPreset] = useState<"admin" | "manager" | "user" | "viewer">("user");
 
   // Queries
-  const { data: allPermissions } = trpc.granularPermissions.getAllPermissions.useQuery() as any;
+  const { data: allPermissions } = trpc.permissions.getAllPermissions.useQuery() as any;
   const { data: allUsers } = trpc.users.getAll.useQuery() as any;
   const { data: allDevices } = trpc.devices.getAll.useQuery() as any;
-  const { data: presets } = trpc.granularPermissions.getPresets.useQuery() as any;
-  const { data: categories } = trpc.granularPermissions.getCategories.useQuery() as any;
-  const { data: userPermissions } = trpc.granularPermissions.getUserPermissions.useQuery(
+  const { data: presets } = trpc.permissions.getPresets.useQuery() as any;
+  const { data: categories } = trpc.permissions.getCategories.useQuery() as any;
+  const { data: userPermissions } = trpc.permissions.getUserPermissions.useQuery(
     { userId: selectedUser || 0 },
     { enabled: !!selectedUser }
   ) as any;
-  const { data: permissionMatrix } = trpc.granularPermissions.getPermissionMatrix.useQuery(
+  const { data: permissionMatrix } = trpc.permissions.getPermissionMatrix.useQuery(
     { userId: selectedUser || 0, deviceIds: allDevices?.map((d: any) => d.id) || [] },
     { enabled: !!selectedUser && !!allDevices }
   ) as any;
 
   // Mutations
-  const assignPermissionMutation = trpc.granularPermissions.assignUserPermission.useMutation({
+  const assignPermissionMutation = trpc.permissions.assignUserPermission.useMutation({
     onSuccess: () => {
       toast.success("Permiso asignado correctamente");
     },
@@ -44,7 +44,7 @@ export default function PermissionsManagement() {
     },
   });
 
-  const revokePermissionMutation = trpc.granularPermissions.revokeUserPermission.useMutation({
+  const revokePermissionMutation = trpc.permissions.revokeUserPermission.useMutation({
     onSuccess: () => {
       toast.success("Permiso revocado correctamente");
     },
@@ -53,7 +53,7 @@ export default function PermissionsManagement() {
     },
   });
 
-  const assignPresetMutation = trpc.granularPermissions.assignPreset.useMutation({
+  const assignPresetMutation = trpc.permissions.assignPreset.useMutation({
     onSuccess: () => {
       toast.success("Preset asignado correctamente");
     },
@@ -62,7 +62,7 @@ export default function PermissionsManagement() {
     },
   });
 
-  const clearPermissionsMutation = trpc.granularPermissions.clearUserPermissions.useMutation({
+  const clearPermissionsMutation = trpc.permissions.clearUserPermissions.useMutation({
     onSuccess: () => {
       toast.success("Permisos limpiados correctamente");
     },
@@ -72,7 +72,7 @@ export default function PermissionsManagement() {
   });
 
   // Mutation para actualizar matriz de permisos usuario-dispositivo
-  const updatePermissionMatrixMutation = trpc.granularPermissions.updatePermissionMatrix.useMutation({
+  const updatePermissionMatrixMutation = trpc.permissions.updatePermissionMatrix.useMutation({
     onSuccess: (data: any) => {
       toast.success(`Permisos actualizados: +${data.added} agregados, -${data.removed} removidos`);
     },
@@ -84,8 +84,8 @@ export default function PermissionsManagement() {
   // Filtered data
   const filteredUsers = useMemo(() => {
     return (allUsers || []).filter((u: any) =>
-      u.name?.toLowerCase().includes(searchUser.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchUser.toLowerCase())
+      (u.name || "").toLowerCase().includes(searchUser.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(searchUser.toLowerCase())
     );
   }, [allUsers, searchUser]);
 
@@ -193,9 +193,9 @@ export default function PermissionsManagement() {
                               : "bg-background border-transparent hover:border-accent/20 hover:bg-secondary/50"
                           }`}
                         >
-                          <div className="font-bold text-sm text-foreground">{user.name}</div>
-                          <div className="text-[10px] text-muted-foreground font-medium truncate">{user.email}</div>
-                          <Badge variant="outline" className={`mt-2 text-[10px] uppercase tracking-wider font-bold ${getRoleColor(user.role)}`}>
+                          <div className="font-bold text-sm text-foreground">{user.name || "Sin nombre"}</div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate">{user.email || "Sin email"}</div>
+                          <Badge variant="outline" className={`mt-2 text-[10px] uppercase tracking-wider font-bold ${getRoleColor(user.role || "")}`}>
                             {user.role}
                           </Badge>
                         </button>

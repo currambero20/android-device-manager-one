@@ -44,37 +44,10 @@ export async function getDb() {
 }
 
 export async function runMigrations() {
-  const db = await getDb();
-  if (!db) {
-    _migrationLog.push("Database not available for migrations");
-    return;
-  }
-  
-  const repairs = [
-    { name: "passwordHash", sql: "ALTER TABLE `users` ADD COLUMN `passwordHash` varchar(255)" },
-    { name: "twoFactorEnabled", sql: "ALTER TABLE `users` ADD COLUMN `twoFactorEnabled` boolean DEFAULT false NOT NULL" },
-    { name: "twoFactorSecret", sql: "ALTER TABLE `users` ADD COLUMN `twoFactorSecret` varchar(255)" },
-    { name: "isActive", sql: "ALTER TABLE `users` ADD COLUMN `isActive` boolean DEFAULT true NOT NULL" },
-    { name: "role_enum", sql: "ALTER TABLE `users` MODIFY COLUMN `role` enum('admin','manager','user','viewer') NOT NULL DEFAULT 'viewer'" }
-  ];
-
-  _migrationLog = [];
-  console.log("[Database] Starting manual schema repair...");
-  
-  for (const repair of repairs) {
-    try {
-      await db.execute(sql.raw(repair.sql));
-      _migrationLog.push(`SUCCESS: ${repair.name}`);
-    } catch (error: any) {
-      const msg = error.message ? error.message.toLowerCase() : "";
-      if (msg.includes("duplicate column") || msg.includes("already exists")) {
-        _migrationLog.push(`EXISTS: ${repair.name}`);
-      } else {
-        const fullErr = error.cause ? String(error.cause) : JSON.stringify(error, Object.getOwnPropertyNames(error));
-        _migrationLog.push(`FAILED: ${repair.name} (${error.message}) -> ${fullErr}`);
-      }
-    }
-  }
+  // Schema is fully managed by scripts/migrate-tidb.ts (run once at setup).
+  // No ALTER statements needed here — all columns exist in TiDB Cloud.
+  _migrationLog = ["Schema OK - managed by migrate-tidb.ts"];
+  console.log("[Database] Schema is up-to-date (TiDB Cloud).");
 }
 
 export async function getHealthStatus() {

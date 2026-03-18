@@ -1,12 +1,7 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
-import { createHash } from "crypto";
-
-// Hash SHA-256 simple para contraseñas de usuarios manuales
-function hashPassword(password: string): string {
-  return createHash("sha256").update(password).digest("hex");
-}
+import { hashPassword } from "../db";
 
 export const usersRouter = router({
   getAll: adminProcedure.query(async () => {

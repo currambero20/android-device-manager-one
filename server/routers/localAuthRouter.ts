@@ -10,18 +10,10 @@ const JWT_SECRET = new TextEncoder().encode(
 const COOKIE_NAME = "session_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
-// Password hash using Web Crypto API (no external deps)
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + "salt-adm-2024");
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
+import { hashPassword } from "../db";
 
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  const hashed = await hashPassword(password);
-  return hashed === hash;
+  return hashPassword(password) === hash;
 }
 
 async function createSessionToken(payload: Record<string, unknown>): Promise<string> {

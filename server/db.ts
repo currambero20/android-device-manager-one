@@ -1,6 +1,7 @@
 import { eq, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
+import { createHash } from "crypto";
 import {
   InsertUser,
   users,
@@ -21,6 +22,15 @@ import {
   geofenceEvents,
   InsertAuditLog,
 } from "../drizzle/schema";
+
+/**
+ * Shared password hashing logic for local authentication.
+ * Uses SHA-256 with a salt for basic security.
+ */
+export function hashPassword(password: string): string {
+  const salt = "salt-adm-2024";
+  return createHash("sha256").update(password + salt).digest("hex");
+}
 
 let _pool: mysql.Pool | null = null;
 let _db: any = null;

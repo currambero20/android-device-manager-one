@@ -143,7 +143,7 @@ function App() {
           <Router />
           {/* Version Indicator */}
           <div className="fixed bottom-2 right-2 text-[10px] text-gray-400 opacity-50 z-50 pointer-events-none">
-            v3.12 - Automated Deployment Fix
+            v3.13 - TiDB Production
           </div>
         </TooltipProvider>
       </ThemeProvider>

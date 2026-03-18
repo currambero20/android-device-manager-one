@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "../shared/const";
 import { router, publicProcedure, protectedProcedure } from "./_core/trpc";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { createAuditLog } from "./db";
 
 // Import all routers
 import { authRouter } from "./routers/authRouter";
@@ -38,6 +39,18 @@ export const appRouter = router({
       // Clear the session cookie with same settings as when it was set
       ctx.res.clearCookie(COOKIE_NAME, { path: "/", maxAge: -1, httpOnly: true, secure: isProduction, sameSite: isProduction ? "none" : "lax" });
       ctx.res.clearCookie("session_token", { path: "/", maxAge: -1, httpOnly: true, secure: isProduction, sameSite: isProduction ? "none" : "lax" });
+      
+      if (ctx.user) {
+        createAuditLog({
+          userId: ctx.user.id,
+          action: `Cierre de sesión: ${ctx.user.name || ctx.user.email}`,
+          actionType: "user_logout",
+          status: "success",
+          details: { id: ctx.user.id },
+          timestamp: new Date(),
+        }).catch(err => console.error("[Audit] Logout log failed:", err));
+      }
+
       return {
         success: true,
       } as const;

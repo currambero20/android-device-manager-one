@@ -7,7 +7,8 @@ import {
   getUserByResetToken, 
   updateUserPassword,
   getDb,
-  clearUserEmailOtp
+  clearUserEmailOtp,
+  createAuditLog
 } from "../db";
 import { sendResetEmail } from "../services/mailService";
 import { users } from "../../drizzle/schema";
@@ -63,6 +64,15 @@ export const authRouter = router({
       const hashedPassword = db.hashPassword(input.newPassword);
       await updateUserPassword(user.id, hashedPassword);
 
+      await createAuditLog({
+        userId: user.id,
+        action: "Restablecimiento de contraseña",
+        actionType: "user_updated",
+        status: "success",
+        details: { method: "token" },
+        timestamp: new Date(),
+      });
+
       return { success: true, message: "Contraseña actualizada correctamente" };
     }),
 
@@ -99,6 +109,16 @@ export const authRouter = router({
         sameSite: isProduction ? "none" : "lax",
         maxAge: 60 * 60 * 24 * 30,
         path: "/",
+      });
+
+      // Log successful 2FA login
+      await createAuditLog({
+        userId: user.id,
+        action: "Verificación 2FA exitosa",
+        actionType: "user_login",
+        status: "success",
+        details: { method: "email-otp" },
+        timestamp: new Date(),
       });
 
       // Clear OTP

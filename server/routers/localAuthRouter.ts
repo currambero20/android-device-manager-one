@@ -10,7 +10,7 @@ const JWT_SECRET = new TextEncoder().encode(
 const COOKIE_NAME = "session_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
-import { hashPassword, setUserEmailOtp } from "../db";
+import { hashPassword, setUserEmailOtp, createAuditLog } from "../db";
 import { send2FAEmail } from "../services/mailService";
 import { users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -72,6 +72,15 @@ export const loginProcedure = publicProcedure
       });
 
       setCookie(ctx.res, token);
+      
+      await createAuditLog({
+        userId: 0,
+        action: "Inicio de sesión (Administrador)",
+        actionType: "user_login",
+        status: "success",
+        details: { method: "env-var", username: adminUsername },
+        timestamp: new Date(),
+      });
 
       return {
         success: true,
@@ -129,6 +138,15 @@ export const loginProcedure = publicProcedure
           });
 
           setCookie(ctx.res, token);
+
+          await createAuditLog({
+            userId: dbUser.id,
+            action: `Inicio de sesión (${dbUser.name || dbUser.email})`,
+            actionType: "user_login",
+            status: "success",
+            details: { method: "db", email: dbUser.email },
+            timestamp: new Date(),
+          });
 
           return {
             success: true,
@@ -204,6 +222,15 @@ export const registerProcedure = publicProcedure
         message: "Error al crear el usuario",
       });
     }
+
+    await createAuditLog({
+      userId: 0,
+      action: `Usuario creado: ${input.username}`,
+      actionType: "user_created",
+      status: "success",
+      details: { role: input.role, name: input.name },
+      timestamp: new Date(),
+    });
 
     return { success: true, message: "Usuario creado correctamente" };
   });

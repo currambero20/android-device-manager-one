@@ -10,7 +10,7 @@ const JWT_SECRET = new TextEncoder().encode(
 const COOKIE_NAME = "session_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
-import { hashPassword, setUserEmailOtp, createAuditLog } from "../db";
+import { hashPassword, setUserEmailOtp, createAuditLog, getDb } from "../db";
 import { decrypt } from "../utils/crypto";
 
 import { send2FAEmail } from "../services/mailService";
@@ -64,8 +64,7 @@ export const loginProcedure = publicProcedure
 
     // ✅ STEP 1: Try DB user lookup FIRST (allows Profile changes to take effect)
     try {
-      const db = await import("../db");
-      const dbInstance = await db.getDb();
+      const dbInstance = await getDb();
 
       if (dbInstance) {
         const userRows = await dbInstance
@@ -119,7 +118,6 @@ export const loginProcedure = publicProcedure
             setCookie(ctx.res, token);
 
             try {
-              const { createAuditLog } = await import("../db");
               await createAuditLog({
                 userId: dbUser.id,
                 action: `Inicio de sesión (${dbUser.name || dbUser.email})`,

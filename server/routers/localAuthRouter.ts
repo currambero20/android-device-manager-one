@@ -77,11 +77,21 @@ export const loginProcedure = publicProcedure
         const dbUser = userRows[0];
 
         if (dbUser && dbUser.passwordHash) {
-          // Try both current and legacy salt for absolute compatibility
-          const hashCurrent = hashPassword(input.password);
-          const hashLegacy = createHash("sha256").update(input.password + "0f54de789b0083c0e7bfcc12b3ad593c:879ee2fd7bcf12b8f537c51c5d07d050").digest("hex");
+          // Define all possible salts for absolute transition safety
+          const masterSecret = 'adm-secure-barranquilla-2017';
+          const rawEncryptedSalt = '0f54de789b0083c0e7bfcc12b3ad593c:879ee2fd7bcf12b8f537c51c5d07d050';
+          const decryptedSalt = decrypt(rawEncryptedSalt); // 'android-device-manager-secure-salt-2024'
           
-          const valid = hashCurrent === dbUser.passwordHash || hashLegacy === dbUser.passwordHash;
+          const saltsToTry = [decryptedSalt, rawEncryptedSalt, masterSecret, ""];
+          let valid = false;
+
+          for (const s of saltsToTry) {
+            const h = createHash("sha256").update(input.password + s).digest("hex");
+            if (h === dbUser.passwordHash) {
+              valid = true;
+              break;
+            }
+          }
           
           if (valid) {
             // Check for 2FA bypass parameter (passed as part of password or a header in the future)

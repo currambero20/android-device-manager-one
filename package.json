@@ -6,9 +6,8 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "cd client && npm run dev",
-    "build": "cd client && npm install --legacy-peer-deps && npm run build",
-    "postinstall": "cd client && npm install --legacy-peer-deps",
+    "dev": "npm run dev --prefix client",
+    "build": "npm install --prefix client --legacy-peer-deps && npm run build --prefix client",
     "start": "npx tsx server/_core/index.ts"
   },
   "dependencies": {

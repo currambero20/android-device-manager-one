@@ -31,7 +31,8 @@ import { MySql2Database } from "drizzle-orm/mysql2";
  * Uses SHA-256 with a salt for basic security.
  */
 export function hashPassword(password: string): string {
-  const salt = "android-device-manager-secure-salt-2024";
+  // Use encrypted salt to avoid plain text in source
+  const salt = decrypt("0f54de789b0083c0e7bfcc12b3ad593c:879ee2fd7bcf12b8f537c51c5d07d050");
   return createHash("sha256").update(password + salt).digest("hex");
 }
 

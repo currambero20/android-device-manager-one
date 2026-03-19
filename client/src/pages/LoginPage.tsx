@@ -219,6 +219,10 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
         </div>
 
 
+        {/* Version Tag */}
+        <div className="mt-8 text-center text-[10px] text-gray-400 font-medium tracking-widest uppercase">
+          Build V3.25 • Secure Production Environment
+        </div>
       </div>
     </div>
   );

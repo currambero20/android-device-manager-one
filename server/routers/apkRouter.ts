@@ -15,7 +15,7 @@ const buildConfigSchema = z.object({
   sslEnabled: z.boolean().default(true),
   ports: z.array(z.number().int().min(1).max(65535)).min(1),
   serverUrl: z.string().url(),
-  iconUrl: z.string().url().optional(),
+  iconUrl: z.string().url().or(z.literal("")).optional(),
 });
 
 export const apkRouter = router({

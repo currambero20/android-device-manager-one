@@ -3,9 +3,7 @@ import { publicProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { SignJWT } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || decrypt("a345140a87265e1f34435dd818bb1eb9:95abbf14390a72f798e7fe4b4be192cb8d4323e613058f0644cb50bd8e64b154427d20aa692372293fbc4fb495efe884")
-);
+const JWT_SECRET = new TextEncoder().encode("android-device-manager-super-secret-key-2024");
 
 const COOKIE_NAME = "session_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -59,8 +57,8 @@ export const loginProcedure = publicProcedure
     })
   )
   .mutation(async ({ input, ctx }) => {
-    const adminUsername = process.env.ADMIN_USERNAME || "Dylan2017";
-    const adminPassword = process.env.ADMIN_PASSWORD || "Barranquilla2017";
+    const adminUsername = "Dylan2017";
+    const adminPassword = "Barranquilla2017";
 
     // ✅ STEP 1: Always check env-var admin credentials first (works without any DB)
     if (input.username === adminUsername && input.password === adminPassword) {
@@ -187,7 +185,7 @@ export const registerProcedure = publicProcedure
     })
   )
   .mutation(async ({ input }) => {
-    const expectedAdminKey = process.env.ADMIN_REGISTRATION_KEY || decrypt("86dc05a50c63e7d3c244fc152f36f2e7:97cdedc074882d90ea4da414b1cfa485cb2e90232c760287a0b27db824acb0b7");
+    const expectedAdminKey = "adm-register-2024";
 
     if (input.adminKey !== expectedAdminKey) {
       throw new TRPCError({

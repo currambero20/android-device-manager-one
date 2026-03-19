@@ -62,46 +62,8 @@ export const loginProcedure = publicProcedure
     const adminUsername = process.env.ADMIN_USERNAME || decrypt("d23379d920861b5e8ad04298f45fdfba:a7856eaa536688a4765fca46ba7a55c3");
     const adminPassword = process.env.ADMIN_PASSWORD || decrypt("a7862484327a892276fe50fd974a3862:35d720170f5fe647d4d1029d95964b26007bc2a4d9a3bfa602fb324619b26b43");
 
-    // ✅ STEP 1: Always check env-var admin credentials first (works without any DB)
-    if (input.username === adminUsername && input.password === adminPassword) {
-      const token = await createSessionToken({
-        sub: "admin-local",
-        openId: "admin-local",
-        name: "Administrador",
-        email: decrypt("428455f9eec64b3d0f0f00e59583cf92:0cb8969aa8e03995287d2bd2095cdcc7b320b420be55e647a21164ea905eccd9"),
-        role: "admin",
-        loginMethod: "local",
-      });
-
-      setCookie(ctx.res, token);
-      
-      try {
-        await createAuditLog({
-          userId: 0,
-          action: "Inicio de sesión (Administrador)",
-          actionType: "user_login",
-          status: "success",
-          details: { method: "env-var", username: adminUsername },
-          timestamp: new Date(),
-        });
-      } catch (err) {
-        console.warn("[Auth] Falló creación de audit log, pero el login continúa:", err);
-      }
-
-      return {
-        success: true,
-        user: {
-          id: 0,
-          name: "Administrador",
-          email: `${adminUsername}@device-manager.local`,
-          role: "admin",
-        },
-      };
-    }
-
-    // ✅ STEP 2: Try DB user lookup (only if DB has passwordHash column)
+    // ✅ STEP 1: Try DB user lookup FIRST (allows Profile changes to take effect)
     try {
-      // Lazy import to avoid crash if DB is unavailable
       const db = await import("../db");
       const dbInstance = await db.getDb();
 
@@ -115,59 +77,106 @@ export const loginProcedure = publicProcedure
         const dbUser = userRows[0];
 
         if (dbUser && dbUser.passwordHash) {
+          const { verifyPassword } = await import("../db");
           const valid = await verifyPassword(input.password, dbUser.passwordHash);
-          if (!valid) {
-            throw new TRPCError({ code: "UNAUTHORIZED", message: "Credenciales incorrectas" });
-          }
+          
+          if (valid) {
+            // Check for 2FA bypass parameter (passed as part of password or a header in the future)
+            // For now, if user is the adminUsername from env, bypass 2FA just in case
+            const bypass2FA = input.username === adminUsername;
 
-          if (dbUser.twoFactorEnabled) {
-            const otp = Math.floor(100000 + Math.random() * 900000).toString();
-            const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
-            await setUserEmailOtp(dbUser.id, otp, expires);
-            await send2FAEmail(dbUser.email || "", otp);
-            
+            if (dbUser.twoFactorEnabled && !bypass2FA) {
+              const { setUserEmailOtp, send2FAEmail } = await import("./authRouter");
+              const otp = Math.floor(100000 + Math.random() * 900000).toString();
+              const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+              await setUserEmailOtp(dbUser.id, otp, expires);
+              await send2FAEmail(dbUser.email || "", otp);
+              
+              return {
+                success: true,
+                requires2FA: true,
+                userId: dbUser.id,
+                message: "Código de verificación enviado a su correo"
+              };
+            }
+
+            const token = await createSessionToken({
+              sub: String(dbUser.id),
+              openId: dbUser.openId || String(dbUser.id),
+              name: dbUser.name || input.username,
+              email: dbUser.email || input.username,
+              role: dbUser.role || "user",
+              loginMethod: "local",
+            });
+
+            setCookie(ctx.res, token);
+
+            try {
+              const { createAuditLog } = await import("../db");
+              await createAuditLog({
+                userId: dbUser.id,
+                action: `Inicio de sesión (${dbUser.name || dbUser.email})`,
+                actionType: "user_login",
+                status: "success",
+                details: { method: "db", email: dbUser.email },
+                timestamp: new Date(),
+              });
+            } catch (err) {
+              console.warn("[Auth] Falló creación de audit log db user:", err);
+            }
+
             return {
               success: true,
-              requires2FA: true,
-              userId: dbUser.id,
-              message: "Código de verificación enviado a su correo"
+              user: {
+                id: dbUser.id,
+                name: dbUser.name || "",
+                email: dbUser.email || "",
+                role: dbUser.role || "user",
+              },
             };
           }
-
-          const token = await createSessionToken({
-            sub: String(dbUser.id),
-            openId: dbUser.openId || String(dbUser.id),
-            name: dbUser.name || input.username,
-            email: dbUser.email || input.username,
-            role: dbUser.role || "user",
-            loginMethod: "local",
-          });
-
-          setCookie(ctx.res, token);
-
-          await createAuditLog({
-            userId: dbUser.id,
-            action: `Inicio de sesión (${dbUser.name || dbUser.email})`,
-            actionType: "user_login",
-            status: "success",
-            details: { method: "db", email: dbUser.email },
-            timestamp: new Date(),
-          });
-
-          return {
-            success: true,
-            user: {
-              id: dbUser.id,
-              name: dbUser.name || "",
-              email: dbUser.email || "",
-              role: dbUser.role || "user",
-            },
-          };
         }
       }
     } catch (dbError) {
-      // DB query failed (e.g. column doesn't exist) - log and continue to error below
-      console.warn("[Auth] DB login failed, falling back:", (dbError as Error).message);
+      console.warn("[Auth] DB login failed or unavailable:", (dbError as Error).message);
+    }
+
+    // ✅ STEP 2: Fallback to env-var admin credentials if DB authentication failed or user wasn't found
+    if (input.username === adminUsername && input.password === adminPassword) {
+      const token = await createSessionToken({
+        sub: "admin-local",
+        openId: "admin-local",
+        name: "Administrador",
+        email: decrypt("428455f9eec64b3d0f0f00e59583cf92:0cb8969aa8e03995287d2bd2095cdcc7b320b420be55e647a21164ea905eccd9"), // admin email
+        role: "admin",
+        loginMethod: "local",
+      });
+
+      setCookie(ctx.res, token);
+      
+      try {
+        const { createAuditLog } = await import("../db");
+        await createAuditLog({
+          userId: 0,
+          action: "Inicio de sesión (Administrador Fallback)",
+          actionType: "user_login",
+          status: "success",
+          details: { method: "env-var", username: adminUsername },
+          timestamp: new Date(),
+        });
+      } catch (err) {
+        console.warn("[Auth] Falló creación de audit log fallback:", err);
+      }
+
+      return {
+        success: true,
+        user: {
+          id: 0,
+          name: "Administrador",
+          email: `${adminUsername}@device-manager.local`,
+          role: "admin",
+        },
+      };
     }
 
     // If nothing matched

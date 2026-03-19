@@ -23,4 +23,24 @@ export const auditLogsRouter = router({
     .query(async ({ input }) => {
       return await getAuditLogsByDeviceId(input.deviceId, input.limit);
     }),
+
+  deleteAll: adminProcedure
+    .mutation(async () => {
+      try {
+        const db = await import("../db");
+        const dbInstance = await db.getDb();
+        if (dbInstance) {
+          const { auditLogs } = await import("../../drizzle/schema");
+          await dbInstance.delete(auditLogs);
+          return { success: true };
+        }
+        return { success: false, error: "Database not available" };
+      } catch (error) {
+        console.error("Failed to delete audit logs:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No se pudieron eliminar los registros de auditoría",
+        });
+      }
+    }),
 });

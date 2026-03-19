@@ -218,9 +218,7 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
 
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Android Device Manager Pro v3.15 - Control Real
-        </p>
+
       </div>
     </div>
   );

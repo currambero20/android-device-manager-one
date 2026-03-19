@@ -30,19 +30,41 @@ import {
   AlertCircle,
   Search,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
+import { toast } from "sonner";
 
 export default function AuditLogs() {
   const [searchTerm, setSearchTerm] = useState("");
   const [actionTypeFilter, setActionTypeFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [limit, setLimit] = useState(50);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: logs, isLoading, refetch } = trpc.auditLogs.getAll.useQuery({ limit });
   const auditLogs: any[] = logs || [];
+
+  const deleteLogsMutation = trpc.auditLogs.deleteAll.useMutation({
+    onSuccess: () => {
+      toast.success("Historial de auditoría eliminado correctamente.");
+      setIsDeleting(false);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al eliminar el historial.");
+      setIsDeleting(false);
+    }
+  });
+
+  const handleDeleteAllLogs = () => {
+    if (window.confirm("¿Estás súper seguro de que quieres eliminar TODO el historial de auditoría? Esta acción no se puede deshacer.")) {
+      setIsDeleting(true);
+      deleteLogsMutation.mutate();
+    }
+  };
 
   const actionTypes = [
     { value: "user_login", label: "Inicio de Sesión" },
@@ -122,6 +144,10 @@ export default function AuditLogs() {
             <p className="text-muted-foreground italic">Seguimiento de todas las acciones del sistema</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={handleDeleteAllLogs} disabled={isDeleting} className="rounded-full border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700">
+              <Trash2 className={`w-4 h-4 mr-2 ${isDeleting ? 'animate-bounce' : ''}`} />
+              Limpiar Historial
+            </Button>
             <Button variant="outline" onClick={() => refetch()} className="rounded-full border-slate-200 text-slate-600">
               <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Sincronizar

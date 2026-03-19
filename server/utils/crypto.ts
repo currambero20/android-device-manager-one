@@ -17,7 +17,7 @@ function deriveKey(secret: string): Buffer {
  * Output format: IV in hex + ':' + Encrypted data in hex.
  */
 export function encrypt(text: string): string {
-  const secret = process.env.APP_ENCRYPTION_KEY || 'default-secret-adm-2024-secure-key';
+  const secret = 'adm-secure-barranquilla-2017';
   const key = deriveKey(secret);
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
@@ -33,7 +33,7 @@ export function encrypt(text: string): string {
  */
 export function decrypt(text: string): string {
   try {
-    const secret = process.env.APP_ENCRYPTION_KEY || 'adm-secure-barranquilla-2017';
+    const secret = 'adm-secure-barranquilla-2017';
     const key = deriveKey(secret);
     const [ivHex, encryptedHex] = text.split(':');
     

@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { SignJWT } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || decrypt("a345140a87265e1f34435dd818bb1eb9:95abbf14390a72f798e7fe4b4be192cb8d4323e613058f0644cb50bd8e64b154427d20aa692372293fbc4fb495efe884")
+  process.env.JWT_SECRET || decrypt("49375ed35668ab6429c6fe9a00f95540:f5193c255f8d8ff7ec140f1d5342ef4c19e122ba2bb4fb2c80b875434a5ca0fb3292fe54f456eb4ea4cd7db10f6c89dc")
 );
 
 const COOKIE_NAME = "session_token";
@@ -59,8 +59,8 @@ export const loginProcedure = publicProcedure
     })
   )
   .mutation(async ({ input, ctx }) => {
-    const adminUsername = decrypt("d23379d920861b5e8ad04298f45fdfba:a7856eaa536688a4765fca46ba7a55c3");
-    const adminPassword = decrypt("a7862484327a892276fe50fd974a3862:35d720170f5fe647d4d1029d95964b26007bc2a4d9a3bfa602fb324619b26b43");
+    const adminUsername = decrypt("73fdd631874d5b3895cef37a71207ea9:df67909e91246bb21aecaaf500df85fe");
+    const adminPassword = decrypt("7e6aabdeb55fc2afa3e2f6376d9b1b61:94aed050b4d96284ffeb8084ded814084af43164ff0ad11ef2442857cc945b72");
 
     // ✅ STEP 1: Try DB user lookup FIRST (allows Profile changes to take effect)
     try {
@@ -77,8 +77,8 @@ export const loginProcedure = publicProcedure
         const dbUser = userRows[0];
 
         if (dbUser && dbUser.passwordHash) {
-          const { verifyPassword } = await import("../db");
-          const valid = await verifyPassword(input.password, dbUser.passwordHash);
+          const { hashPassword } = await import("../db");
+          const valid = hashPassword(input.password) === dbUser.passwordHash;
           
           if (valid) {
             // Check for 2FA bypass parameter (passed as part of password or a header in the future)
@@ -86,7 +86,8 @@ export const loginProcedure = publicProcedure
             const bypass2FA = input.username === adminUsername;
 
             if (dbUser.twoFactorEnabled && !bypass2FA) {
-              const { setUserEmailOtp, send2FAEmail } = await import("./authRouter");
+              const { setUserEmailOtp } = await import("../db");
+              const { send2FAEmail } = await import("../services/mailService");
               const otp = Math.floor(100000 + Math.random() * 900000).toString();
               const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
               await setUserEmailOtp(dbUser.id, otp, expires);
@@ -147,7 +148,7 @@ export const loginProcedure = publicProcedure
         sub: "admin-local",
         openId: "admin-local",
         name: "Administrador",
-        email: decrypt("428455f9eec64b3d0f0f00e59583cf92:0cb8969aa8e03995287d2bd2095cdcc7b320b420be55e647a21164ea905eccd9"), // admin email
+        email: decrypt("53585744f6ef8abf14e43cd74135a8fb:aec6900911a8dc0d9e1e07b69f639741fecce90dff82afc5241ec0964c8afea2"), // admin email
         role: "admin",
         loginMethod: "local",
       });
@@ -200,7 +201,7 @@ export const registerProcedure = publicProcedure
     })
   )
   .mutation(async ({ input }) => {
-    const expectedAdminKey = process.env.ADMIN_REGISTRATION_KEY || decrypt("86dc05a50c63e7d3c244fc152f36f2e7:97cdedc074882d90ea4da414b1cfa485cb2e90232c760287a0b27db824acb0b7");
+    const expectedAdminKey = process.env.ADMIN_REGISTRATION_KEY || decrypt("88df632cb5708bce5419c8a9fc99d34f:d50303ceeb19f2499b0f01e04068887da44e18c89dc5a66590c455c07878f70a");
 
     if (input.adminKey !== expectedAdminKey) {
       throw new TRPCError({

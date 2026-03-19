@@ -12,9 +12,9 @@ const transporter = nodemailer.createTransport({
   pool: true, // Uses pooled connections
   maxConnections: 1, // Limit for serverless
   maxMessages: 10,
-  connectionTimeout: 5000, // 5 seconds max to connect
-  socketTimeout: 5000,
-  greetingTimeout: 5000,
+  connectionTimeout: 15000, // 15 seconds max to connect to prevent Render timeouts
+  socketTimeout: 15000,
+  greetingTimeout: 15000,
 });
 
 /**

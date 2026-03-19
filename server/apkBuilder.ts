@@ -1,9 +1,9 @@
 import { promises as fs } from "fs";
-import { execSync, spawn } from "child_process";
 import path from "path";
 import crypto from "crypto";
 import { getDb } from "./db";
 import { apkBuilds } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 export interface APKConfig {
   appName: string;
@@ -30,245 +30,28 @@ export interface BuildResult {
 export class APKBuilder {
   private buildDir: string;
   private outputDir: string;
-  private keystoreDir: string;
 
   constructor() {
     this.buildDir = path.join(process.cwd(), "builds");
     this.outputDir = path.join(this.buildDir, "outputs");
-    this.keystoreDir = path.join(this.buildDir, "keystores");
   }
 
-  /**
-   * Initialize build directories
-   */
   async initialize(): Promise<void> {
     try {
       await fs.mkdir(this.buildDir, { recursive: true });
       await fs.mkdir(this.outputDir, { recursive: true });
-      await fs.mkdir(this.keystoreDir, { recursive: true });
-      console.log("[APKBuilder] Directories initialized");
     } catch (error) {
       console.error("[APKBuilder] Failed to initialize directories:", error);
       throw error;
     }
   }
 
-  /**
-   * Generate a keystore for signing APK
-   */
-  async generateKeystore(buildId: string, packageName: string): Promise<string> {
-    const keystorePath = path.join(this.keystoreDir, `${buildId}.keystore`);
-    const keystorePassword = crypto.randomBytes(16).toString("hex");
-    const keyAlias = "release";
-    const keyPassword = crypto.randomBytes(16).toString("hex");
-
-    try {
-      // Generate keystore using keytool
-      const command = [
-        "keytool",
-        "-genkey",
-        "-v",
-        "-keystore",
-        keystorePath,
-        "-keyalg",
-        "RSA",
-        "-keysize",
-        "2048",
-        "-validity",
-        "10000",
-        "-alias",
-        keyAlias,
-        "-storepass",
-        keystorePassword,
-        "-keypass",
-        keyPassword,
-        "-dname",
-        `CN=${packageName}, O=Android Device Manager, L=Global, ST=Global, C=US`,
-      ];
-
-      execSync(command.join(" "), { stdio: "pipe" });
-
-      // Save credentials
-      const credentialsPath = path.join(this.keystoreDir, `${buildId}.credentials`);
-      await fs.writeFile(
-        credentialsPath,
-        JSON.stringify(
-          {
-            keystorePath,
-            keystorePassword,
-            keyAlias,
-            keyPassword,
-          },
-          null,
-          2
-        )
-      );
-
-      console.log(`[APKBuilder] Keystore generated: ${keystorePath}`);
-      return keystorePath;
-    } catch (error) {
-      console.error("[APKBuilder] Failed to generate keystore:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create Android project structure
-   */
-  async createProjectStructure(buildId: string, config: APKConfig): Promise<string> {
-    const projectDir = path.join(this.buildDir, buildId);
-
-    try {
-      // Create directory structure
-      const dirs = [
-        "app/src/main",
-        "app/src/main/java",
-        "app/src/main/res/values",
-        "app/src/main/res/xml",
-        "app/src/main/res/drawable",
-        "gradle/wrapper",
-      ];
-
-      for (const dir of dirs) {
-        await fs.mkdir(path.join(projectDir, dir), { recursive: true });
-      }
-
-      // Create build.gradle
-      const buildGradle = this.generateBuildGradle(config);
-      await fs.writeFile(path.join(projectDir, "app/build.gradle"), buildGradle);
-
-      // Create settings.gradle
-      await fs.writeFile(path.join(projectDir, "settings.gradle"), 'include ":app"');
-
-      // Create AndroidManifest.xml
-      const manifest = this.generateManifest(config);
-      await fs.writeFile(path.join(projectDir, "app/src/main/AndroidManifest.xml"), manifest);
-
-      // Create strings.xml
-      const strings = this.generateStringsXml(config);
-      await fs.writeFile(path.join(projectDir, "app/src/main/res/values/strings.xml"), strings);
-
-      // Create device_admin.xml
-      const deviceAdminXml = this.generateDeviceAdminXml();
-      await fs.writeFile(path.join(projectDir, "app/src/main/res/xml/device_admin.xml"), deviceAdminXml);
-
-      // Create MainActivity and DeviceAdminReceiver
-      const packagePath = config.packageName.replace(/\./g, "/");
-      await fs.mkdir(path.join(projectDir, `app/src/main/java/${packagePath}`), {
-        recursive: true,
-      });
-
-      const mainActivity = this.generateMainActivity(config);
-      await fs.writeFile(
-        path.join(projectDir, `app/src/main/java/${packagePath}/MainActivity.java`),
-        mainActivity
-      );
-
-      const deviceAdminReceiver = this.generateDeviceAdminReceiver(config);
-      await fs.writeFile(
-        path.join(projectDir, `app/src/main/java/${packagePath}/AdminReceiver.java`),
-        deviceAdminReceiver
-      );
-
-      console.log(`[APKBuilder] Project structure created: ${projectDir}`);
-      return projectDir;
-    } catch (error) {
-      console.error("[APKBuilder] Failed to create project structure:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Compile APK using Gradle
-   */
-  async compileAPK(projectDir: string, buildId: string): Promise<string> {
-    try {
-      const gradleWrapper = path.join(projectDir, "gradlew");
-
-      // Make gradlew executable
-      await fs.chmod(gradleWrapper, 0o755);
-
-      // Run gradle build
-      const command = `cd ${projectDir} && ./gradlew assembleRelease`;
-      execSync(command, { stdio: "pipe" });
-
-      // Find compiled APK
-      const apkPath = path.join(projectDir, "app/build/outputs/apk/release/app-release.apk");
-
-      // Verify APK exists
-      await fs.access(apkPath);
-
-      console.log(`[APKBuilder] APK compiled: ${apkPath}`);
-      return apkPath;
-    } catch (error) {
-      console.error("[APKBuilder] Failed to compile APK:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Sign APK with keystore
-   */
-  async signAPK(apkPath: string, keystorePath: string, credentials: any): Promise<string> {
-    try {
-      const signedApkPath = apkPath.replace(".apk", "-signed.apk");
-
-      const command = [
-        "jarsigner",
-        "-verbose",
-        "-sigalg",
-        "SHA1withRSA",
-        "-digestalg",
-        "SHA1",
-        "-keystore",
-        keystorePath,
-        "-storepass",
-        credentials.keystorePassword,
-        "-keypass",
-        credentials.keyPassword,
-        apkPath,
-        credentials.keyAlias,
-      ];
-
-      execSync(command.join(" "), { stdio: "pipe" });
-
-      console.log(`[APKBuilder] APK signed: ${signedApkPath}`);
-      return signedApkPath;
-    } catch (error) {
-      console.error("[APKBuilder] Failed to sign APK:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Build complete APK
-   */
   async buildAPK(config: APKConfig, userId: number): Promise<BuildResult> {
     const buildId = `build-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
 
     try {
-      // Initialize
       await this.initialize();
 
-      // Create project structure
-      const projectDir = await this.createProjectStructure(buildId, config);
-
-      // Generate keystore
-      const keystorePath = await this.generateKeystore(buildId, config.packageName);
-      const credentialsPath = path.join(this.keystoreDir, `${buildId}.credentials`);
-      const credentials = JSON.parse(await fs.readFile(credentialsPath, "utf-8"));
-
-      // Compile APK
-      const apkPath = await this.compileAPK(projectDir, buildId);
-
-      // Sign APK
-      const signedApkPath = await this.signAPK(apkPath, keystorePath, credentials);
-
-      // Copy to outputs
-      const outputPath = path.join(this.outputDir, `${buildId}-${config.appName}.apk`);
-      await fs.copyFile(signedApkPath, outputPath);
-
-      // Save build info to database
       const db = await getDb();
       if (db) {
         await db.insert(apkBuilds).values({
@@ -282,41 +65,60 @@ export class APKBuilder {
           sslEnabled: config.sslEnabled,
           ports: config.ports,
           serverUrl: config.serverUrl,
-          status: "ready",
-          apkUrl: `/api/apk/download/${buildId}`,
-          fileSize: (await fs.stat(outputPath)).size,
+          status: "building",
           createdAt: new Date(),
         });
+      }
+
+      const githubToken = process.env.GITHUB_TOKEN;
+      const githubRepo = process.env.GITHUB_REPO; // e.g. "currambero20/android-device-manager-one"
+      const serverUrlStr = process.env.RENDER_EXTERNAL_URL || process.env.SERVER_URL || process.env.FRONTEND_URL || "https://your-server.render.com";
+      const webhookUrl = `${serverUrlStr}/api/apk/webhook`;
+      const configBase64 = Buffer.from(JSON.stringify(config)).toString("base64");
+
+      if (!githubToken || !githubRepo) {
+        throw new Error("GITHUB_TOKEN or GITHUB_REPO not configured in environment variables.");
+      }
+
+      // We use global fetch (available in Node 18+)
+      const response = await fetch(`https://api.github.com/repos/${githubRepo}/actions/workflows/build-apk.yml/dispatches`, {
+        method: "POST",
+        headers: {
+          "Accept": "application/vnd.github.v3+json",
+          "Authorization": `token ${githubToken}`,
+          "Content-Type": "application/json",
+          "User-Agent": "APKBuilder-Backend"
+        },
+        body: JSON.stringify({
+          ref: "main",
+          inputs: {
+            config_base64: configBase64,
+            build_id: buildId,
+            webhook_url: webhookUrl
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub API error: ${response.status} ${errorText}`);
       }
 
       return {
         success: true,
         buildId,
-        apkPath: outputPath,
         apkUrl: `/api/apk/download/${buildId}`,
-        progress: 100,
-        status: "completed",
+        progress: 10,
+        status: "building",
       };
     } catch (error) {
       console.error(`[APKBuilder] Build failed for ${buildId}:`, error);
 
-      // Save failed build to database
       const db = await getDb();
       if (db) {
-        await db.insert(apkBuilds).values({
-          buildId,
-          createdBy: userId,
-          appName: config.appName,
-          packageName: config.packageName,
-          versionName: config.versionName,
-          versionCode: config.versionCode,
-          stealthMode: config.stealthMode,
-          sslEnabled: config.sslEnabled,
-          ports: config.ports,
-          serverUrl: config.serverUrl,
-          status: "failed",
-          createdAt: new Date(),
-        });
+        await db.update(apkBuilds)
+          .set({ status: "failed" })
+          .where(eq(apkBuilds.buildId, buildId));
       }
 
       return {
@@ -329,302 +131,73 @@ export class APKBuilder {
     }
   }
 
-  /**
-   * Generate build.gradle content
-   */
-  private generateBuildGradle(config: APKConfig): string {
-    return `plugins {
-    id 'com.android.application'
-}
+  async saveAPK(buildId: string, buffer: Buffer): Promise<void> {
+    await this.initialize();
+    const outputPath = path.join(this.outputDir, `${buildId}.apk`);
+    await fs.writeFile(outputPath, buffer);
+    console.log(`[APKBuilder] Saved APK for build ${buildId} (${buffer.length} bytes)`);
 
-android {
-    namespace '${config.packageName}'
-    compileSdk 34
-
-    defaultConfig {
-        applicationId '${config.packageName}'
-        minSdk 21
-        targetSdk 34
-        versionCode ${config.versionCode}
-        versionName '${config.versionName}'
+    const db = await getDb();
+    if (db) {
+      await db.update(apkBuilds)
+        .set({ 
+          status: "ready", 
+          fileSize: buffer.length,
+          apkUrl: `/api/apk/download/${buildId}` 
+        })
+        .where(eq(apkBuilds.buildId, buildId));
     }
-
-    buildTypes {
-        release {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
-    }
-}
-
-dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-}`;
   }
 
-  /**
-   * Generate AndroidManifest.xml
-   */
-  private generateManifest(config: APKConfig): string {
-    const packagePath = config.packageName.replace(/\./g, "/");
-    return `<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="${config.packageName}">
-
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    
-    <!-- Permisos para MDM -->
-    <uses-permission android:name="android.permission.MANAGE_DEVICE_ADMINS" />
-    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
-
-    <application
-        android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
-        android:label="@string/app_name"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.DarkActionBar"
-        android:usesCleartextTraffic="${!config.sslEnabled}">
-
-        <!-- Actividad Principal -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
-        <!-- Receptor de Administrador de Dispositivo (MDM Core) -->
-        <receiver
-            android:name=".AdminReceiver"
-            android:exported="true"
-            android:permission="android.permission.BIND_DEVICE_ADMIN">
-            <meta-data
-                android:name="android.app.device_admin"
-                android:resource="@xml/device_admin" />
-            <intent-filter>
-                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-                <action android:name="android.app.action.PROFILE_PROVISIONING_COMPLETE"/>
-            </intent-filter>
-        </receiver>
-
-    </application>
-
-</manifest>`;
+  async markBuildFailed(buildId: string): Promise<void> {
+    const db = await getDb();
+    if (db) {
+      await db.update(apkBuilds)
+        .set({ status: "failed" })
+        .where(eq(apkBuilds.buildId, buildId));
+      console.log(`[APKBuilder] Marked build ${buildId} as failed`);
+    }
   }
 
-  /**
-   * Generate device_admin.xml
-   */
-  private generateDeviceAdminXml(): string {
-    return `<?xml version="1.0" encoding="utf-8"?>
-<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-policies>
-        <limit-password />
-        <watch-login />
-        <reset-password />
-        <force-lock />
-        <wipe-data />
-        <expire-password />
-        <encrypted-storage />
-        <disable-camera />
-    </uses-policies>
-</device-admin>`;
-  }
-
-  /**
-   * Generate strings.xml
-   */
-  private generateStringsXml(config: APKConfig): string {
-    return `<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">${config.appName}</string>
-    <string name="server_url">${config.serverUrl}</string>
-    <string name="server_ports">${config.ports.join(",")}</string>
-    <string name="stealth_mode">${config.stealthMode}</string>
-</resources>`;
-  }
-
-  /**
-   * Generate MainActivity.java
-   */
-  private generateMainActivity(config: APKConfig): string {
-    const packageName = config.packageName;
-    return `package ${packageName};
-
-import android.app.Activity;
-import android.app.admin.DevicePolicyManager;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.os.Bundle;
-import android.widget.TextView;
-import android.widget.Toast;
-
-public class MainActivity extends Activity {
-    
-    private DevicePolicyManager dpm;
-    private ComponentName adminComponent;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        
-        dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
-        adminComponent = new ComponentName(this, AdminReceiver.class);
-        
-        TextView textView = new TextView(this);
-        textView.setText("${config.appName} - MDM Initializing...");
-        setContentView(textView);
-
-        // Registro inicial con el servidor
-        registerDevice();
-
-        // Modo Oculto
-        if ("true".equals("${config.stealthMode}")) {
-            hideAppIcon();
-        }
-
-        // Solicitar permisos de administrador si no se tienen
-        if (!dpm.isAdminActive(adminComponent)) {
-            Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
-            intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent);
-            intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Security activation required.");
-            startActivityForResult(intent, 1);
-        } else {
-            Toast.makeText(this, "Device Enrolled", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void hideAppIcon() {
-        android.content.pm.PackageManager p = getPackageManager();
-        ComponentName componentName = new ComponentName(this, MainActivity.class);
-        p.setComponentEnabledSetting(componentName, 
-            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, 
-            android.content.pm.PackageManager.DONT_KILL_APP);
-    }
-
-    private void registerDevice() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String serverUrl = "${config.serverUrl}";
-                    java.net.URL url = new java.net.URL(serverUrl + "/api/devices/register");
-                    java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setDoOutput(true);
-                    conn.setRequestProperty("Content-Type", "application/json");
-                    String json = "{\\\"name\\\":\\\"\" + android.os.Build.MODEL + \"\\\", \\\"brand\\\":\\\"\" + android.os.Build.BRAND + \"\\\"}";
-                    byte[] input = json.getBytes(\"utf-8\");
-                    conn.getOutputStream().write(input, 0, input.length);
-                    conn.getResponseCode();
-                } catch (Exception e) {}
-            }
-        }).start();
-    }
-    }
-}`;
-  }
-
-  /**
-   * Generate AdminReceiver.java
-   */
-  private generateDeviceAdminReceiver(config: APKConfig): string {
-    const packageName = config.packageName;
-    return `package ${packageName};
-
-import android.app.admin.DeviceAdminReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.widget.Toast;
-
-public class AdminReceiver extends DeviceAdminReceiver {
-    
-    @Override
-    public void onEnabled(Context context, Intent intent) {
-        super.onEnabled(context, intent);
-        Toast.makeText(context, "Administración de Dispositivo Habilitada", Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public CharSequence onDisableRequested(Context context, Intent intent) {
-        return "Deshabilitar esto eliminará el acceso a los recursos corporativos.";
-    }
-
-    @Override
-    public void onDisabled(Context context, Intent intent) {
-        super.onDisabled(context, intent);
-        Toast.makeText(context, "Administración de Dispositivo Deshabilitada", Toast.LENGTH_SHORT).show();
-    }
-}`;
-  }
-
-  /**
-   * Get build status
-   */
   async getBuildStatus(buildId: string): Promise<BuildResult | null> {
     const db = await getDb();
     if (!db) return null;
 
     try {
-      // TODO: Query database for build status
-      return null;
+      const dbBuilds = await db.select().from(apkBuilds).where(eq(apkBuilds.buildId, buildId)).limit(1);
+      if (dbBuilds.length === 0) return null;
+      const b = dbBuilds[0];
+      return {
+        success: b.status === "ready",
+        buildId: b.buildId,
+        apkUrl: b.apkUrl || undefined,
+        status: b.status as any,
+        progress: b.status === "ready" ? 100 : b.status === "building" ? 50 : 0
+      };
     } catch (error) {
       console.error("[APKBuilder] Failed to get build status:", error);
       return null;
     }
   }
 
-  /**
-   * Download APK file
-   */
   async downloadAPK(buildId: string): Promise<Buffer | null> {
     try {
-      const apkPath = path.join(this.outputDir, `${buildId}*.apk`);
-      // Use glob to find the file
-      const files = await fs.readdir(this.outputDir);
-      const apkFile = files.find((f) => f.startsWith(buildId));
-
-      if (!apkFile) {
-        console.warn(`[APKBuilder] APK not found: ${buildId}`);
-        return null;
-      }
-
-      const fullPath = path.join(this.outputDir, apkFile);
-      return await fs.readFile(fullPath);
+      const apkPath = path.join(this.outputDir, `${buildId}.apk`);
+      return await fs.readFile(apkPath);
     } catch (error) {
       console.error("[APKBuilder] Failed to download APK:", error);
       return null;
     }
   }
 
-  /**
-   * Clean up build artifacts
-   */
   async cleanupBuild(buildId: string): Promise<void> {
     try {
-      const projectDir = path.join(this.buildDir, buildId);
-      const keystorePath = path.join(this.keystoreDir, `${buildId}.keystore`);
-      const credentialsPath = path.join(this.keystoreDir, `${buildId}.credentials`);
-
-      // Remove project directory
-      await fs.rm(projectDir, { recursive: true, force: true });
-
-      // Remove keystore files
-      await fs.rm(keystorePath, { force: true });
-      await fs.rm(credentialsPath, { force: true });
-
+      const apkPath = path.join(this.outputDir, `${buildId}.apk`);
+      await fs.rm(apkPath, { force: true });
+      const db = await getDb();
+      if (db) {
+         await db.delete(apkBuilds).where(eq(apkBuilds.buildId, buildId));
+      }
       console.log(`[APKBuilder] Build artifacts cleaned: ${buildId}`);
     } catch (error) {
       console.error("[APKBuilder] Failed to cleanup build:", error);

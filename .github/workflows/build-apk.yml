@@ -1,0 +1,61 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_base64:
+        description: 'Base64 encoded JSON configuration'
+        required: true
+      build_id:
+        description: 'Build ID'
+        required: true
+      webhook_url:
+        description: 'Webhook URL to notify upon completion'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Generate APK files
+        run: npx tsx scripts/generate-apk-files.ts "${{ github.event.inputs.config_base64 }}" "${{ github.event.inputs.build_id }}"
+
+      - name: Generate Keystore
+        run: |
+          keytool -genkey -v -keystore release.keystore -keyalg RSA -keysize 2048 -validity 10000 -alias release -storepass android123 -keypass android123 -dname "CN=Android, O=Android, L=Global, ST=Global, C=US"
+          
+      - name: Build APK with Gradle
+        working-directory: builds/${{ github.event.inputs.build_id }}
+        run: gradle assembleRelease
+        
+      - name: Sign APK
+        run: |
+          apk_path=$(find builds/${{ github.event.inputs.build_id }}/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore release.keystore -storepass android123 -keypass android123 "$apk_path" release
+          "$ANDROID_HOME/build-tools/34.0.0/zipalign" -v 4 "$apk_path" final-app.apk
+
+      - name: Upload APK to Server
+        if: success()
+        run: |
+          curl -v -X POST --data-binary @final-app.apk \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            ${{ github.event.inputs.webhook_url }}/${{ github.event.inputs.build_id }}
+
+      - name: Notify Webhook Failure
+        if: failure()
+        run: |
+          curl -X POST -H "Content-Type: application/json" -d '{"buildId":"${{ github.event.inputs.build_id }}","status":"failed","githubRunId":"${{ github.run_id }}"}' ${{ github.event.inputs.webhook_url }}/status/${{ github.event.inputs.build_id }} || true

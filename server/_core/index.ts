@@ -50,6 +50,43 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  // Webhook for GitHub Actions to upload compiled APK
+  app.post("/api/apk/webhook/:buildId", express.raw({ type: "*/*", limit: "150mb" }), async (req, res) => {
+    try {
+      const { buildId } = req.params;
+      const buffer = req.body;
+      if (!buffer || !Buffer.isBuffer(buffer)) {
+         return res.status(400).json({ error: "Invalid file buffer" });
+      }
+      
+      const { getAPKBuilder } = await import("./apkBuilder");
+      const builder = getAPKBuilder();
+      await builder.saveAPK(buildId, buffer);
+      
+      res.json({ success: true, message: "APK received and saved" });
+    } catch (err) {
+      console.error("[Server] Webhook APK save error:", err);
+      res.status(500).json({ error: "Failed to save APK" });
+    }
+  });
+
+  // Webhook for failure notification
+  app.post("/api/apk/webhook/status/:buildId", express.json(), async (req, res) => {
+    try {
+      const { buildId } = req.params;
+      const { status } = req.body;
+      if (status === "failed") {
+        const { getAPKBuilder } = await import("./apkBuilder");
+        const builder = getAPKBuilder();
+        await builder.markBuildFailed(buildId);
+      }
+      res.json({ success: true });
+    } catch(err) {
+      console.error("[Server] Webhook Status error:", err);
+      res.status(500).json({ error: "Failed to process status webhook" });
+    }
+  });
+
   // Registrar rutas de OAuth
   registerOAuthRoutes(app);
 

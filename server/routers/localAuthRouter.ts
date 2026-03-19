@@ -158,6 +158,9 @@ export const loginProcedure = publicProcedure
         }
       }
     } catch (dbError) {
+      // ✅ FIX: Do NOT swallow TRPCError (like 2FA failures). Re-throw them so the client sees the real message.
+      if (dbError instanceof TRPCError) throw dbError;
+      
       console.warn("[Auth] DB login failed or unavailable:", (dbError as Error).message);
     }
 

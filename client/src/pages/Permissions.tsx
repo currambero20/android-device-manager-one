@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -209,7 +209,7 @@ interface UserPermissionCardProps {
 
 function UserPermissionCard({ user, allPermissions, assignMutation, revokeMutation }: UserPermissionCardProps) {
   const { data: userPerms = [], isLoading } = trpc.permissions.getUserPermissions.useQuery({ userId: user.id });
-  const userPermCodes = userPerms.map(p => p.code);
+  const userPermCodes = userPerms.map((p: any) => p.code) as string[];
 
   const toggle = (code: string) => {
     if (userPermCodes.includes(code)) {

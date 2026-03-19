@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { router, adminProcedure, protectedProcedure } from "../_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { getAllAuditLogs, getAuditLogsByDeviceId } from "../db";
 
 export const auditLogsRouter = router({

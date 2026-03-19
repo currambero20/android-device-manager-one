@@ -93,7 +93,7 @@ export default function Users() {
 
   const togglePermission = (permCode: string) => {
     if (!managingUserId) return;
-    const currentCodes = userPerms.map(p => p.code);
+    const currentCodes = userPerms.map(p => p.code) as string[];
     const newCodes = currentCodes.includes(permCode)
       ? currentCodes.filter(c => c !== permCode)
       : [...currentCodes, permCode];
@@ -162,7 +162,7 @@ export default function Users() {
                     <Button variant="ghost" size="sm" onClick={() => { setManagingUserId(user.id); setIsPermsDialogOpen(true); }}>
                       <Layout className="w-4 h-4 text-purple-600" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => { setEditingUserId(user.id); setFormData({ ...user }); setIsDialogOpen(true); }}>
+                    <Button variant="ghost" size="sm" onClick={() => { setEditingUserId(user.id); setFormData({ name: user.name || "", email: user.email || "", password: "", role: user.role || "user" }); setIsDialogOpen(true); }}>
                       <Edit className="w-4 h-4 text-cyan-600" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => deleteUserMutation.mutate({ id: user.id })} className="text-red-500">

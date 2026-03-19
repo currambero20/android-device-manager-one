@@ -77,7 +77,6 @@ export const loginProcedure = publicProcedure
         const dbUser = userRows[0];
 
         if (dbUser && dbUser.passwordHash) {
-          const { hashPassword } = await import("../db");
           const valid = hashPassword(input.password) === dbUser.passwordHash;
           
           if (valid) {
@@ -86,8 +85,6 @@ export const loginProcedure = publicProcedure
             const bypass2FA = input.username === adminUsername;
 
             if (dbUser.twoFactorEnabled && !bypass2FA) {
-              const { setUserEmailOtp } = await import("../db");
-              const { send2FAEmail } = await import("../services/mailService");
               const otp = Math.floor(100000 + Math.random() * 900000).toString();
               const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
               await setUserEmailOtp(dbUser.id, otp, expires);

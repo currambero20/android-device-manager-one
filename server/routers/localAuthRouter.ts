@@ -73,17 +73,22 @@ export const loginProcedure = publicProcedure
 
       setCookie(ctx.res, token);
       
-      await createAuditLog({
-        userId: 0,
-        action: "Inicio de sesión (Administrador)",
-        actionType: "user_login",
-        status: "success",
-        details: { method: "env-var", username: adminUsername },
-        timestamp: new Date(),
-      });
+      try {
+        await createAuditLog({
+          userId: 0,
+          action: "Inicio de sesión (Administrador)",
+          actionType: "user_login",
+          status: "success",
+          details: { method: "env-var", username: adminUsername, version: "v3.15.1-FORCE-FIX-02" },
+          timestamp: new Date(),
+        });
+      } catch (err) {
+        console.warn("[Auth] Falló creación de audit log, pero el login continúa:", err);
+      }
 
       return {
         success: true,
+        version: "v3.15.1-FORCE-FIX-02",
         user: {
           id: 0,
           name: "Administrador",

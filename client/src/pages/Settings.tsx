@@ -167,7 +167,7 @@ export default function Settings() {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
                   <span className="text-muted-foreground">Versión:</span>
-                  <span className="font-bold text-cyan-400">v3.15.1</span>
+                  <span className="font-bold text-cyan-400">V3.25</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
                   <span className="text-muted-foreground">Estado:</span>

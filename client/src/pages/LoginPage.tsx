@@ -219,6 +219,12 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
         </div>
 
 
+        {/* Version Indicator */}
+        <div className="mt-8 text-center">
+          <p className="text-[10px] text-gray-400 opacity-50">
+            Build V3.25 • Secure Production Environment
+          </p>
+        </div>
       </div>
     </div>
   );

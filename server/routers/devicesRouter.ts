@@ -101,7 +101,7 @@ export const devicesRouter = router({
     .input(z.object({
       deviceId: z.number(),
       command: z.string(),
-      payload: z.record(z.any()).optional(),
+      payload: z.record(z.string(), z.any()).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       try {

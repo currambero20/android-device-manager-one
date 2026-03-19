@@ -21,7 +21,7 @@ export default function PermissionsManagement() {
   // Queries
   const { data: allPermissions } = trpc.permissions.getAllPermissions.useQuery() as any;
   const { data: allUsers } = trpc.users.getAll.useQuery() as any;
-  const { data: allDevices } = trpc.devices.getAll.useQuery() as any;
+  const { data: allDevices } = trpc.devices.getMyDevices.useQuery() as any;
   const { data: presets } = trpc.permissions.getPresets.useQuery() as any;
   const { data: categories } = trpc.permissions.getCategories.useQuery() as any;
   const { data: userPermissions } = trpc.permissions.getUserPermissions.useQuery(
@@ -281,8 +281,8 @@ export default function PermissionsManagement() {
                       <CardContent>
                         <ScrollArea className="h-[400px] pr-4">
                           <div className="space-y-2">
-                            {allPermissions?.map((perm) => {
-                              const hasPermission = userPermissions?.some((p) => p.code === perm.code);
+                            {allPermissions?.map((perm: any) => {
+                              const hasPermission = userPermissions?.some((p: any) => p.code === perm.code);
                               return (
                                 <div
                                   key={perm.code}
@@ -363,7 +363,7 @@ export default function PermissionsManagement() {
                                   </Badge>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
-                                  {allPermissions?.map((perm) => {
+                                  {allPermissions?.map((perm: any) => {
                                     const devicePerms = permissionMatrix?.[device.id] || [];
                                     const hasPermission = devicePerms.includes(perm.code);
                                     const isLoading = updatePermissionMatrixMutation.isPending;
@@ -434,7 +434,7 @@ export default function PermissionsManagement() {
                     <CardDescription>Permisos de sistema asociados</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2 pt-4">
-                    {category.permissions.map((perm) => (
+                    {category.permissions.map((perm: any) => (
                       <div key={perm} className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl border border-accent/10 group/item hover:bg-secondary/50">
                         <span className="text-sm font-semibold text-foreground group-hover/item:text-primary transition-colors">{perm}</span>
                         <div className="p-1.5 bg-background rounded-lg shadow-sm border border-accent/10">
@@ -451,7 +451,7 @@ export default function PermissionsManagement() {
           {/* Presets Rápidos */}
           <TabsContent value="presets" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {presets?.map((preset) => (
+              {presets?.map((preset: any) => (
                 <Card key={preset.name} className="border-accent/20 shadow-sm hover:border-primary/30 transition-all bg-gradient-to-br from-white to-secondary/20">
                   <CardHeader>
                     <CardTitle className="capitalize text-xl font-bold flex items-center gap-3">
@@ -464,7 +464,7 @@ export default function PermissionsManagement() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2">
-                      {preset.permissions.map((perm) => (
+                      {preset.permissions.map((perm: any) => (
                         <div key={perm.code} className="p-2.5 bg-background rounded-xl border border-accent/10 shadow-sm">
                           <div className="font-bold text-xs text-primary">{perm.code}</div>
                           <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{perm.description}</div>
@@ -482,7 +482,7 @@ export default function PermissionsManagement() {
                         className="w-full h-11 text-sm font-bold shadow-lg shadow-primary/20"
                         disabled={assignPresetMutation.isPending}
                       >
-                        Asignar Plantilla a {filteredUsers?.find(u => u.id === selectedUser)?.name || "Usuario"}
+                        Asignar Plantilla a {filteredUsers?.find((u: any) => u.id === selectedUser)?.name || "Usuario"}
                       </Button>
                     )}
                   </CardContent>

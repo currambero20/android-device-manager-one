@@ -91,7 +91,16 @@ export const loginProcedure = publicProcedure
               const otp = Math.floor(100000 + Math.random() * 900000).toString();
               const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
               await setUserEmailOtp(dbUser.id, otp, expires);
-              await send2FAEmail(dbUser.email || "", otp);
+              
+              try {
+                await send2FAEmail(dbUser.email || "", otp);
+              } catch (mailError) {
+                console.error("[Auth] 2FA Email failed:", mailError);
+                throw new TRPCError({ 
+                  code: "INTERNAL_SERVER_ERROR", 
+                  message: "Fallo al enviar correo 2FA. Revisa la configuración de correo local/Vercel." 
+                });
+              }
               
               return {
                 success: true,

@@ -9,6 +9,12 @@ const transporter = nodemailer.createTransport({
     user: GMAIL_USER,
     pass: GMAIL_APP_PASSWORD,
   },
+  pool: true, // Uses pooled connections
+  maxConnections: 1, // Limit for serverless
+  maxMessages: 10,
+  connectionTimeout: 5000, // 5 seconds max to connect
+  socketTimeout: 5000,
+  greetingTimeout: 5000,
 });
 
 /**
@@ -35,7 +41,15 @@ export async function sendResetEmail(to: string, token: string) {
     `,
   };
 
-  return transporter.sendMail(mailOptions);
+  return new Promise((resolve, reject) => {
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error sending reset email:", error);
+        return reject(error);
+      }
+      resolve(info);
+    });
+  });
 }
 
 /**
@@ -60,5 +74,13 @@ export async function send2FAEmail(to: string, otp: string) {
     `,
   };
 
-  return transporter.sendMail(mailOptions);
+  return new Promise((resolve, reject) => {
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error sending 2FA email:", error);
+        return reject(error);
+      }
+      resolve(info);
+    });
+  });
 }

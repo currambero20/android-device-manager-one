@@ -4,17 +4,14 @@ const GMAIL_USER = process.env.GMAIL_USER || "pecesitolindo6677@gmail.com";
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD || "ktbt kkrm uyfa wxby";
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // Use SSL immediately
   auth: {
     user: GMAIL_USER,
     pass: GMAIL_APP_PASSWORD,
   },
-  pool: true, // Uses pooled connections
-  maxConnections: 1, // Limit for serverless
-  maxMessages: 10,
-  connectionTimeout: 15000, // 15 seconds max to connect to prevent Render timeouts
-  socketTimeout: 15000,
-  greetingTimeout: 15000,
+  // Removed pool and strict timeouts that cause Connection Timeout on Render
 });
 
 /**

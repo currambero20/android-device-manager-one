@@ -12,6 +12,7 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 import { hashPassword, setUserEmailOtp, createAuditLog, getDb } from "../db";
 import { decrypt } from "../utils/crypto";
+import { createHash } from "crypto";
 
 import { send2FAEmail } from "../services/mailService";
 import { users } from "../../drizzle/schema";
@@ -76,7 +77,11 @@ export const loginProcedure = publicProcedure
         const dbUser = userRows[0];
 
         if (dbUser && dbUser.passwordHash) {
-          const valid = hashPassword(input.password) === dbUser.passwordHash;
+          // Try both current and legacy salt for absolute compatibility
+          const hashCurrent = hashPassword(input.password);
+          const hashLegacy = createHash("sha256").update(input.password + "0f54de789b0083c0e7bfcc12b3ad593c:879ee2fd7bcf12b8f537c51c5d07d050").digest("hex");
+          
+          const valid = hashCurrent === dbUser.passwordHash || hashLegacy === dbUser.passwordHash;
           
           if (valid) {
             // Check for 2FA bypass parameter (passed as part of password or a header in the future)

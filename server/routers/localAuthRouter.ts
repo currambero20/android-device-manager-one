@@ -105,11 +105,11 @@ export const loginProcedure = publicProcedure
               
               try {
                 await send2FAEmail(dbUser.email || "", otp);
-              } catch (mailError) {
+              } catch (mailError: any) {
                 console.error("[Auth] 2FA Email failed:", mailError);
                 throw new TRPCError({ 
                   code: "INTERNAL_SERVER_ERROR", 
-                  message: "Fallo al enviar correo 2FA. Revisa la configuración de correo local/Vercel." 
+                  message: `Fallo al enviar correo 2FA: ${mailError.message || "Error desconocido"}. Revisa la configuración de correo.` 
                 });
               }
               

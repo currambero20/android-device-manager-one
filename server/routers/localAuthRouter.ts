@@ -59,8 +59,8 @@ export const loginProcedure = publicProcedure
     })
   )
   .mutation(async ({ input, ctx }) => {
-    const adminUsername = process.env.ADMIN_USERNAME || decrypt("d23379d920861b5e8ad04298f45fdfba:a7856eaa536688a4765fca46ba7a55c3");
-    const adminPassword = process.env.ADMIN_PASSWORD || decrypt("a7862484327a892276fe50fd974a3862:35d720170f5fe647d4d1029d95964b26007bc2a4d9a3bfa602fb324619b26b43");
+    const adminUsername = decrypt("d23379d920861b5e8ad04298f45fdfba:a7856eaa536688a4765fca46ba7a55c3");
+    const adminPassword = decrypt("a7862484327a892276fe50fd974a3862:35d720170f5fe647d4d1029d95964b26007bc2a4d9a3bfa602fb324619b26b43");
 
     // ✅ STEP 1: Try DB user lookup FIRST (allows Profile changes to take effect)
     try {

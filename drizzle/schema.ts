@@ -414,6 +414,7 @@ export const apkBuilds = mysqlTable(
     fileSize: bigint("fileSize", { mode: "number" }),
     status: mysqlEnum("status", ["building", "ready", "failed", "expired"]).default("building").notNull(),
     downloadCount: int("downloadCount").default(0).notNull(),
+    buildLogs: text("buildLogs"),
     expiresAt: timestamp("expiresAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

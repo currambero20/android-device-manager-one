@@ -58,6 +58,9 @@ export default function ApkBuilder() {
   const [copiedBuildId, setCopiedBuildId] = useState<string | null>(null);
   const [viewingLogsFor, setViewingLogsFor] = useState<string | null>(null);
 
+  const utils = trpc.useUtils();
+  const { data: builds = [], isLoading } = trpc.apk.listBuilds.useQuery({ limit: 50 });
+
   // Poll for build status/logs every 5 seconds if a build is in progress
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -73,9 +76,6 @@ export default function ApkBuilder() {
       if (interval) clearInterval(interval);
     };
   }, [builds, utils.apk.listBuilds]);
-
-  const utils = trpc.useUtils();
-  const { data: builds = [], isLoading } = trpc.apk.listBuilds.useQuery({ limit: 50 });
 
   const buildApkMutation = trpc.apk.buildAPK.useMutation({
     onSuccess: () => {

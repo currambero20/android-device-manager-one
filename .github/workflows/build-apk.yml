@@ -19,43 +19,66 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-      
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
-      - name: Generate APK files
-        run: npx tsx scripts/generate-apk-files.ts "${{ github.event.inputs.config_base64 }}" "${{ github.event.inputs.build_id }}"
 
-      - name: Generate Keystore
+      - name: Install tsx
+        run: npm install -g tsx
+
+      - name: Generate APK project files
+        env:
+          APK_CONFIG_BASE64: ${{ github.event.inputs.config_base64 }}
+          BUILD_ID: ${{ github.event.inputs.build_id }}
+        run: tsx scripts/generate-apk-files.ts
+
+      - name: Setup Gradle wrapper in project
         run: |
-          keytool -genkey -v -keystore release.keystore -keyalg RSA -keysize 2048 -validity 10000 -alias release -storepass android123 -keypass android123 -dname "CN=Android, O=Android, L=Global, ST=Global, C=US"
+          PROJECT_DIR="builds/${{ github.event.inputs.build_id }}"
+          echo "Project dir: $PROJECT_DIR"
+          ls -la "$PROJECT_DIR"
           
+          # Generate gradle wrapper files inside the project directory
+          cd "$PROJECT_DIR"
+          gradle wrapper --gradle-version 8.7 --distribution-type bin
+          chmod +x ./gradlew
+          ls -la gradle/wrapper/
+
       - name: Build APK with Gradle
-        working-directory: builds/${{ github.event.inputs.build_id }}
-        run: gradle assembleRelease
-        
-      - name: Sign APK
         run: |
-          apk_path=$(find builds/${{ github.event.inputs.build_id }}/app/build/outputs/apk/release -name "*.apk" | head -n 1)
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore release.keystore -storepass android123 -keypass android123 "$apk_path" release
-          "$ANDROID_HOME/build-tools/34.0.0/zipalign" -v 4 "$apk_path" final-app.apk
+          PROJECT_DIR="builds/${{ github.event.inputs.build_id }}"
+          cd "$PROJECT_DIR"
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Find built APK
+        id: find_apk
+        run: |
+          PROJECT_DIR="builds/${{ github.event.inputs.build_id }}"
+          APK_PATH=$(find "$PROJECT_DIR" -name "*.apk" | head -n 1)
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "Found APK: $APK_PATH"
 
       - name: Upload APK to Server
-        if: success()
+        if: success() && steps.find_apk.outputs.apk_path != ''
         run: |
-          curl -v -X POST --data-binary @final-app.apk \
+          echo "Uploading APK to ${{ github.event.inputs.webhook_url }}/${{ github.event.inputs.build_id }}"
+          curl -v -X POST \
+            --data-binary @"${{ steps.find_apk.outputs.apk_path }}" \
             -H "Content-Type: application/vnd.android.package-archive" \
-            ${{ github.event.inputs.webhook_url }}/${{ github.event.inputs.build_id }}
+            "${{ github.event.inputs.webhook_url }}/${{ github.event.inputs.build_id }}"
 
-      - name: Notify Webhook Failure
+      - name: Notify Webhook on Failure
         if: failure()
         run: |
-          curl -X POST -H "Content-Type: application/json" -d '{"buildId":"${{ github.event.inputs.build_id }}","status":"failed","githubRunId":"${{ github.run_id }}"}' ${{ github.event.inputs.webhook_url }}/status/${{ github.event.inputs.build_id }} || true
+          curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"buildId\":\"${{ github.event.inputs.build_id }}\",\"status\":\"failed\",\"githubRunId\":\"${{ github.run_id }}\"}" \
+            "${{ github.event.inputs.webhook_url }}/status/${{ github.event.inputs.build_id }}" || true

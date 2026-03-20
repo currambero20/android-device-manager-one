@@ -16,7 +16,7 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // ✅ CORS CONFIGURADO PARA VERCEL
+  // âœ… CORS CONFIGURADO PARA VERCEL
   const corsOptions = {
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       const allowedOrigins = [
@@ -59,14 +59,14 @@ async function startServer() {
          return res.status(400).json({ error: "Invalid file buffer" });
       }
       
-      const { getAPKBuilder } = await import("./apkBuilder");
+      const { getAPKBuilder } = await import("../apkBuilder");
       const builder = getAPKBuilder();
       await builder.saveAPK(buildId, buffer);
       
       res.json({ success: true, message: "APK received and saved" });
-    } catch (err) {
+    } catch (err: any) {
       console.error("[Server] Webhook APK save error:", err);
-      res.status(500).json({ error: "Failed to save APK" });
+      res.status(500).json({ error: "Failed to save APK", details: err?.message, stack: err?.stack });
     }
   });
 
@@ -76,7 +76,7 @@ async function startServer() {
       const { buildId } = req.params;
       const { status } = req.body;
       if (status === "failed") {
-        const { getAPKBuilder } = await import("./apkBuilder");
+        const { getAPKBuilder } = await import("../apkBuilder");
         const builder = getAPKBuilder();
         await builder.markBuildFailed(buildId);
       }

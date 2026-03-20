@@ -41,8 +41,9 @@ async function generateFiles() {
       await fs.mkdir(path.join(projectDir, dir), { recursive: true });
     }
 
+    // Simple app/build.gradle
     const buildGradle = `plugins {
-    id 'com.android.application'
+    id 'com.android.application' version '8.2.2'
 }
 
 android {
@@ -59,7 +60,7 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -70,13 +71,24 @@ android {
     }
 }
 
+repositories {
+    google()
+    mavenCentral()
+}
+
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 }`;
     await fs.writeFile(path.join(projectDir, "app/build.gradle"), buildGradle);
 
-    await fs.writeFile(path.join(projectDir, "settings.gradle"), 'include ":app"');
+    // Simple root build.gradle
+    await fs.writeFile(path.join(projectDir, "build.gradle"), "// Top-level build file");
+
+    // Simple settings.gradle
+    const settingsGradle = `rootProject.name = "APKBuilder"
+include ':app'`;
+    await fs.writeFile(path.join(projectDir, "settings.gradle"), settingsGradle);
 
     const manifest = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"

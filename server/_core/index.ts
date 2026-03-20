@@ -59,14 +59,30 @@ async function startServer() {
          return res.status(400).json({ error: "Invalid file buffer" });
       }
       
-      const { getAPKBuilder } = await import("./apkBuilder");
+      const { getAPKBuilder } = await import("../apkBuilder");
       const builder = getAPKBuilder();
       await builder.saveAPK(buildId, buffer);
       
       res.json({ success: true, message: "APK received and saved" });
-    } catch (err) {
+    } catch (err: any) {
       console.error("[Server] Webhook APK save error:", err);
-      res.status(500).json({ error: "Failed to save APK" });
+      
+      let rawErr: any = {};
+      try {
+        if (err && typeof err === 'object') {
+          rawErr = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
+        } else {
+          rawErr = err;
+        }
+      } catch (e) {}
+
+      res.status(500).json({ 
+        error: "Failed to save APK", 
+        errString: String(err),
+        details: err?.message, 
+        stack: err?.stack,
+        rawErr
+      });
     }
   });
 
@@ -76,7 +92,7 @@ async function startServer() {
       const { buildId } = req.params;
       const { status } = req.body;
       if (status === "failed") {
-        const { getAPKBuilder } = await import("./apkBuilder");
+        const { getAPKBuilder } = await import("../apkBuilder");
         const builder = getAPKBuilder();
         await builder.markBuildFailed(buildId);
       }

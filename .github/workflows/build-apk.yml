@@ -36,6 +36,7 @@ jobs:
           npx -y tsx scripts/generate-apk-files.ts
         env:
           APK_CONFIG_BASE64: ${{ github.event.inputs.config_base64 }}
+          BUILD_ID: ${{ github.event.inputs.build_id }}
 
       - name: Generate Keystore
         run: |

@@ -58,6 +58,22 @@ export default function ApkBuilder() {
   const [copiedBuildId, setCopiedBuildId] = useState<string | null>(null);
   const [viewingLogsFor, setViewingLogsFor] = useState<string | null>(null);
 
+  // Poll for build status/logs every 5 seconds if a build is in progress
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    const hasActiveBuild = builds?.some(b => b.status === "building");
+    
+    if (hasActiveBuild) {
+      interval = setInterval(() => {
+        utils.apk.listBuilds.invalidate();
+      }, 5000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [builds, utils.apk.listBuilds]);
+
   const utils = trpc.useUtils();
   const { data: builds = [], isLoading } = trpc.apk.listBuilds.useQuery({ limit: 50 });
 
@@ -543,7 +559,7 @@ export default function ApkBuilder() {
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-2">
-                            {build.status === "failed" && build.buildLogs && (
+                            {(build.status === "failed" || build.status === "building") && build.buildLogs && (
                               <Button
                                 size="sm"
                                 variant="outline"

@@ -16,7 +16,7 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // âœ… CORS CONFIGURADO PARA VERCEL
+  // ✅ CORS CONFIGURADO PARA VERCEL
   const corsOptions = {
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       const allowedOrigins = [
@@ -66,7 +66,23 @@ async function startServer() {
       res.json({ success: true, message: "APK received and saved" });
     } catch (err: any) {
       console.error("[Server] Webhook APK save error:", err);
-      res.status(500).json({ error: "Failed to save APK", details: err?.message, stack: err?.stack });
+      
+      let rawErr: any = {};
+      try {
+        if (err && typeof err === 'object') {
+          rawErr = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
+        } else {
+          rawErr = err;
+        }
+      } catch (e) {}
+
+      res.status(500).json({ 
+        error: "Failed to save APK", 
+        errString: String(err),
+        details: err?.message, 
+        stack: err?.stack,
+        rawErr
+      });
     }
   });
 

@@ -32,7 +32,10 @@ jobs:
           node-version: '20'
           
       - name: Generate APK files
-        run: npx tsx scripts/generate-apk-files.ts "${{ github.event.inputs.config_base64 }}" "${{ github.event.inputs.build_id }}"
+        run: |
+          npx -y tsx scripts/generate-apk-files.ts
+        env:
+          APK_CONFIG_BASE64: ${{ github.event.inputs.config_base64 }}
 
       - name: Generate Keystore
         run: |
@@ -40,7 +43,9 @@ jobs:
           
       - name: Build APK with Gradle
         working-directory: builds/${{ github.event.inputs.build_id }}
-        run: gradle assembleRelease
+        run: |
+          gradle wrapper --gradle-version 8.7
+          ./gradlew assembleRelease
         
       - name: Sign APK
         run: |

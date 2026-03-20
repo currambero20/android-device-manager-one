@@ -240,27 +240,6 @@ export default function ApkBuilder() {
                         />
                       </div>
                     </div>
-                    {viewingLogsFor === build.buildId && (
-                      <div className="mt-4 p-4 bg-black/40 border border-glow-cyan rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
-                        <div className="flex items-center justify-between mb-2">
-                          <h5 className="text-sm font-bold glow-cyan flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
-                            Construction Logs
-                          </h5>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 w-6 p-0"
-                            onClick={() => setViewingLogsFor(null)}
-                          >
-                            ×
-                          </Button>
-                        </div>
-                        <pre className="text-[10px] font-mono whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto text-muted-foreground p-2 bg-black/20 rounded">
-                          {build.buildLogs}
-                        </pre>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -532,93 +511,116 @@ export default function ApkBuilder() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                      {(builds || []).map((build: any) => (
-                    <div
-                      key={build.id}
-                      className="border-glow-cyan p-4 rounded flex items-start justify-between hover:bg-accent/5 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Package className="w-4 h-4 glow-cyan" />
-                          <h4 className="font-bold">{build.appName}</h4>
-                          <span
-                            className={`text-xs px-2 py-1 rounded ${
-                              build.status === "ready"
-                                ? "bg-green-500/20 text-green-400"
-                                : build.status === "building"
-                                ? "bg-yellow-500/20 text-yellow-400"
-                                : build.status === "failed"
-                                ? "bg-red-500/20 text-red-400"
-                                : "bg-gray-500/20 text-gray-400"
-                            }`}
-                          >
-                            {build.status.toUpperCase()}
-                          </span>
+                  {(builds || []).map((build: any) => (
+                    <div key={build.buildId} className="space-y-4">
+                      <div
+                        className="border-glow-cyan p-4 rounded flex items-start justify-between hover:bg-accent/5 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Package className="w-4 h-4 glow-cyan" />
+                            <h4 className="font-bold">{build.appName}</h4>
+                            <span
+                              className={`text-xs px-2 py-1 rounded ${
+                                build.status === "ready"
+                                  ? "bg-green-500/20 text-green-400"
+                                  : build.status === "building"
+                                  ? "bg-yellow-500/20 text-yellow-400"
+                                  : build.status === "failed"
+                                  ? "bg-red-500/20 text-red-400"
+                                  : "bg-gray-500/20 text-gray-400"
+                              }`}
+                            >
+                              {build.status.toUpperCase()}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground font-mono">
+                            {build.packageName}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            v{build.versionName} • {build.fileSize ? `${(build.fileSize / 1024 / 1024).toFixed(2)} MB` : "—"}
+                          </p>
                         </div>
-                        <p className="text-sm text-muted-foreground font-mono">
-                          {build.packageName}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          v{build.versionName} • {build.fileSize ? `${(build.fileSize / 1024 / 1024).toFixed(2)} MB` : "—"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-2">
-                        {build.status === "failed" && build.buildLogs && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-                            onClick={() => setViewingLogsFor(viewingLogsFor === build.buildId ? null : build.buildId)}
-                          >
-                            <FileText className="w-4 h-4 mr-1" />
-                            Logs
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:bg-destructive/10"
-                          onClick={() => deleteBuildMutation.mutate({ buildId: build.buildId })}
-                          disabled={deleteBuildMutation.isPending}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                        {build.status === "ready" && (
-                          <>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2">
+                            {build.status === "failed" && build.buildLogs && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                                onClick={() => setViewingLogsFor(viewingLogsFor === build.buildId ? null : build.buildId)}
+                              >
+                                <FileText className="w-4 h-4 mr-1" />
+                                Logs
+                              </Button>
+                            )}
                             <Button
                               size="sm"
-                              className="btn-neon-cyan"
-                              onClick={() => {
-                                copyToClipboard(build.apkUrl, build.buildId);
-                              }}
+                              variant="ghost"
+                              className="text-destructive hover:bg-destructive/10"
+                              onClick={() => deleteBuildMutation.mutate({ buildId: build.buildId })}
+                              disabled={deleteBuildMutation.isPending}
                             >
-                              {copiedBuildId === build.buildId ? (
-                                <>
-                                  <Check className="w-4 h-4 mr-1" />
-                                  Copied
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-4 h-4 mr-1" />
-                                  URL
-                                </>
-                              )}
+                              <Trash2 className="w-4 h-4" />
                             </Button>
-                            <Button
-                              size="sm"
-                              className="btn-neon"
-                              asChild
+                            {build.status === "ready" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="btn-neon-cyan"
+                                  onClick={() => {
+                                    copyToClipboard(build.apkUrl, build.buildId);
+                                  }}
+                                >
+                                  {copiedBuildId === build.buildId ? (
+                                    <>
+                                      <Check className="w-4 h-4 mr-1" />
+                                      Copied
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-4 h-4 mr-1" />
+                                      URL
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="btn-neon"
+                                  asChild
+                                >
+                                  <a href={build.apkUrl || "#"} download>
+                                    <Download className="w-4 h-4 mr-1" />
+                                    Get APK
+                                  </a>
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {viewingLogsFor === build.buildId && (
+                        <div className="mt-4 p-4 bg-black/40 border border-glow-cyan rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
+                          <div className="flex items-center justify-between mb-2">
+                            <h5 className="text-sm font-bold glow-cyan flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              Construction Logs
+                            </h5>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 w-6 p-0"
+                              onClick={() => setViewingLogsFor(null)}
                             >
-                              <a href={build.apkUrl || "#"} download>
-                                <Download className="w-4 h-4 mr-1" />
-                                Get APK
-                              </a>
+                              ×
                             </Button>
-                          </>
-                        )}
-                      </div>
-                      </div>
+                          </div>
+                          <pre className="text-[10px] font-mono whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto text-muted-foreground p-2 bg-black/20 rounded">
+                            {build.buildLogs}
+                          </pre>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

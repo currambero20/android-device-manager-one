@@ -13,15 +13,23 @@ export interface APKConfig {
   iconUrl?: string;
 }
 
-// Ensure args are present
-const configBase64 = process.argv[2];
+// Read from environment variables (set by GitHub Actions)
+const configBase64 = process.env.APK_CONFIG_BASE64 || process.argv[2];
+const buildId = process.env.BUILD_ID || process.argv[3] || "test-build";
+
 if (!configBase64) {
-  console.error("Usage: npx tsx scripts/generate-apk-files.ts <base64-json-config> <buildId>");
+  console.error("ERROR: APK_CONFIG_BASE64 environment variable is not set.");
   process.exit(1);
 }
-const buildId = process.argv[3] || "test-build";
 
-const config: APKConfig = JSON.parse(Buffer.from(configBase64, 'base64').toString('utf-8'));
+let config: APKConfig;
+try {
+  config = JSON.parse(Buffer.from(configBase64, "base64").toString("utf-8"));
+  console.log(`Generating APK project for: ${config.appName} (${config.packageName})`);
+} catch (e) {
+  console.error("ERROR: Failed to parse APK config from base64:", e);
+  process.exit(1);
+}
 
 const buildDir = path.join(process.cwd(), "builds");
 const projectDir = path.join(buildDir, buildId);
@@ -41,7 +49,48 @@ async function generateFiles() {
       await fs.mkdir(path.join(projectDir, dir), { recursive: true });
     }
 
-    const buildGradle = `plugins {
+    // Root settings.gradle - must be first
+    const settingsGradle = `pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "APKBuilder"
+include ':app'
+`;
+    await fs.writeFile(path.join(projectDir, "settings.gradle"), settingsGradle);
+
+    // Root build.gradle
+    const rootBuildGradle = `// Top-level build file
+plugins {
+    id 'com.android.application' version '8.2.2' apply false
+}
+`;
+    await fs.writeFile(path.join(projectDir, "build.gradle"), rootBuildGradle);
+
+    // gradle.properties
+    const gradleProperties = `android.useAndroidX=true
+android.enableJetifier=true
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+`;
+    await fs.writeFile(path.join(projectDir, "gradle.properties"), gradleProperties);
+
+    // local.properties (required by AGP)
+    const sdkDir = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || "/usr/local/lib/android/sdk";
+    await fs.writeFile(path.join(projectDir, "local.properties"), `sdk.dir=${sdkDir}\n`);
+
+    // app/build.gradle
+    const appBuildGradle = `plugins {
     id 'com.android.application'
 }
 
@@ -59,8 +108,9 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
         }
     }
 
@@ -72,34 +122,29 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-}`;
-    await fs.writeFile(path.join(projectDir, "app/build.gradle"), buildGradle);
+}
+`;
+    await fs.writeFile(path.join(projectDir, "app/build.gradle"), appBuildGradle);
 
-    await fs.writeFile(path.join(projectDir, "settings.gradle"), 'include ":app"');
+    // proguard-rules.pro
+    await fs.writeFile(path.join(projectDir, "app/proguard-rules.pro"), "# Add project specific ProGuard rules here.\n");
 
+    // AndroidManifest.xml
     const manifest = `<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="${config.packageName}">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    
-    <!-- Permisos para MDM -->
     <uses-permission android:name="android.permission.MANAGE_DEVICE_ADMINS" />
-    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
-        android:label="@string/app_name"
-        android:supportsRtl="true"
+        android:label="${config.appName}"
         android:theme="@style/Theme.AppCompat.Light.DarkActionBar"
         android:usesCleartextTraffic="${!config.sslEnabled}">
 
-        <!-- Actividad Principal -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -109,7 +154,6 @@ dependencies {
             </intent-filter>
         </activity>
 
-        <!-- Receptor de Administrador de Dispositivo (MDM Core) -->
         <receiver
             android:name=".AdminReceiver"
             android:exported="true"
@@ -119,7 +163,6 @@ dependencies {
                 android:resource="@xml/device_admin" />
             <intent-filter>
                 <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-                <action android:name="android.app.action.PROFILE_PROVISIONING_COMPLETE"/>
             </intent-filter>
         </receiver>
 
@@ -128,6 +171,7 @@ dependencies {
 </manifest>`;
     await fs.writeFile(path.join(projectDir, "app/src/main/AndroidManifest.xml"), manifest);
 
+    // strings.xml
     const strings = `<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">${config.appName}</string>
@@ -137,6 +181,7 @@ dependencies {
 </resources>`;
     await fs.writeFile(path.join(projectDir, "app/src/main/res/values/strings.xml"), strings);
 
+    // device_admin.xml
     const deviceAdminXml = `<?xml version="1.0" encoding="utf-8"?>
 <device-admin xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-policies>
@@ -145,13 +190,12 @@ dependencies {
         <reset-password />
         <force-lock />
         <wipe-data />
-        <expire-password />
-        <encrypted-storage />
         <disable-camera />
     </uses-policies>
 </device-admin>`;
     await fs.writeFile(path.join(projectDir, "app/src/main/res/xml/device_admin.xml"), deviceAdminXml);
 
+    // Java sources
     const packagePath = config.packageName.replace(/\./g, "/");
     await fs.mkdir(path.join(projectDir, `app/src/main/java/${packagePath}`), { recursive: true });
 
@@ -164,49 +208,31 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class MainActivity extends Activity {
-    
+
     private DevicePolicyManager dpm;
     private ComponentName adminComponent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
         dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
         adminComponent = new ComponentName(this, AdminReceiver.class);
-        
+
         TextView textView = new TextView(this);
-        textView.setText("${config.appName} - MDM Initializing...");
+        textView.setText("${config.appName}");
         setContentView(textView);
 
-        // Registro inicial con el servidor
-        registerDevice();
-
-        // Modo Oculto
-        if ("true".equals("${config.stealthMode}")) {
-            hideAppIcon();
-        }
-
-        // Solicitar permisos de administrador si no se tienen
         if (!dpm.isAdminActive(adminComponent)) {
             Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
             intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent);
             intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Security activation required.");
             startActivityForResult(intent, 1);
-        } else {
-            Toast.makeText(this, "Device Enrolled", Toast.LENGTH_SHORT).show();
         }
-    }
 
-    private void hideAppIcon() {
-        android.content.pm.PackageManager p = getPackageManager();
-        ComponentName componentName = new ComponentName(this, MainActivity.class);
-        p.setComponentEnabledSetting(componentName, 
-            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, 
-            android.content.pm.PackageManager.DONT_KILL_APP);
+        registerDevice();
     }
 
     private void registerDevice() {
@@ -218,54 +244,52 @@ public class MainActivity extends Activity {
                     java.net.URL url = new java.net.URL(serverUrl + "/api/devices/register");
                     java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
                     conn.setRequestMethod("POST");
+                    conn.setConnectTimeout(5000);
                     conn.setDoOutput(true);
                     conn.setRequestProperty("Content-Type", "application/json");
-                    String json = "{\\\"name\\\":\\\"\" + android.os.Build.MODEL + \"\\\", \\\"brand\\\":\\\"\" + android.os.Build.BRAND + \"\\\"}";
+                    String deviceId = android.os.Build.SERIAL;
+                    String json = "{\\"deviceId\\":\\"" + deviceId + "\\",\\"model\\":\\"" + android.os.Build.MODEL + "\\",\\"brand\\":\\"" + android.os.Build.BRAND + "\\"}";
                     byte[] input = json.getBytes("utf-8");
                     conn.getOutputStream().write(input, 0, input.length);
                     conn.getResponseCode();
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                    // Silently fail
+                }
             }
         }).start();
     }
 }`;
-    await fs.writeFile(
-      path.join(projectDir, `app/src/main/java/${packagePath}/MainActivity.java`),
-      mainActivity
-    );
+    await fs.writeFile(path.join(projectDir, `app/src/main/java/${packagePath}/MainActivity.java`), mainActivity);
 
     const adminReceiver = `package ${config.packageName};
 
 import android.app.admin.DeviceAdminReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.widget.Toast;
 
 public class AdminReceiver extends DeviceAdminReceiver {
-    
+
     @Override
     public void onEnabled(Context context, Intent intent) {
         super.onEnabled(context, intent);
-        Toast.makeText(context, "Administración de Dispositivo Habilitada", Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public CharSequence onDisableRequested(Context context, Intent intent) {
-        return "Deshabilitar esto eliminará el acceso a los recursos corporativos.";
+        return "Disabling this will remove access to corporate resources.";
     }
 
     @Override
     public void onDisabled(Context context, Intent intent) {
         super.onDisabled(context, intent);
-        Toast.makeText(context, "Administración de Dispositivo Deshabilitada", Toast.LENGTH_SHORT).show();
     }
 }`;
-    await fs.writeFile(
-      path.join(projectDir, `app/src/main/java/${packagePath}/AdminReceiver.java`),
-      adminReceiver
-    );
+    await fs.writeFile(path.join(projectDir, `app/src/main/java/${packagePath}/AdminReceiver.java`), adminReceiver);
 
-    console.log(`Project files successfully generated in ${projectDir}`);
+    console.log(`âœ… Project files successfully generated in ${projectDir}`);
+    console.log(`   - Package: ${config.packageName}`);
+    console.log(`   - Version: ${config.versionName} (${config.versionCode})`);
+    console.log(`   - Server: ${config.serverUrl}`);
   } catch (error) {
     console.error("Error generating files:", error);
     process.exit(1);

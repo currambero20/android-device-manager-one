@@ -13,13 +13,13 @@ export interface APKConfig {
   iconUrl?: string;
 }
 
-// Ensure args are present
-const configBase64 = process.argv[2];
+// Ensure environment variables are present
+const configBase64 = process.env.APK_CONFIG_BASE64;
 if (!configBase64) {
-  console.error("Usage: npx tsx scripts/generate-apk-files.ts <base64-json-config> <buildId>");
+  console.error("Error: Missing APK_CONFIG_BASE64 environment variable.");
   process.exit(1);
 }
-const buildId = process.argv[3] || "test-build";
+const buildId = process.env.BUILD_ID || "test-build";
 
 const config: APKConfig = JSON.parse(Buffer.from(configBase64, 'base64').toString('utf-8'));
 

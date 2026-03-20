@@ -92,12 +92,18 @@ async function startServer() {
       const { buildId } = req.params;
       let { status, logs, apkUrl, fileSize } = req.body;
       
-      // Decode logs if provided in base64
-      if (logs && /^[A-Za-z0-9+/=]+$/.test(logs) && logs.length > 50) {
+      console.log(`[Webhook] Status update for ${buildId}: ${status}`);
+
+      // Decode logs if provided in base64 (check for common base64 pattern)
+      if (logs && /^[A-Za-z0-9+/=]+$/.test(logs)) {
         try {
-          logs = Buffer.from(logs, 'base64').toString('utf8');
+          // If it looks like base64, try to decode.
+          // We check if it's not a tiny string to avoid false positives on normal text.
+          if (logs.length > 8) { 
+             logs = Buffer.from(logs, 'base64').toString('utf8');
+          }
         } catch(e) {
-          // Fallback to raw logs if decoding fails
+          console.error(`[Webhook] Failed to decode base64 logs: ${e.message}`);
         }
       }
 

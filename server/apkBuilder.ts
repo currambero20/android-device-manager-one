@@ -101,7 +101,23 @@ export class APKBuilder {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`GitHub API error: ${response.status} ${errorText}`);
+        const errorMessage = `GitHub API error (${response.status}): ${errorText}`;
+        console.error(`[APKBuilder] ${errorMessage}`);
+
+        const db = await getDb();
+        if (db) {
+          await db.update(apkBuilds)
+            .set({ status: "failed" })
+            .where(eq(apkBuilds.buildId, buildId));
+        }
+
+        return {
+          success: false,
+          buildId,
+          error: errorMessage,
+          progress: 0,
+          status: "failed",
+        };
       }
 
       return {
@@ -149,35 +165,26 @@ export class APKBuilder {
     }
   }
 
-  async markBuildFailed(buildId: string): Promise<void> {
+  async markBuildFailed(buildId: string, logs?: string): Promise<void> {
     const db = await getDb();
     if (db) {
       await db.update(apkBuilds)
-        .set({ status: "failed" })
+        .set({ 
+          status: "failed",
+          buildLogs: logs || null
+        })
         .where(eq(apkBuilds.buildId, buildId));
-      console.log(`[APKBuilder] Marked build ${buildId} as failed`);
+      console.log(`[APKBuilder] Marked build ${buildId} as failed${logs ? " (with logs)" : ""}`);
     }
   }
 
-  async getBuildStatus(buildId: string): Promise<BuildResult | null> {
+  async getBuildStatus(buildId: string): Promise<any | null> {
     const db = await getDb();
     if (!db) return null;
 
-    try {
-      const dbBuilds = await db.select().from(apkBuilds).where(eq(apkBuilds.buildId, buildId)).limit(1);
-      if (dbBuilds.length === 0) return null;
-      const b = dbBuilds[0];
-      return {
-        success: b.status === "ready",
-        buildId: b.buildId,
-        apkUrl: b.apkUrl || undefined,
-        status: b.status as any,
-        progress: b.status === "ready" ? 100 : b.status === "building" ? 50 : 0
-      };
-    } catch (error) {
-      console.error("[APKBuilder] Failed to get build status:", error);
-      return null;
-    }
+    const result = await db.select().from(apkBuilds).where(eq(apkBuilds.buildId, buildId)).limit(1);
+    if (result.length === 0) return null;
+    return result[0];
   }
 
   async downloadAPK(buildId: string): Promise<Buffer | null> {

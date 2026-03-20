@@ -46,7 +46,25 @@ jobs:
         working-directory: builds/${{ github.event.inputs.build_id }}
         run: |
           gradle wrapper --gradle-version 8.7
-          ./gradlew assembleRelease
+
+          # Start a background process to stream logs to the server every 10 seconds
+          (
+            while sleep 10; do
+              if [ -f build.log ]; then
+                LOGS=$(tail -n 100 build.log | base64 -w 0)
+                curl -X POST -H "Content-Type: application/json" \
+                  -d "{\"status\":\"building\",\"logs\":\"$LOGS\"}" \
+                  "https://android-device-manager-one-1.onrender.com/api/apk/webhook/status/${{ github.event.inputs.build_id }}" || true
+              fi
+            done
+          ) &
+          STREAM_PID=$!
+          
+          # Run gradle and pipe output to build.log AND stdout
+          ./gradlew assembleRelease 2>&1 | tee build.log
+          
+          # Kill the background streamer when done
+          kill $STREAM_PID || true
         
       - name: Sign APK
         run: |

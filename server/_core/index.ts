@@ -90,11 +90,11 @@ async function startServer() {
   app.post("/api/apk/webhook/status/:buildId", express.json(), async (req, res) => {
     try {
       const { buildId } = req.params;
-      const { status } = req.body;
+      const { status, logs } = req.body;
       if (status === "failed") {
         const { getAPKBuilder } = await import("../apkBuilder");
         const builder = getAPKBuilder();
-        await builder.markBuildFailed(buildId);
+        await builder.markBuildFailed(buildId, logs);
       }
       res.json({ success: true });
     } catch(err) {

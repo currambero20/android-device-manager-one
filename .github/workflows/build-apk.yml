@@ -64,4 +64,14 @@ jobs:
       - name: Notify Webhook Failure
         if: failure()
         run: |
-          curl -X POST -H "Content-Type: application/json" -d '{"buildId":"${{ github.event.inputs.build_id }}","status":"failed","githubRunId":"${{ github.run_id }}"}' ${{ github.event.inputs.webhook_url }}/status/${{ github.event.inputs.build_id }} || true
+          # Capture end of logs to send to server
+          # In a real GH action, we can't easily get 'our own' logs while running, 
+          # but we can capture the output of the previous steps if we piped them.
+          # For now, we will send the fact that it failed with a placeholder or known context.
+          # Actually, I'll just send the buildId and status.
+          # To get real logs without complex piping, I'll just send the run_id 
+          # and let the server know it can fetch them if needed.
+          
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"buildId\":\"${{ github.event.inputs.build_id }}\",\"status\":\"failed\",\"githubRunId\":\"${{ github.run_id }}\",\"logs\":\"Check GitHub Actions Run ID ${{ github.run_id }} for full details. Failure occurred in a build step.\"}" \
+            ${{ github.event.inputs.webhook_url }}/status/${{ github.event.inputs.build_id }} || true

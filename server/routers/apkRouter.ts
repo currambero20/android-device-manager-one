@@ -80,6 +80,7 @@ export const apkRouter = router({
           downloadCount: buildRecord.downloadCount,
           createdAt: buildRecord.createdAt,
           apkUrl: buildRecord.apkUrl,
+          buildLogs: buildRecord.buildLogs,
         };
       } catch (error) {
         console.error("[APK Router] Status check error:", error);
@@ -124,6 +125,7 @@ export const apkRouter = router({
           downloadCount: build.downloadCount,
           createdAt: build.createdAt,
           apkUrl: build.apkUrl,
+          buildLogs: build.buildLogs,
         }));
       } catch (error) {
         console.error("[APK Router] List error:", error);

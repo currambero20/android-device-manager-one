@@ -85,8 +85,22 @@ dependencies {
     // Simple root build.gradle
     await fs.writeFile(path.join(projectDir, "build.gradle"), "// Top-level build file");
 
-    // Simple settings.gradle
-    const settingsGradle = `rootProject.name = "APKBuilder"
+    // settings.gradle with plugin management for Gradle 8.2+
+    const settingsGradle = `pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = "APKBuilder"
 include ':app'`;
     await fs.writeFile(path.join(projectDir, "settings.gradle"), settingsGradle);
 

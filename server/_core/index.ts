@@ -90,11 +90,26 @@ async function startServer() {
   app.post("/api/apk/webhook/status/:buildId", express.json(), async (req, res) => {
     try {
       const { buildId } = req.params;
-      const { status, logs } = req.body;
-      if (status === "failed") {
-        const { getAPKBuilder } = await import("../apkBuilder");
-        const builder = getAPKBuilder();
-        await builder.markBuildFailed(buildId, logs);
+      let { status, logs, apkUrl, fileSize } = req.body;
+      
+      // Decode logs if provided in base64
+      if (logs && /^[A-Za-z0-9+/=]+$/.test(logs) && logs.length > 50) {
+        try {
+          logs = Buffer.from(logs, 'base64').toString('utf8');
+        } catch(e) {
+          // Fallback to raw logs if decoding fails
+        }
+      }
+
+      const { getAPKBuilder } = await import("../apkBuilder");
+      const apkBuilder = getAPKBuilder();
+
+      if (status === "ready") {
+        await apkBuilder.markBuildReady(buildId, apkUrl, fileSize);
+      } else if (status === "failed") {
+        await apkBuilder.markBuildFailed(buildId, logs);
+      } else if (status === "building" && logs) {
+        await apkBuilder.updateBuildLogs(buildId, logs);
       }
       res.json({ success: true });
     } catch(err) {

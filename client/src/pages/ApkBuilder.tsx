@@ -24,6 +24,7 @@ import {
   Trash2,
   Copy,
   Check,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -55,6 +56,7 @@ export default function ApkBuilder() {
   });
   const [newPort, setNewPort] = useState("");
   const [copiedBuildId, setCopiedBuildId] = useState<string | null>(null);
+  const [viewingLogsFor, setViewingLogsFor] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const { data: builds = [], isLoading } = trpc.apk.listBuilds.useQuery({ limit: 50 });
@@ -238,6 +240,27 @@ export default function ApkBuilder() {
                         />
                       </div>
                     </div>
+                    {viewingLogsFor === build.buildId && (
+                      <div className="mt-4 p-4 bg-black/40 border border-glow-cyan rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="text-sm font-bold glow-cyan flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Construction Logs
+                          </h5>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0"
+                            onClick={() => setViewingLogsFor(null)}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                        <pre className="text-[10px] font-mono whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto text-muted-foreground p-2 bg-black/20 rounded">
+                          {build.buildLogs}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -541,6 +564,17 @@ export default function ApkBuilder() {
                       </div>
                       <div className="flex items-center gap-2">
                       <div className="flex items-center gap-2">
+                        {build.status === "failed" && build.buildLogs && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                            onClick={() => setViewingLogsFor(viewingLogsFor === build.buildId ? null : build.buildId)}
+                          >
+                            <FileText className="w-4 h-4 mr-1" />
+                            Logs
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"

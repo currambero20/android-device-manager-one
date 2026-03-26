@@ -43,6 +43,7 @@ export class WebSocketManager {
         methods: ["GET", "POST"],
       },
       transports: ["websocket", "polling"],
+      allowEIO3: true,
     });
 
     this.setupEventHandlers();

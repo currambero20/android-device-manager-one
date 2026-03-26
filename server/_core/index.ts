@@ -149,6 +149,10 @@ async function startServer() {
     });
   });
 
+  // Initialize WebSocket server
+  const { initializeWebSocket } = await import("../websocket");
+  initializeWebSocket(server);
+
   const port = Number(process.env.PORT) || 3000;
   server.listen(port, "0.0.0.0", () => {
     console.log(`[Server] Backend V3.25 started on port ${port}`);

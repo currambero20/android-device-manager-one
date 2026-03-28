@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
-import { existsSync, mkdirSync, writeFileSync, readFileSync, renameSync } from "fs";
-import { join, resolve, dirname } from "path";
+import { existsSync, mkdirSync, writeFileSync, readFileSync, renameSync, statSync } from "fs";
+import { join, resolve, dirname, basename } from "path";
 import { fileURLToPath } from "url";
 import { getDb } from "./db";
 import { apkBuilds } from "../drizzle/schema";
@@ -164,7 +164,8 @@ class APKCompiler {
     try {
       const updateData: any = { status };
       if (apkPath) updateData.apkUrl = apkPath;
-      if (logs) updateData.serverUrl = logs.join("\n").substring(0, 2000);
+      // Write logs to the correct column, safely truncated to 4000 chars
+      if (logs) updateData.buildLogs = logs.join("\n").substring(0, 4000);
       await db.update(apkBuilds).set(updateData).where(eq(apkBuilds.id, buildId));
     } catch (err) {
       console.error("[APKCompiler] Error actualizando estado en DB:", err);
@@ -172,10 +173,8 @@ class APKCompiler {
   }
 
   getAPKInfo(apkPath: string) {
-    const fs = require("fs");
-    const path = require("path");
-    const stats = fs.statSync(apkPath);
-    return { size: stats.size, path: apkPath, name: path.basename(apkPath) };
+    const stats = statSync(apkPath);
+    return { size: stats.size, path: apkPath, name: basename(apkPath) };
   }
 }
 

@@ -56,6 +56,10 @@ async function startServer() {
   const { activeTrackingService } = await import("../activeTrackingService");
   activeTrackingService.start(wsManager);
 
+  // [MOD L3MON] Register APK Download Route
+  const { handleAPKDownload } = await import("../apkDownload");
+  app.get("/api/apk/download/:buildId", handleAPKDownload);
+
   // [DEBUG] Temporarily disabled for boot check
   // registerOAuthRoutes(app);
 

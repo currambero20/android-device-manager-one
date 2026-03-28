@@ -2,9 +2,9 @@ export const COOKIE_NAME = "session_token";
 export const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
 export const GOOGLE_OAUTH_CONFIG = {
-  clientId: process.env.GOOGLE_CLIENT_ID || "placeholder_id",
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET || "placeholder_secret",
-  redirectUri: process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/auth/callback/google",
+  clientId: (typeof process !== "undefined" && process.env ? process.env.GOOGLE_CLIENT_ID : undefined) || "placeholder_id",
+  clientSecret: (typeof process !== "undefined" && process.env ? process.env.GOOGLE_CLIENT_SECRET : undefined) || "placeholder_secret",
+  redirectUri: (typeof process !== "undefined" && process.env ? process.env.GOOGLE_REDIRECT_URI : undefined) || "http://localhost:3000/api/auth/callback/google",
 };
 
 export const NOT_ADMIN_ERR_MSG = "Solo los administradores pueden realizar esta acción";

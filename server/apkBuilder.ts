@@ -42,9 +42,8 @@ export class APKBuilder {
 
   async initialize(): Promise<void> {
     try {
-      const fsSync = require("fs");
-      if (!fsSync.existsSync(this.buildDir)) await fs.mkdir(this.buildDir, { recursive: true });
-      if (!fsSync.existsSync(this.outputDir)) await fs.mkdir(this.outputDir, { recursive: true });
+      await fs.mkdir(this.buildDir, { recursive: true });
+      await fs.mkdir(this.outputDir, { recursive: true });
     } catch (error) {
       console.error("[APKBuilder] Failed to initialize directories:", error);
     }
@@ -78,7 +77,7 @@ export class APKBuilder {
         });
         
         // En MySQL/TiDB, el resultado suele ser un objeto con insertId
-        buildRecordId = (result as any)[0]?.insertId || 0;
+        buildRecordId = (result as any)[0]?.insertId || Date.now();
       }
 
       // 2. Preparar Config para el compilador local
@@ -96,25 +95,45 @@ export class APKBuilder {
         targetArchitectures: ["arm64-v8a", "armeabi-v7a"],
       };
 
-      // 3. Ejecutar compilación local
-      const buildResult = await apkCompiler.compileAPK(compilationConfig);
+      // 3. Kick off compilation in the background (don't await)
+      // This prevents the HTTP request from timing out while apktool runs
+      setImmediate(async () => {
+        try {
+          const buildResult = await apkCompiler.compileAPK(compilationConfig);
 
-      if (!buildResult.success) {
-        throw new Error(buildResult.error || "Falla en compilación local");
-      }
+          if (!buildResult.success) {
+            throw new Error(buildResult.error || "Falla en compilación local");
+          }
 
-      // 4. Mover el APK al directorio de descargas final
-      const finalApkPath = path.join(this.outputDir, `${buildIdStr}.apk`);
-      if (buildResult.apkPath) {
-        await fs.copyFile(buildResult.apkPath, finalApkPath);
-      }
+          // Move the APK to the downloads directory
+          const finalApkPath = path.join(this.outputDir, `${buildIdStr}.apk`);
+          if (buildResult.apkPath) {
+            await fs.copyFile(buildResult.apkPath, finalApkPath);
+          }
 
+          // Update DB to ready with download URL
+          if (db) {
+            await db.update(apkBuilds)
+              .set({ status: "ready", apkUrl: `/api/apk/download/${buildIdStr}` })
+              .where(eq(apkBuilds.buildId, buildIdStr));
+          }
+        } catch (error) {
+          console.error(`[APKBuilder] Background build failed:`, error);
+          if (db) {
+            await db.update(apkBuilds)
+              .set({ status: "failed", buildLogs: String(error).substring(0, 4000) })
+              .where(eq(apkBuilds.buildId, buildIdStr));
+          }
+        }
+      });
+
+      // Return immediately — client should poll getBuildStatus
       return {
         success: true,
         buildId: buildIdStr,
         apkUrl: `/api/apk/download/${buildIdStr}`,
-        progress: 100,
-        status: "completed",
+        progress: 0,
+        status: "building" as const,
       };
 
     } catch (error) {
@@ -144,10 +163,7 @@ export class APKBuilder {
   async cleanupBuild(buildId: string): Promise<void> {
     try {
       const apkPath = path.join(this.outputDir, `${buildId}.apk`);
-      const fsSync = require("fs");
-      if (fsSync.existsSync(apkPath)) {
-        await fs.unlink(apkPath);
-      }
+      await fs.unlink(apkPath).catch(() => {});
     } catch (error) {
       console.error(`[APKBuilder] Cleanup failed for ${buildId}:`, error);
     }

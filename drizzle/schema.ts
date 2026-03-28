@@ -479,3 +479,50 @@ export const geofenceEvents = mysqlTable(
 
 export type GeofenceEvent = typeof geofenceEvents.$inferSelect;
 export type InsertGeofenceEvent = typeof geofenceEvents.$inferInsert;
+
+/**
+ * WiFi history table - stores scanned WiFi networks.
+ */
+export const wifiLogs = mysqlTable(
+  "wifiLogs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    deviceId: int("deviceId").notNull(),
+    ssid: varchar("ssid", { length: 255 }),
+    bssid: varchar("bssid", { length: 64 }),
+    signalStrength: int("signalStrength"),
+    timestamp: timestamp("timestamp").notNull(),
+    recordedAt: timestamp("recordedAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    deviceIdIdx: index("deviceId_idx").on(table.deviceId),
+    timestampIdx: index("timestamp_idx").on(table.timestamp),
+  })
+);
+
+export type WifiLog = typeof wifiLogs.$inferSelect;
+export type InsertWifiLog = typeof wifiLogs.$inferInsert;
+
+/**
+ * Activity logs table - stores keylogs and other sensitive events.
+ */
+export const activityLogs = mysqlTable(
+  "activityLogs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    deviceId: int("deviceId").notNull(),
+    activityType: varchar("activityType", { length: 64 }).notNull(), // e.g. "keylog", "app_usage"
+    description: text("description"),
+    metadata: json("metadata"),
+    timestamp: timestamp("timestamp").notNull(),
+    recordedAt: timestamp("recordedAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    deviceIdIdx: index("deviceId_idx").on(table.deviceId),
+    activityTypeIdx: index("activityType_idx").on(table.activityType),
+    timestampIdx: index("timestamp_idx").on(table.timestamp),
+  })
+);
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = typeof activityLogs.$inferInsert;

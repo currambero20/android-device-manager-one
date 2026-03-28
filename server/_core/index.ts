@@ -1,11 +1,19 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import path, { resolve, join } from "path";
+import { fileURLToPath } from "url";
+
+// ✅ CARGAR DOTENV DESDE LA RAÍZ DEL PROYECTO (Resuelve problemas de --prefix)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: resolve(join(__dirname, "../../.env")) });
+
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { createServer } from "http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
-import { appRouter } from "../routers";
+import { appRouter } from "../appRouter";
 import { createContext } from "./context";
 import { runMigrations } from "../db";
 
@@ -18,132 +26,23 @@ async function startServer() {
 
   // ✅ CORS CONFIGURADO PARA VERCEL
   const corsOptions = {
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      const allowedOrigins = [
-        "https://repodeploy.vercel.app",
-        "http://localhost:3000",
-        "http://localhost:5173",
-      ];
-      // Allow requests with no origin (mobile apps, curl, etc) in development
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-      // Check if origin matches any allowed pattern
-      if (
-        allowedOrigins.includes(origin) ||
-        origin.match(/\.vercel\.app$/) ||
-        origin.match(/localhost/)
-      ) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: [
+      process.env.VITE_APP_URL || "http://localhost:5173",
+      "https://repodeploy.vercel.app"
+    ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-TRPC-Source"]
   };
+
   app.use(cors(corsOptions));
-
   app.use(cookieParser());
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-  // Webhook for GitHub Actions to upload compiled APK
-  app.post("/api/apk/webhook/:buildId", express.raw({ type: "*/*", limit: "150mb" }), async (req, res) => {
-    try {
-      const { buildId } = req.params;
-      const buffer = req.body;
-      if (!buffer || !Buffer.isBuffer(buffer)) {
-         return res.status(400).json({ error: "Invalid file buffer" });
-      }
-      
-      const { getAPKBuilder } = await import("../apkBuilder");
-      const builder = getAPKBuilder();
-      await builder.saveAPK(buildId, buffer);
-      
-      res.json({ success: true, message: "APK received and saved" });
-    } catch (err: any) {
-      console.error("[Server] Webhook APK save error:", err);
-      
-      let rawErr: any = {};
-      try {
-        if (err && typeof err === 'object') {
-          rawErr = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
-        } else {
-          rawErr = err;
-        }
-      } catch (e) {}
-
-      res.status(500).json({ 
-        error: "Failed to save APK", 
-        errString: String(err),
-        details: err?.message, 
-        stack: err?.stack,
-        rawErr
-      });
-    }
-  });
-
-  // Webhook for failure notification
-  app.post("/api/apk/webhook/status/:buildId", express.json(), async (req, res) => {
-    try {
-      const { buildId } = req.params;
-      let { status, logs, apkUrl, fileSize } = req.body;
-      
-      console.log(`[Webhook] Status update for ${buildId}: ${status}`);
-
-      // Decode logs if provided in base64 (check for common base64 pattern)
-      if (logs && /^[A-Za-z0-9+/=]+$/.test(logs)) {
-        try {
-          // If it looks like base64, try to decode.
-          // We check if it's not a tiny string to avoid false positives on normal text.
-          if (logs.length > 8) { 
-             logs = Buffer.from(logs, 'base64').toString('utf8');
-          }
-        } catch(e) {
-          console.error(`[Webhook] Failed to decode base64 logs: ${e.message}`);
-        }
-      }
-
-      const { getAPKBuilder } = await import("../apkBuilder");
-      const apkBuilder = getAPKBuilder();
-
-      if (status === "ready") {
-        await apkBuilder.markBuildReady(buildId, apkUrl, fileSize);
-      } else if (status === "failed") {
-        await apkBuilder.markBuildFailed(buildId, logs);
-      } else if (status === "building" && logs) {
-        await apkBuilder.updateBuildLogs(buildId, logs);
-      }
-      res.json({ success: true });
-    } catch(err) {
-      console.error("[Server] Webhook Status error:", err);
-      res.status(500).json({ error: "Failed to process status webhook" });
-    }
-  });
-
-  // Registrar rutas de OAuth
-  registerOAuthRoutes(app);
-
-  // TRPC API
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-      onError: ({ path, error }) => {
-        console.error(`[tRPC Error] Path: ${path}`, error);
-      },
-    })
-  );
-
+  
   // Health check
   app.get("/", async (req, res) => {
     const dbStatus = await (await import("../db")).getHealthStatus();
     res.json({ 
-      message: "Backend is running (V3.25 - Secure Production Fix)",
+      message: "Backend is running (Platinum Intelligence Pro)",
       database: dbStatus,
       dbProtocol: process.env.DATABASE_URL?.substring(0, 10)
     });
@@ -151,11 +50,27 @@ async function startServer() {
 
   // Initialize WebSocket server
   const { initializeWebSocket } = await import("../websocket");
-  initializeWebSocket(server);
+  const wsManager = initializeWebSocket(server);
+
+  // [MOD L3MON] Start Active Intelligence Tracking Service
+  const { activeTrackingService } = await import("../activeTrackingService");
+  activeTrackingService.start(wsManager);
+
+  // [DEBUG] Temporarily disabled for boot check
+  // registerOAuthRoutes(app);
+
+  // TRPC API
+  app.use(
+    "/api/trpc",
+    createExpressMiddleware({
+      router: appRouter,
+      createContext,
+    })
+  );
 
   const port = Number(process.env.PORT) || 3000;
   server.listen(port, "0.0.0.0", () => {
-    console.log(`[Server] Backend V3.25 started on port ${port}`);
+    console.log(`[Server] Backend Platinum V1.0 started on port ${port}`);
     console.log(`[Server] Database URL Configured: ${process.env.DATABASE_URL ? "Yes" : "No"}`);
   });
 }

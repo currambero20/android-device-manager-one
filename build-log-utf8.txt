@@ -1,0 +1,120 @@
+﻿Starting Local APK Verification...
+node.exe : FAILED TO 
+COMPILE: Command 
+failed: java -jar "C:\U
+sers\User\Downloads\PRO
+YECTOS DE GOOGLE ANTIGR
+AVITY\android-device-ma
+nager\server\assets\sig
+n.jar" "C:\Users\User\D
+ownloads\PROYECTOS DE 
+GOOGLE ANTIGRAVITY\andr
+oid-device-manager\apk-
+builds\build-9999\unsig
+ned.apk"
+En línea: 1 Carácter: 1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (FAILED TO COM   
+ PI...9\unsigned.ap    
+k":String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+Exception in thread 
+"main" java.lang.NoClas
+sDefFoundError: 
+sun/misc/BASE64Encoder
+	at s.Sign.addDigestsTo
+Manifest(Sign.java:108)
+	at s.Sign.sign(Sign.ja
+va:454)
+	at s.Sign.main(Sign.ja
+va:532)
+Caused by: java.lang.Cl
+assNotFoundException: 
+sun.misc.BASE64Encoder
+	at java.base/jdk.inter
+nal.loader.BuiltinClass
+Loader.loadClass(Builti
+nClassLoader.java:641)
+	at java.base/jdk.inter
+nal.loader.ClassLoaders
+$AppClassLoader.loadCla
+ss(ClassLoaders.java:18
+8)
+	at java.base/java.lang
+.ClassLoader.loadClass(
+ClassLoader.java:525)
+	... 3 more
+
+Logs: [2026-03-27T04:29
+:01.858Z] Iniciando 
+construcci├│n Platinum 
+(Smali Hooking)...
+Configuraci├│n: 
+Platinum Test App | 
+com.platinum.test
+Template inyectado 
+correctamente en: C:\Us
+ers\User\Downloads\PROY
+ECTOS DE GOOGLE ANTIGRA
+VITY\android-device-man
+ager\apk-builds\build-9
+999\project
+[2026-03-27T04:29:04.46
+1Z] Re-compilando 
+Smali con Apktool...
+[2026-03-27T04:29:11.76
+9Z] Firmando paquete 
+con testkey...
+[ERROR] Command 
+failed: java -jar "C:\U
+sers\User\Downloads\PRO
+YECTOS DE GOOGLE ANTIGR
+AVITY\android-device-ma
+nager\server\assets\sig
+n.jar" "C:\Users\User\D
+ownloads\PROYECTOS DE 
+GOOGLE ANTIGRAVITY\andr
+oid-device-manager\apk-
+builds\build-9999\unsig
+ned.apk"
+Exception in thread 
+"main" java.lang.NoClas
+sDefFoundError: 
+sun/misc/BASE64Encoder
+	at s.Sign.addDigestsTo
+Manifest(Sign.java:108)
+	at s.Sign.sign(Sign.ja
+va:454)
+	at s.Sign.main(Sign.ja
+va:532)
+Caused by: java.lang.Cl
+assNotFoundException: 
+sun.misc.BASE64Encoder
+	at java.base/jdk.inter
+nal.loader.BuiltinClass
+Loader.loadClass(Builti
+nClassLoader.java:641)
+	at java.base/jdk.inter
+nal.loader.ClassLoaders
+$AppClassLoader.loadCla
+ss(ClassLoaders.java:18
+8)
+	at java.base/java.lang
+.ClassLoader.loadClass(
+ClassLoader.java:525)
+	... 3 more
+

@@ -1,0 +1,45 @@
+﻿Starting Local APK Verification...
+FAILED
+node.exe : C:\Users\Use
+r\Downloads\PROYECTOS 
+DE GOOGLE ANTIGRAVITY\a
+ndroid-device-manager\v
+erify-build.ts:29
+En línea: 1 Carácter: 1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (C:\Users\User   
+ \D...ify-build.ts:    
+29:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+    require('fs').write
+FileSync('build-diagnos
+tic.txt', "CRITICAL 
+EXCEPTION:\n" + 
+(error.stack || 
+error.message));
+    ^
+
+ReferenceError: 
+require is not defined
+    at verifyBuild (C:\
+Users\User\Downloads\PR
+OYECTOS DE GOOGLE ANTIG
+RAVITY\android-device-m
+anager\verify-build.ts:
+29:5)
+
+Node.js v24.14.0

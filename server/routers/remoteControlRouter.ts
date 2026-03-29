@@ -62,6 +62,20 @@ export const remoteControlRouter = router({
           }
         );
 
+        // [PLATINUM FIX] Emit the command in real-time via WebSocket
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          console.log(`[WebSocket] Emitting remote command '${input.commandType}' to device ${input.deviceId}`);
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: input.commandType,
+            payload: input.payload || {},
+            commandId: command.commandId
+          });
+        } else {
+          console.warn(`[WebSocket] Warning: wsManager not available to send remote command ${input.commandType}`);
+        }
+
         return {
           success: true,
           commandId: command.commandId,

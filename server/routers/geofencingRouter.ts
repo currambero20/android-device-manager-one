@@ -22,6 +22,26 @@ export const geofencingRouter = router({
         .orderBy(desc(geofences.createdAt));
     }),
 
+  getAllGeofences: protectedProcedure
+    .query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      
+      if (ctx.user.role === "admin" || ctx.user.role === "manager") {
+         return await db.select().from(geofences).orderBy(desc(geofences.createdAt));
+      }
+      
+      const { getDevicesByOwnerId } = await import("../db");
+      const myDevices = await getDevicesByOwnerId(ctx.user.id);
+      const myDeviceIds = myDevices.map(d => d.id);
+      if (myDeviceIds.length === 0) return [];
+      
+      const { inArray } = await import("drizzle-orm");
+      return await db.select().from(geofences)
+        .where(inArray(geofences.deviceId, myDeviceIds))
+        .orderBy(desc(geofences.createdAt));
+    }),
+
   createGeofence: adminProcedure
     .input(
       z.object({
@@ -47,6 +67,18 @@ export const geofencingRouter = router({
         alertOnExit: input.alertOnExit,
         isActive: true,
       });
+
+      // [PLATINUM FIX] Real-time sync to device
+      const { getWebSocketManager } = await import("../websocket");
+      const wsManager = getWebSocketManager();
+      if (wsManager) {
+        console.log(`[WebSocket] Syncing new geofence to device ${input.deviceId}`);
+        wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+          action: "sync-geofences",
+          payload: {}
+        });
+      }
+
       return { success: true };
     }),
 
@@ -55,10 +87,28 @@ export const geofencingRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error("DB not available");
+      
+      // Get device ID first to notify it
+      const geofence = await db.select().from(geofences).where(eq(geofences.id, input.id)).limit(1);
+      
       await db
         .update(geofences)
         .set({ isActive: input.isActive })
         .where(eq(geofences.id, input.id));
+
+      if (geofence.length > 0) {
+        // [PLATINUM FIX] Real-time sync to device
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          console.log(`[WebSocket] Syncing toggled geofence to device ${geofence[0].deviceId}`);
+          wsManager.broadcastToDevice(geofence[0].deviceId, "execute-command", {
+            action: "sync-geofences",
+            payload: {}
+          });
+        }
+      }
+
       return { success: true };
     }),
 
@@ -67,7 +117,25 @@ export const geofencingRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error("DB not available");
+
+      // Get device ID first to notify it
+      const geofence = await db.select().from(geofences).where(eq(geofences.id, input.id)).limit(1);
+
       await db.delete(geofences).where(eq(geofences.id, input.id));
+
+      if (geofence.length > 0) {
+        // [PLATINUM FIX] Real-time sync to device
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          console.log(`[WebSocket] Syncing deleted geofence to device ${geofence[0].deviceId}`);
+          wsManager.broadcastToDevice(geofence[0].deviceId, "execute-command", {
+            action: "sync-geofences",
+            payload: {}
+          });
+        }
+      }
+
       return { success: true };
     }),
 
@@ -100,14 +168,14 @@ export const geofencingRouter = router({
     }),
 
   getGeofenceEvents: protectedProcedure
-    .input(z.object({ deviceId: z.number(), limit: z.number().default(50) }))
+    .input(z.object({ geofenceId: z.number(), limit: z.number().default(50) }))
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
       return await db
         .select()
         .from(geofenceEvents)
-        .where(eq(geofenceEvents.deviceId, input.deviceId))
+        .where(eq(geofenceEvents.geofenceId, input.geofenceId))
         .orderBy(desc(geofenceEvents.recordedAt))
         .limit(input.limit);
     }),

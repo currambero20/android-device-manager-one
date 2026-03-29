@@ -39,6 +39,24 @@ export const devicesRouter = router({
   }),
 
   /**
+   * Alias for getMyDevices to match frontend usage in some tabs.
+   */
+  getAll: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB error" });
+
+      const { getDevicesByOwnerId, getAllDevices } = await import("../db");
+      if (ctx.user.role === "admin" || ctx.user.role === "manager") {
+         return await getAllDevices();
+      }
+      return await getDevicesByOwnerId(ctx.user.id);
+    } catch (error) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch devices" });
+    }
+  }),
+
+  /**
    * Register a new device.
    */
   register: protectedProcedure
@@ -112,6 +130,20 @@ export const devicesRouter = router({
           action: input.command,
           details: input.payload,
         });
+
+        // [PLATINUM FIX] Emit the command in real-time via WebSocket
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          console.log(`[WebSocket] Emitting command '${input.command}' to device ${input.deviceId}`);
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: input.command,
+            payload: input.payload || {}
+          });
+        } else {
+          console.warn(`[WebSocket] Warning: wsManager not available to send command ${input.command}`);
+        }
+
         return { success: true };
       } catch (error) {
         console.error("[Devices Router] Error sending command:", error);

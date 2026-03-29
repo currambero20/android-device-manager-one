@@ -53,19 +53,22 @@ export default function Geofencing() {
   const [selectedGeofence, setSelectedGeofence] = useState<Geofence | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({
-    deviceId: 1,
+    deviceId: 0,
     name: "",
     latitude: "",
     longitude: "",
     radius: "500",
   });
 
+  // Fetch devices
+  const { data: devicesData } = trpc.devices.getMyDevices.useQuery() as any;
+
   // Fetch geofences
-  const { data: geofencesData } = trpc.geofencing.getAllGeofences.useQuery();
+  const { data: geofencesData } = trpc.geofencing.getAllGeofences.useQuery() as any;
   const { data: eventsData } = trpc.geofencing.getGeofenceEvents.useQuery(
-    selectedGeofence ? { geofenceId: selectedGeofence.id } : { geofenceId: 0 },
+    selectedGeofence ? { geofenceId: selectedGeofence.id } : { geofenceId: 0 } as any,
     { enabled: !!selectedGeofence }
-  );
+  ) as any;
 
   useEffect(() => {
     if (geofencesData) {
@@ -169,6 +172,21 @@ export default function Geofencing() {
             <CardContent>
               <form onSubmit={handleCreateGeofence} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label className="text-gray-300">Dispositivo Objetivo</Label>
+                    <select
+                      value={formData.deviceId.toString()}
+                      onChange={(e) => setFormData({ ...formData, deviceId: parseInt(e.target.value) })}
+                      className="w-full h-10 px-3 rounded-md bg-gray-800 border-gray-700 text-white font-bold"
+                    >
+                      <option value="0" disabled>Selecciona un dispositivo...</option>
+                      {devicesData?.map((d: any) => (
+                        <option key={d.id} value={d.id.toString()}>
+                          {d.deviceName} (ID: {d.id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <Label className="text-gray-300">Nombre</Label>
                     <Input
@@ -214,7 +232,7 @@ export default function Geofencing() {
                 <div className="flex gap-2">
                   <Button
                     type="submit"
-                    disabled={createMutation.isPending}
+                    disabled={createMutation.isPending || formData.deviceId === 0}
                     className="bg-cyan-600 hover:bg-cyan-700"
                   >
                     {createMutation.isPending ? "Creando..." : "Crear Geofence"}

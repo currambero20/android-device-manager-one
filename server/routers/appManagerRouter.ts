@@ -67,26 +67,70 @@ export const appManagerRouter = router({
           );
         }
 
-        // Obtener total
-        const total = await (db as any).query.installedApps.findMany({
-          where: and(...whereConditions),
-        });
+        // [PLATINUM FIX] Real-time request with EventBus waiting
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          console.log(`[WebSocket] Requesting installed apps list from device ${input.deviceId}`);
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: "request-apps",
+            payload: {}
+          });
+        }
 
-        return {
-          apps: filteredApps.map((app: any) => ({
-            id: app.id,
-            name: app.appName,
-            packageName: app.packageName,
-            version: app.version,
-            versionCode: app.versionCode,
-            isSystemApp: app.isSystemApp,
-            installTime: app.installTime,
-            updateTime: app.updateTime,
-          })),
-          total: total.length,
-          limit: input.limit,
-          offset: input.offset,
-        };
+        const { eventBus } = await import("../eventBus");
+        const eventName = `apps-response-${input.deviceId}`;
+        
+        try {
+          const deviceResponse = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error("Timeout")), 8000);
+            eventBus.once(eventName, (data) => {
+              clearTimeout(timeout);
+              resolve(data);
+            });
+          });
+          
+          const rawApps = (deviceResponse as any).apps || [];
+          // Normalizar apps desde dispositivo
+          return {
+            apps: rawApps.map((app: any, idx: number) => ({
+              id: idx,
+              name: app.name || app.appName || "Unknown App",
+              packageName: app.packageName || app.id || "unknown.package",
+              version: app.version || "1.0",
+              versionCode: app.versionCode || 1,
+              isSystemApp: app.isSystemApp || false,
+              installTime: app.installTime || new Date(),
+              updateTime: app.updateTime || new Date(),
+            })),
+            total: rawApps.length,
+            limit: input.limit,
+            offset: input.offset,
+          };
+        } catch (e) {
+          console.warn(`[AppManager] Device ${input.deviceId} did not respond in time. Falling back to DB cache.`);
+          
+          // Obtener total
+          const total = await (db as any).query.installedApps.findMany({
+            where: and(...whereConditions),
+          });
+
+          return {
+            apps: filteredApps.map((app: any) => ({
+              id: app.id,
+              name: app.appName,
+              packageName: app.packageName,
+              version: app.version,
+              versionCode: app.versionCode,
+              isSystemApp: app.isSystemApp,
+              installTime: app.installTime,
+              updateTime: app.updateTime,
+            })),
+            total: total.length,
+            limit: input.limit,
+            offset: input.offset,
+          };
+        }
       } catch (error) {
         console.error("[AppManager] Error getting installed apps:", error);
         throw new TRPCError({

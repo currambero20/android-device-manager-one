@@ -93,13 +93,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       href: "/analytics",
       roles: ["admin", "manager", "user"],
     },
-    {
-      label: "Geovallas",
-      icon: Shield,
-      href: "/geofencing",
-      roles: ["admin", "manager", "user"],
-      permission: "MENU_LOCATION",
-    },
+
     {
       label: "Notificaciones",
       icon: Bell,

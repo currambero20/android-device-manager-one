@@ -151,9 +151,9 @@ export default function RemoteControl() {
                   </TabsList>
 
                   <div className="mb-4 flex justify-end">
-                    <Button variant="link" size="sm" className="text-magenta-400 font-bold p-0" asChild>
-                      <a href="/media">Ir a Galería de Evidencia →</a>
-                    </Button>
+                      <Button variant="link" size="sm" className="text-magenta-400 font-bold p-0" asChild>
+                        <a href="/media-capture">Ir a Galería de Evidencia →</a>
+                      </Button>
                   </div>
 
                   <TabsContent value="control" className="grid grid-cols-2 md:grid-cols-3 gap-3">

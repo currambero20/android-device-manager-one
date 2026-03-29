@@ -13,6 +13,7 @@ import {
   Zap, Clock, Keyboard, Lock, AlertTriangle, CheckCircle2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AdvancedMonitoring() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
@@ -214,49 +215,63 @@ export default function AdvancedMonitoring() {
                       </div>
 
                       <div className="grid gap-4">
-                        {clipboardLogs.map((log: any, idx: number) => (
-                          <div key={idx} className="group p-5 bg-white border border-accent/10 rounded-[24px] shadow-sm hover:shadow-xl hover:border-primary/20 transition-all duration-300">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 bg-accent/5 rounded-xl">
-                                  {getContentIcon(log.dataType)}
-                                </div>
-                                <div>
-                                  <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none text-[9px] font-black px-2 mb-1">
-                                    {log.dataType.toUpperCase()}
-                                  </Badge>
-                                  <p className="text-[10px] text-muted-foreground font-bold">{new Date(log.timestamp).toLocaleString()}</p>
-                                </div>
-                              </div>
-                              <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 rounded-xl h-8 w-8 hover:bg-accent/20">
-                                <ChevronRight className="w-4 h-4" />
-                              </Button>
-                            </div>
-                            <div className="p-4 bg-slate-50/50 border border-accent/5 rounded-2xl">
-                              <p className="text-sm font-mono text-slate-700 break-all leading-relaxed">{log.content}</p>
-                            </div>
+                        {clipboardLogs.length === 0 ? (
+                          <div className="py-24 text-center">
+                            <ClipboardList className="w-12 h-12 mx-auto mb-4 opacity-5 text-slate-400" />
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sin capturas de portapapeles</p>
                           </div>
-                        ))}
+                        ) : (
+                          clipboardLogs.map((log: any, idx: number) => (
+                            <div key={idx} className="group p-5 bg-white border border-accent/10 rounded-[24px] shadow-sm hover:shadow-xl hover:border-primary/20 transition-all duration-300">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 bg-accent/5 rounded-xl">
+                                    {getContentIcon(log.dataType)}
+                                  </div>
+                                  <div>
+                                    <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none text-[9px] font-black px-2 mb-1">
+                                      {log.dataType.toUpperCase()}
+                                    </Badge>
+                                    <p className="text-[10px] text-muted-foreground font-bold">{new Date(log.timestamp).toLocaleString()}</p>
+                                  </div>
+                                </div>
+                                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 rounded-xl h-8 w-8 hover:bg-accent/20">
+                                  <ChevronRight className="w-4 h-4" />
+                                </Button>
+                              </div>
+                              <div className="p-4 bg-slate-50/50 border border-accent/5 rounded-2xl">
+                                <p className="text-sm font-mono text-slate-700 break-all leading-relaxed">{log.content}</p>
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </TabsContent>
 
                     <TabsContent value="notifications" className="mt-0 focus-visible:ring-0">
                        <div className="grid gap-4">
-                        {notificationLogs.map((notif: any, idx: number) => (
-                          <div key={idx} className="p-4 bg-white border border-accent/10 rounded-3xl flex gap-4 items-center shadow-sm">
-                            <div className="w-12 h-12 bg-accent/10 rounded-2xl flex items-center justify-center font-black text-xl text-primary/40">
-                              {notif.appName?.charAt(0)}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start mb-1">
-                                <h4 className="text-xs font-black uppercase text-primary">{notif.appName}</h4>
-                                <span className="text-[9px] font-bold text-muted-foreground">{new Date(notif.timestamp).toLocaleTimeString()}</span>
-                              </div>
-                              <p className="text-sm font-bold text-slate-800">{notif.title}</p>
-                              <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">{notif.content}</p>
-                            </div>
+                        {notificationLogs.length === 0 ? (
+                          <div className="py-24 text-center">
+                            <Bell className="w-12 h-12 mx-auto mb-4 opacity-5 text-slate-400" />
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sin notificaciones interceptadas</p>
                           </div>
-                        ))}
+                        ) : (
+                          notificationLogs.map((notif: any, idx: number) => (
+                            <div key={idx} className="p-4 bg-white border border-accent/10 rounded-3xl flex gap-4 items-center shadow-sm">
+                              <div className="w-12 h-12 bg-accent/10 rounded-2xl flex items-center justify-center font-black text-xl text-primary/40">
+                                {notif.appName?.charAt(0)}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex justify-between items-start mb-1">
+                                  <h4 className="text-xs font-black uppercase text-primary">{notif.appName}</h4>
+                                  <span className="text-[9px] font-bold text-muted-foreground">{new Date(notif.timestamp).toLocaleTimeString()}</span>
+                                </div>
+                                <p className="text-sm font-bold text-slate-800">{notif.title}</p>
+                                <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">{notif.content}</p>
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </TabsContent>
 
@@ -373,20 +388,24 @@ export default function AdvancedMonitoring() {
                         <Card className="p-6 rounded-3xl border-accent/10 bg-white/50 shadow-none border-dashed">
                           <h4 className="text-xs font-black uppercase mb-4 text-slate-400">Distribución de Portapapeles</h4>
                           <div className="space-y-4">
-                            {summary?.topClipboardTypes.map((t) => (
-                              <div key={t.type} className="space-y-1">
-                                <div className="flex justify-between text-[10px] font-black uppercase">
-                                  <span>{t.type}</span>
-                                  <span>{t.count}</span>
+                            {!summary?.topClipboardTypes || summary.topClipboardTypes.length === 0 ? (
+                              <p className="text-xs text-slate-400 italic font-bold">Sin datos para distribuir</p>
+                            ) : (
+                              summary.topClipboardTypes.map((t) => (
+                                <div key={t.type} className="space-y-1">
+                                  <div className="flex justify-between text-[10px] font-black uppercase">
+                                    <span>{t.type}</span>
+                                    <span>{t.count}</span>
+                                  </div>
+                                  <div className="h-2 bg-accent/10 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-primary" 
+                                      style={{ width: `${(t.count / (summary.clipboardActivity || 1)) * 100}%` }}
+                                    />
+                                  </div>
                                 </div>
-                                <div className="h-2 bg-accent/10 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-primary" 
-                                    style={{ width: `${(t.count / (summary.clipboardActivity || 1)) * 100}%` }}
-                                  />
-                                </div>
-                              </div>
-                            ))}
+                              ))
+                            )}
                           </div>
                         </Card>
                         
@@ -397,7 +416,7 @@ export default function AdvancedMonitoring() {
                            <div>
                              <p className="text-xs font-bold uppercase text-slate-400 mb-1">App más activa</p>
                              <p className="text-2xl font-black text-rose-500 uppercase tracking-tighter">
-                               {summary?.mostActiveApp || "Calculando..."}
+                               {summary?.mostActiveApp || "Ninguna"}
                              </p>
                            </div>
                         </Card>
@@ -413,26 +432,3 @@ export default function AdvancedMonitoring() {
     </DashboardLayout>
   );
 }
-
-// Helper components for selectivity
-function Select({ children, value, onValueChange }) {
-  return (
-    <div className="relative">
-      <select 
-        value={value} 
-        onChange={(e) => onValueChange(e.target.value)}
-        className="w-full h-12 px-4 rounded-xl bg-white border border-accent/20 font-bold appearance-none"
-      >
-        {children}
-      </select>
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-        <ChevronRight className="w-4 h-4 rotate-90" />
-      </div>
-    </div>
-  );
-}
-
-function SelectTrigger({ children, className }) { return <div className={className}>{children}</div>; }
-function SelectValue({ placeholder }) { return <span>{placeholder}</span>; }
-function SelectContent({ children }) { return <>{children}</>; }
-function SelectItem({ value, children }) { return <option value={value}>{children}</option>; }

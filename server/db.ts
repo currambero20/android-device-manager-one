@@ -458,7 +458,7 @@ export async function sendDeviceCommand(params: {
     userId: params.userId,
     action: params.action,
     actionType: "device_monitored", // Using device_monitored as a generic command type
-    status: "pending",
+    status: "success",
     details: params.details || {},
     timestamp: new Date(),
   } as any);

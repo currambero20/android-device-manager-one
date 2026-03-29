@@ -4,7 +4,7 @@ import * as db from "../db";
 import { hashPassword } from "../db";
 
 export const usersRouter = router({
-  getAll: adminProcedure.query(async () => {
+  getAll: protectedProcedure.query(async () => {
     return await db.getAllUsers();
   }),
 

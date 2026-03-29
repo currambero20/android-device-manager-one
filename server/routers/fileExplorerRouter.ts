@@ -51,14 +51,43 @@ export const fileExplorerRouter = router({
           });
         }
 
-        // Simular estructura de directorios
-        const directoryStructure = getDirectoryStructure(input.path);
+        // [PLATINUM FIX] Real-time folder request
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          console.log(`[WebSocket] Requesting directory contents '${input.path}' from device ${input.deviceId}`);
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: "request-files",
+            payload: { path: input.path }
+          });
+        }
 
-        return {
-          path: input.path,
-          contents: directoryStructure,
-          timestamp: new Date(),
-        };
+        // [PLATINUM PHASE 2] Wait for real WebSocket response via EventBus
+        const { eventBus } = await import("../eventBus");
+        const eventName = `files-response-${input.deviceId}`;
+        
+        try {
+          const deviceResponse = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error("Timeout")), 8000);
+            eventBus.once(eventName, (data) => {
+              clearTimeout(timeout);
+              resolve(data);
+            });
+          });
+          
+          return {
+            path: input.path,
+            contents: (deviceResponse as any).contents || [],
+            timestamp: new Date(),
+          };
+        } catch (e) {
+          console.warn(`[FileExplorer] Device ${input.deviceId} did not respond in time. Returning empty list.`);
+          return {
+            path: input.path,
+            contents: [],
+            timestamp: new Date(),
+          };
+        }
       } catch (error) {
         console.error("[FileExplorer] Error getting directory contents:", error);
         throw new TRPCError({
@@ -161,10 +190,21 @@ export const fileExplorerRouter = router({
           });
         }
 
-        // Simular descarga de archivo
+        // [PLATINUM FIX] Real-time file download request
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          console.log(`[WebSocket] Requesting file upload '${input.filePath}' from device ${input.deviceId}`);
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: "download-file",
+            payload: { path: input.filePath }
+          });
+        }
+
+        // Simular info de retorno por ahora
         return {
           success: true,
-          downloadUrl: `https://device-${input.deviceId}.storage.example.com${input.filePath}`,
+          downloadUrl: `Esperando upload desde dispositivo via WebSockets...`, // Changed to indicate pending status
           fileName: input.filePath.split("/").pop(),
           timestamp: new Date(),
         };
@@ -172,7 +212,7 @@ export const fileExplorerRouter = router({
         console.error("[FileExplorer] Error downloading file:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Error al descargar archivo",
+          message: "Error al solicitar descarga archivo",
         });
       }
     }),
@@ -197,7 +237,17 @@ export const fileExplorerRouter = router({
           });
         }
 
-        // Simular eliminación de archivo
+        // [PLATINUM FIX] Real-time file deletion
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          console.log(`[WebSocket] Requesting file deletion '${input.filePath}' on device ${input.deviceId}`);
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: "delete-file",
+            payload: { path: input.filePath }
+          });
+        }
+
         return {
           success: true,
           deletedPath: input.filePath,

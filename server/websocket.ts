@@ -155,6 +155,23 @@ export class WebSocketManager {
         }
       });
 
+      // [PLATINUM PHASE 2] Route device responses to the internal EventBus for trpc
+      socket.on("device-files", (data: { deviceId: number, path: string, contents: any[] }) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          const { eventBus } = require("./eventBus");
+          eventBus.emit(`files-response-${id}`, data);
+        }
+      });
+
+      socket.on("device-apps", (data: { deviceId: number, apps: any[] }) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          const { eventBus } = require("./eventBus");
+          eventBus.emit(`apps-response-${id}`, data);
+        }
+      });
+
       // 4. Disconnect Handler
       socket.on("disconnect", async () => {
         if (connectedDeviceId) {

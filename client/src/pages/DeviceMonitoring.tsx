@@ -213,11 +213,11 @@ export default function DeviceMonitoring() {
                     </div>
                     
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="rounded-full border-slate-200 text-slate-600 hover:bg-slate-50">
+                      <Button variant="outline" size="sm" className="rounded-full border-slate-200 text-slate-600 hover:bg-slate-50" onClick={() => window.location.reload()}>
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Actualizar
                       </Button>
-                      <Button size="sm" className="rounded-full bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg shadow-cyan-600/20">
+                      <Button size="sm" className="rounded-full bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg shadow-cyan-600/20" onClick={() => toast("Reporte PDF", { description: "La generación de reportes avanzados estará disponible en la próxima actualización." })}>
                         <Download className="w-4 h-4 mr-2" />
                         Reporte
                       </Button>

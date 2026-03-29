@@ -66,6 +66,16 @@ export default function ApkBuilder() {
 
   // Poll for build status/logs every 5 seconds if a build is in progress
   useEffect(() => {
+    // Detect server IP from health check
+    fetch("/api/health")
+      .then(res => res.json())
+      .then(data => {
+        if (data.serverUrl && !config.serverUrl) {
+          setConfig(prev => ({ ...prev, serverUrl: data.serverUrl }));
+        }
+      })
+      .catch(() => {});
+
     let interval: NodeJS.Timeout;
     const hasActiveBuild = builds?.some(b => b.status === "building");
     

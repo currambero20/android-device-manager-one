@@ -38,14 +38,23 @@ async function startServer() {
   app.use(cors(corsOptions));
   app.use(cookieParser());
   
-  // Health check
-  app.get("/", async (req, res) => {
-    const dbStatus = await (await import("../db")).getHealthStatus();
-    res.json({ 
-      message: "Backend is running (Platinum Intelligence Pro)",
-      database: dbStatus,
-      dbProtocol: process.env.DATABASE_URL?.substring(0, 10)
-    });
+  // Health check for auto-discovery
+  app.get("/api/health", async (req, res) => {
+    try {
+      const os = await import("os");
+      const networkInterfaces = os.networkInterfaces();
+      const localIp = Object.values(networkInterfaces)
+        .flat()
+        .find(iface => iface?.family === 'IPv4' && !iface.internal)?.address || "localhost";
+      
+      const port = process.env.PORT || 3000;
+      res.json({ 
+        status: "ok",
+        serverUrl: `http://${localIp}:${port}`,
+      });
+    } catch (e) {
+      res.status(500).json({ status: "error" });
+    }
   });
 
   // Initialize WebSocket server

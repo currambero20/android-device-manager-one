@@ -46,41 +46,27 @@ export default function Notifications() {
     "security_alert",
   ]);
 
-  // Simulate loading notifications
+  // Real data fetching
+  const { data: realNotifications, isLoading, refetch } = trpc.notifications.getAll.useQuery({
+    limit: 50
+  }, {
+    refetchInterval: 10000 // Polling every 10s for real-time feel
+  });
+
   useEffect(() => {
-    // In a real app, fetch from API
-    const mockNotifications: Notification[] = [
-      {
-        id: "1",
-        type: "geofence_entry",
-        title: "Entrada a Geofence",
-        message: "Dispositivo 1 entró a la zona Oficina Principal",
-        deviceId: 1,
-        geofenceId: 1,
-        timestamp: new Date(Date.now() - 5 * 60000),
-        read: false,
-      },
-      {
-        id: "2",
-        type: "device_offline",
-        title: "Dispositivo Fuera de Línea",
-        message: "Samsung Galaxy S21 se desconectó",
-        deviceId: 2,
-        timestamp: new Date(Date.now() - 15 * 60000),
-        read: false,
-      },
-      {
-        id: "3",
-        type: "command_executed",
-        title: "Comando Ejecutado",
-        message: "Comando screenshot en dispositivo 1 ejecutado",
-        deviceId: 1,
-        timestamp: new Date(Date.now() - 30 * 60000),
-        read: true,
-      },
-    ];
-    setNotifications(mockNotifications);
-  }, []);
+    if (realNotifications) {
+      const formatted = realNotifications.map((n: any) => ({
+        id: n.id.toString(),
+        type: "system_alert", // Map appName or body to types if needed
+        title: n.title || "Notificación de Dispositivo",
+        message: n.body || "",
+        deviceId: n.deviceId,
+        timestamp: new Date(n.timestamp),
+        read: false, // Schema doesn't have isRead yet
+      }));
+      setNotifications(formatted);
+    }
+  }, [realNotifications]);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {

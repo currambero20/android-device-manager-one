@@ -336,8 +336,11 @@ class AdvancedMonitoring {
         .where(eq(notificationLogs.deviceId, deviceId));
 
       // Obtener media captures
-      // Obtener media captures (tabla no existe aún)
-      const captures: any[] = [];
+      const { mediaFiles } = await import("../drizzle/schema");
+      const captures = await db
+        .select()
+        .from(mediaFiles)
+        .where(eq(mediaFiles.deviceId, deviceId));
 
       // Contar por tipo
       const clipboardByType: Record<string, number> = {};
@@ -347,11 +350,10 @@ class AdvancedMonitoring {
       });
 
       const mediaByType: Record<string, number> = {};
-      // No hay capturas de media aún
-      // captures.forEach((capture) => {
-      //   const type = capture.type || "unknown";
-      //   mediaByType[type] = (mediaByType[type] || 0) + 1;
-      // });
+      captures.forEach((capture) => {
+        const type = capture.fileType || "unknown";
+        mediaByType[type] = (mediaByType[type] || 0) + 1;
+      });
 
       return {
         totalClipboardEntries: clipboardEntries.length,

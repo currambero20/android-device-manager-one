@@ -61,6 +61,35 @@ export default function Settings() {
     compactMode: false,
   });
 
+  const { data: remoteSettings, refetch: refetchSettings } = trpc.settings.getAll.useQuery();
+  const saveSettingsMutation = trpc.settings.setBatch.useMutation({
+    onSuccess: () => {
+      toast.success("Configuración guardada en el servidor");
+      refetchSettings();
+    },
+    onError: (err) => {
+      toast.error("Error al guardar: " + err.message);
+    }
+  });
+
+  // Sync with remote settings on load
+  useEffect(() => {
+    if (remoteSettings && remoteSettings.length > 0) {
+      const newSettings = { ...settings };
+      remoteSettings.forEach((s: any) => {
+        if (s.key in newSettings) {
+          try {
+            const val = JSON.parse(s.value);
+            (newSettings as any)[s.key] = val;
+          } catch {
+            (newSettings as any)[s.key] = s.value;
+          }
+        }
+      });
+      setSettings(newSettings);
+    }
+  }, [remoteSettings]);
+
   // Sync with real user 2FA state
   useEffect(() => {
     if (user) {
@@ -73,7 +102,7 @@ export default function Settings() {
 
   const toggle2FAMutation = trpc.auth.toggleTwoFactor.useMutation({
     onSuccess: () => {
-      toast.success("Seguridad actualizada correctamente");
+      toast.success("Seguridad de cuenta actualizada");
       refresh();
     },
     onError: (error) => {
@@ -89,12 +118,18 @@ export default function Settings() {
   };
 
   const handleSaveSettings = () => {
-    // Save 2FA to backend if changed
+    // 1. Save 2FA to backend if changed
     if (user && !!(user as any).twoFactorEnabled !== settings.enableTwoFactor) {
       toggle2FAMutation.mutate({ enabled: settings.enableTwoFactor });
-    } else {
-      toast.success("Configuración guardada localmente");
     }
+    
+    // 2. Save all other settings to globalSettings table
+    const settingsToSave: Record<string, string> = {};
+    Object.entries(settings).forEach(([key, value]) => {
+      settingsToSave[key] = JSON.stringify(value);
+    });
+    
+    saveSettingsMutation.mutate(settingsToSave);
   };
 
   const handleResetSettings = () => {

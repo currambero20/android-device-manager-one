@@ -27,7 +27,8 @@ async function startServer() {
   // ✅ CORS CONFIGURADO PARA VERCEL
   const corsOptions = {
     origin: [
-      process.env.VITE_APP_URL || "http://localhost:5173",
+      process.env.VITE_APP_URL || "http://192.168.200.9:5173",
+      "http://localhost:5173",
       "https://repodeploy.vercel.app"
     ],
     credentials: true,
@@ -68,6 +69,12 @@ async function startServer() {
   // [MOD L3MON] Register APK Download Route
   const { handleAPKDownload } = await import("../apkDownload");
   app.get("/api/apk/download/:buildId", handleAPKDownload);
+
+  // [PLATINUM] Serve Evidence Files
+  const fs = await import("fs");
+  const evidencePath = join(process.cwd(), "builds", "evidence");
+  if (!fs.existsSync(evidencePath)) fs.mkdirSync(evidencePath, { recursive: true });
+  app.use("/api/evidence/download", express.static(evidencePath));
 
   // [DEBUG] Temporarily disabled for boot check
   // registerOAuthRoutes(app);

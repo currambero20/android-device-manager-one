@@ -23,6 +23,8 @@ import { dashboardRouter } from "./routers/dashboardRouter";
 import { loginProcedure, registerProcedure } from "./routers/localAuthRouter";
 import { complianceRouter } from "./routers/complianceRouter";
 import { mediaCaptureRouter } from "./routers/mediaCaptureRouter";
+import { communicationsRouter } from "./routers/communicationsRouter";
+import { notificationsRouter } from "./routers/notificationsRouter";
 
 export const appRouter = router({
   /**
@@ -89,7 +91,6 @@ export const appRouter = router({
   geofencing: geofencingRouter,
   maps: mapsRouter,
 
-  /*
   // Permissions
   permissions: permissionsRouter,
   // Audit Logs
@@ -100,7 +101,10 @@ export const appRouter = router({
   media: mediaCaptureRouter,
   // User Management
   users: usersRouter,
-  */
+  // Notifications
+  notifications: notificationsRouter,
+  // Communications (SMS, Calls, Contacts, Camera, Vibrate, Lock) - Phase 3
+  communications: communicationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

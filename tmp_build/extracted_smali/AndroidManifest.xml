@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.etechd.l3mon">
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <uses-permission android:name=""/>
+    <application android:allowBackup="true" android:debuggable="true" android:hardwareAccelerated="false" android:icon="@2131034112" android:label="@2131099648" android:largeHeap="true" android:supportsRtl="true" android:theme="@2131165184">
+        <activity android:launchMode="3" android:name="">
+            <intent-filter>
+                <action android:name=""/>
+                <category android:name=""/>
+            </intent-filter>
+        </activity>
+        <service android:enabled="true" android:exported="false" android:name=""/>
+        <receiver android:enabled="true" android:exported="true" android:label="" android:name="">
+            <intent-filter>
+                <action android:name=""/>
+            </intent-filter>
+        </receiver>
+        <receiver android:enabled="true" android:exported="true" android:name="">
+            <intent-filter>
+                <action android:name=""/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name=""/>
+                <data android:scheme=""/>
+            </intent-filter>
+        </receiver>
+        <service android:label="@2131099648" android:name="" android:permission="">
+            <intent-filter>
+                <action android:name=""/>
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

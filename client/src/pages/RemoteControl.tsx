@@ -19,7 +19,9 @@ import {
   Clock,
   XCircle,
   RefreshCw,
+  Activity,
 } from "lucide-react";
+import { Link } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
@@ -39,7 +41,7 @@ export default function RemoteControl() {
       toast.success("Comando enviado satisfactoriamente");
       refetchLogs();
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast.error("Error: " + err.message);
     },
   });
@@ -152,12 +154,14 @@ export default function RemoteControl() {
 
                   <div className="mb-4 flex justify-end">
                       <Button variant="link" size="sm" className="text-magenta-400 font-bold p-0" asChild>
-                        <a href="/media-capture">Ir a Galería de Evidencia →</a>
+                      <Link href={`/media-capture/${selectedDeviceId}`} className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1">
+                        Ir a Galería de Evidencia <Activity className="w-3 h-3" />
+                      </Link>
                       </Button>
                   </div>
 
                   <TabsContent value="control" className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {commandTypes.map((cmd) => (
+                    {commandTypes.map((cmd: any) => (
                       <Button
                         key={cmd.value}
                         onClick={() => handleSendCommand(cmd.value)}
@@ -183,7 +187,7 @@ export default function RemoteControl() {
                     {commands.length === 0 ? (
                       <p className="text-center py-8 text-xs text-muted-foreground">Sin actividad registrada para este dispositivo</p>
                     ) : (
-                      commands.map((cmd) => (
+                      commands.map((cmd: any) => (
                         <div key={cmd.id} className="p-2 bg-accent/5 rounded border border-border flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             {getStatusIcon(cmd.status)}

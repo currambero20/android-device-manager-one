@@ -96,13 +96,12 @@ export default function DeviceMonitoring() {
           </div>
           
           <div className={`flex items-center gap-3 px-4 py-2 rounded-full border transition-all ${
-            isConnected ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700"
+            isConnected ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-[0_0_15px_rgba(16,185,129,0.1)]" : "bg-rose-50 border-rose-200 text-rose-700"
           }`}>
-            {isConnected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
-            <span className="text-sm font-semibold">
-              Servidor: <span className="uppercase">{isConnected ? "Conectado" : "Desconectado"}</span>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+            <span className="text-xs font-bold uppercase tracking-wider">
+              Servidor: {isConnected ? "Conectado" : "Desconectado/Reconectando..."}
             </span>
-            {isConnected && <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ml-1" />}
           </div>
         </div>
 
@@ -213,13 +212,39 @@ export default function DeviceMonitoring() {
                     </div>
                     
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="rounded-full border-slate-200 text-slate-600 hover:bg-slate-50" onClick={() => window.location.reload()}>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Actualizar
+                      <Button variant="outline" size="sm" onClick={() => {
+                        if (!selectedDevice) return;
+                        const csvContent = [
+                          ["Propiedad", "Valor"],
+                          ["Nombre", selectedDevice.deviceName],
+                          ["Status", selectedDevice.status],
+                          ["Batería", `${selectedDevice.batteryLevel}%`],
+                          ["Sinal", `${selectedDevice.signalStrength}%`],
+                          ["Última Conexión", selectedDevice.lastSeen ? new Date(selectedDevice.lastSeen).toLocaleString() : "N/A"],
+                          ["Latitud", currentLocation?.latitude || "N/A"],
+                          ["Longitud", currentLocation?.longitude || "N/A"],
+                          ["Precisión", currentLocation?.accuracy || "N/A"],
+                        ].map(e => e.join(",")).join("\n");
+                        
+                        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.setAttribute("href", url);
+                        link.setAttribute("download", `reporte_${selectedDevice.deviceName.replace(/\s/g, "_")}.csv`);
+                        link.style.visibility = "hidden";
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        toast.success("Reporte generado exitosamente");
+                      }}>
+                        <Download className="w-4 h-4 mr-2" /> Reporte
                       </Button>
-                      <Button size="sm" className="rounded-full bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg shadow-cyan-600/20" onClick={() => toast("Reporte PDF", { description: "La generación de reportes avanzados estará disponible en la próxima actualización." })}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Reporte
+                      <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => {
+                         trpc.devices.refreshStatus.useMutation().mutate({ deviceId: selectedDeviceId! });
+                         toast.success("Solicitud de actualización enviada al dispositivo");
+                      }}>
+                        <RefreshCw className="w-4 h-4 mr-2" /> Actualizar
                       </Button>
                     </div>
                   </div>

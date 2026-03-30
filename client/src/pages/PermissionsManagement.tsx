@@ -90,7 +90,7 @@ export default function PermissionsManagement() {
 
   const filteredDevices = useMemo(() => {
     return (allDevices || []).filter((d: any) =>
-      d.name?.toLowerCase().includes(searchDevice.toLowerCase())
+      (d.deviceName || "").toLowerCase().includes(searchDevice.toLowerCase())
     );
   }, [allDevices, searchDevice]);
 
@@ -182,23 +182,34 @@ export default function PermissionsManagement() {
                   </div>
                   <ScrollArea className="h-[500px] border border-accent/10 rounded-xl p-2 bg-secondary/10">
                     <div className="space-y-2">
-                      {filteredUsers?.map((user: any) => (
-                        <button
-                          key={user.id}
-                          onClick={() => setSelectedUser(user.id)}
-                          className={`w-full text-left p-3 rounded-xl transition-all border ${
-                            selectedUser === user.id
-                              ? "bg-primary/10 border-primary/30 shadow-sm"
-                              : "bg-background border-transparent hover:border-accent/20 hover:bg-secondary/50"
-                          }`}
-                        >
-                          <div className="font-bold text-sm text-foreground">{user.name || "Sin nombre"}</div>
-                          <div className="text-[10px] text-muted-foreground font-medium truncate">{user.email || "Sin email"}</div>
-                          <Badge variant="outline" className={`mt-2 text-[10px] uppercase tracking-wider font-bold ${getRoleColor(user.role || "")}`}>
-                            {user.role}
-                          </Badge>
-                        </button>
-                      ))}
+                      {trpc.users.getAll.isLoading ? (
+                        <div className="flex flex-col items-center justify-center py-10 opacity-50">
+                          <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                          <p className="text-[10px] font-bold uppercase tracking-widest">Cargando Usuarios...</p>
+                        </div>
+                      ) : filteredUsers?.length === 0 ? (
+                        <div className="text-center py-10 text-muted-foreground">
+                          <p className="text-xs italic">No se encontraron usuarios</p>
+                        </div>
+                      ) : (
+                        filteredUsers?.map((user: any) => (
+                          <button
+                            key={user.id}
+                            onClick={() => setSelectedUser(user.id)}
+                            className={`w-full text-left p-3 rounded-xl transition-all border ${
+                              selectedUser === user.id
+                                ? "bg-primary/10 border-primary/30 shadow-sm"
+                                : "bg-background border-transparent hover:border-accent/20 hover:bg-secondary/50"
+                            }`}
+                          >
+                            <div className="font-bold text-sm text-foreground">{user.name || "Sin nombre"}</div>
+                            <div className="text-[10px] text-muted-foreground font-medium truncate">{user.email || "Sin email"}</div>
+                            <Badge variant="outline" className={`mt-2 text-[10px] uppercase tracking-wider font-bold ${getRoleColor(user.role || "")}`}>
+                              {user.role}
+                            </Badge>
+                          </button>
+                        ))
+                      )}
                     </div>
                   </ScrollArea>
                 </CardContent>

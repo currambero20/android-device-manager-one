@@ -79,14 +79,19 @@ class APKCompiler {
       let content = readFileSync(ioSocketPath, "utf8");
       
       // Auto-fix URL (Protocolo y Puerto)
-      let serverUrl = config.payloadCode || "http://localhost:3000";
+      let serverUrl = config.payloadCode || process.env.API_URL || "http://192.168.200.9:3001";
       if (!serverUrl.startsWith("http")) serverUrl = `http://${serverUrl}`;
       
-      // Si no tiene puerto, añadir el puerto por defecto (:3000)
-      const urlObj = new URL(serverUrl);
-      if (!urlObj.port) {
-          const port = process.env.PORT || "3000";
-          serverUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}`;
+      // Si no tiene puerto, intentar extraer de la URL base o ENV
+      try {
+          const urlObj = new URL(serverUrl);
+          if (!urlObj.port) {
+              const port = process.env.PORT || process.env.WEBSOCKET_PORT || "3001";
+              serverUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}`;
+          }
+      } catch (e) {
+          console.warn("[APKCompiler] Invalid URL in config, fallback to default IP", e);
+          serverUrl = "http://192.168.200.9:3001";
       }
 
       console.log(`[APKCompiler] Injecting Server URL: ${serverUrl}`);
@@ -178,7 +183,9 @@ class APKCompiler {
     if (!db) return;
     try {
       const updateData: any = { status };
-      if (apkPath) updateData.apkUrl = apkPath;
+      // [PLATINUM FIX] Don't overwrite the API URL with the local file path
+      // if (apkPath) updateData.apkUrl = apkPath; 
+      
       // Write logs to the correct column, safely truncated to 4000 chars
       if (logs) updateData.buildLogs = logs.join("\n").substring(0, 4000);
       await db.update(apkBuilds).set(updateData).where(eq(apkBuilds.id, buildId));

@@ -154,7 +154,20 @@ export const complianceRouter = router({
         },
         status: "success",
       });
-      // The actual MDM command would be sent via WebSocket/Push
+      // [PLATINUM FIX] Send actual MDM command via WebSocket
+      const { getWebSocketManager } = await import("../websocket");
+      const wsManager = getWebSocketManager();
+      if (wsManager) {
+        console.log(`[WebSocket] Sending LOST_MODE command to device ${input.deviceId} | Enabled: ${input.enabled}`);
+        wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+          action: input.enabled ? "lock_device" : "unlock_device",
+          payload: {
+            message: input.message || "Device Lost",
+            phone: input.contactPhone || ""
+          }
+        });
+      }
+
       return {
         success: true,
         message: input.enabled

@@ -16,8 +16,8 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function MediaCapture() {
-  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
+export default function MediaCapture({ deviceId }: { deviceId?: number | null }) {
+  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(deviceId ?? null);
   const [selectedCamera, setSelectedCamera] = useState<"front" | "back">("back");
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);

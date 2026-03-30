@@ -60,6 +60,8 @@ export default function Geofencing() {
     radius: "500",
   });
 
+  const utils = trpc.useUtils();
+
   // Fetch devices
   const { data: devicesData } = trpc.devices.getMyDevices.useQuery() as any;
 
@@ -87,8 +89,7 @@ export default function Geofencing() {
       toast.success("Geofence creado exitosamente");
       setFormData({ deviceId: 1, name: "", latitude: "", longitude: "", radius: "500" });
       setIsCreating(false);
-      // Refetch geofences
-      window.location.reload();
+      utils.geofencing.getAllGeofences.invalidate();
     },
     onError: (error) => {
       toast.error(`Error: ${error.message}`);
@@ -99,7 +100,7 @@ export default function Geofencing() {
     onSuccess: () => {
       toast.success("Geofence eliminado");
       setSelectedGeofence(null);
-      window.location.reload();
+      utils.geofencing.getAllGeofences.invalidate();
     },
     onError: (error) => {
       toast.error(`Error: ${error.message}`);
@@ -174,18 +175,24 @@ export default function Geofencing() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <Label className="text-gray-300">Dispositivo Objetivo</Label>
-                    <select
-                      value={formData.deviceId.toString()}
-                      onChange={(e) => setFormData({ ...formData, deviceId: parseInt(e.target.value) })}
-                      className="w-full h-10 px-3 rounded-md bg-gray-800 border-gray-700 text-white font-bold"
-                    >
-                      <option value="0" disabled>Selecciona un dispositivo...</option>
-                      {devicesData?.map((d: any) => (
-                        <option key={d.id} value={d.id.toString()}>
-                          {d.deviceName} (ID: {d.id})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex gap-2">
+                      <select
+                        value={formData.deviceId.toString()}
+                        onChange={(e) => setFormData({ ...formData, deviceId: parseInt(e.target.value) })}
+                        className="flex-1 h-10 px-3 rounded-md bg-gray-800 border-gray-700 text-white font-bold focus:ring-2 focus:ring-cyan-500 outline-none"
+                      >
+                        <option value="0">Seleccionar dispositivo...</option>
+                        {devicesData && devicesData.length > 0 ? (
+                          devicesData.map((d: any) => (
+                            <option key={d.id} value={d.id.toString()}>
+                              {d.deviceName} (ID: {d.id})
+                            </option>
+                          ))
+                        ) : (
+                          <option value="0" disabled>No se encontraron dispositivos conectados</option>
+                        )}
+                      </select>
+                    </div>
                   </div>
                   <div>
                     <Label className="text-gray-300">Nombre</Label>

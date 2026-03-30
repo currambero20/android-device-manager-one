@@ -153,4 +153,22 @@ export const devicesRouter = router({
         });
       }
     }),
+
+  /**
+   * Request an immediate status refresh from the device.
+   */
+  refreshStatus: protectedProcedure
+    .input(z.object({ deviceId: z.number() }))
+    .mutation(async ({ input }) => {
+      const { getWebSocketManager } = await import("../websocket");
+      const wsManager = getWebSocketManager();
+      if (wsManager) {
+        console.log(`[WebSocket] Triggering manual refresh for device ${input.deviceId}`);
+        // Request basic status + location
+        wsManager.broadcastToDevice(input.deviceId, "execute-command", { action: "get-status" });
+        wsManager.broadcastToDevice(input.deviceId, "execute-command", { action: "get-location" });
+        return { success: true };
+      }
+      return { success: false, message: "WS Manager offline" };
+    }),
 });

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout android:id="@2130903040" android:paddingLeft="@2130837504" android:paddingTop="@2130837505" android:paddingRight="@2130837504" android:paddingBottom="@2130837505" android:layout_width="-1" android:layout_height="-1"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <LinearLayout android:gravity="0x00000011" android:orientation="1" android:layout_width="-1" android:layout_height="-1">
+        <ProgressBar android:id="@2130903041" android:layout_width="395.0dip" android:layout_height="88.0dip" android:indeterminate="true" android:layout_marginStart="0.0dip" style="?16842871" />
+    </LinearLayout>
+</RelativeLayout>

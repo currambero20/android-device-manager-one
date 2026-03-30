@@ -526,3 +526,18 @@ export const activityLogs = mysqlTable(
 
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = typeof activityLogs.$inferInsert;
+
+/**
+ * Global application settings table.
+ */
+export const globalSettings = mysqlTable(
+  "globalSettings",
+  {
+    key: varchar("key", { length: 128 }).primaryKey(),
+    value: text("value"),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  }
+);
+
+export type GlobalSetting = typeof globalSettings.$inferSelect;
+export type InsertGlobalSetting = typeof globalSettings.$inferInsert;

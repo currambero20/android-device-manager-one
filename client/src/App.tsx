@@ -29,6 +29,7 @@ import Notifications from "./pages/Notifications";
 import GpsTracker from "./pages/GpsTracker";
 import ComplianceDashboard from "./pages/ComplianceDashboard";
 import MediaCapture from "./pages/MediaCapture";
+import Communications from "./pages/Communications";
 
 function Router() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -127,9 +128,14 @@ function Router() {
         <ComplianceDashboard />
       </Route>
       
-      {/* Media Capture */}
-      <Route path="/media-capture">
-        <MediaCapture />
+      {/* Media Capture with optional deviceId */}
+      <Route path="/media-capture/:deviceId?">
+        {(params) => <MediaCapture deviceId={params.deviceId ? Number(params.deviceId) : null} />}
+      </Route>
+
+      {/* Phase 3: Communications MDM */}
+      <Route path="/communications">
+        <Communications />
       </Route>
 
       <Route>

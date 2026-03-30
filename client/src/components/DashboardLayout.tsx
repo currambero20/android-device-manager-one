@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   FolderOpen,
   Camera,
+  MessageSquare,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -152,6 +153,13 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       icon: Camera,
       href: "/media-capture",
       roles: ["admin", "manager", "user"],
+    },
+    {
+      label: "Comunicaciones MDM",
+      icon: MessageSquare,
+      href: "/communications",
+      roles: ["admin", "manager", "user"],
+      permission: "MENU_COMMUNICATIONS",
     },
     {
       label: "Configuración",

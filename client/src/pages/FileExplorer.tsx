@@ -32,7 +32,7 @@ export default function FileExplorer() {
   const [currentPath, setCurrentPath] = useState("/");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: devices = [] } = trpc.devices.getAll.useQuery() as any;
+  const { data: allDevices, isLoading: loadingDevices } = trpc.devices.getMyDevices.useQuery();
   const { data: directoryData, isLoading, refetch } = trpc.fileExplorer.getDirectoryContents.useQuery(
     { deviceId: selectedDeviceId!, path: currentPath },
     { enabled: !!selectedDeviceId }
@@ -116,7 +116,7 @@ export default function FileExplorer() {
                   <SelectValue placeholder="Seleccionar dispositivo..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {(devices as any[]).map((d: any) => (
+                  {(allDevices || []).map((d: any) => (
                     <SelectItem key={d.id} value={d.id.toString()}>
                       {d.deviceName}
                     </SelectItem>
@@ -140,7 +140,7 @@ export default function FileExplorer() {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-2 border-accent/20 shadow-sm overflow-hidden">
+          <Card className="lg:col-span-2 border-accent/20 shadow-sm overflow-hidden flex flex-col">
             <div className="p-4 bg-secondary/10 border-b border-accent/10 flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -170,27 +170,27 @@ export default function FileExplorer() {
               </div>
             </div>
 
-            <CardContent className="p-0">
-              <div className="max-h-[500px] overflow-y-auto">
+            <CardContent className="p-0 flex-1 overflow-hidden">
+              <div className="h-[500px] overflow-y-auto">
                 {!selectedDeviceId ? (
-                  <div className="py-24 text-center text-muted-foreground">
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                     <ShieldAlert className="w-12 h-12 mx-auto mb-4 opacity-10" />
                     <p className="text-sm font-medium">No se ha seleccionado ningún dispositivo</p>
                     <p className="text-xs mt-1">Selecciona un dispositivo para explorar sus archivos</p>
                   </div>
                 ) : isLoading ? (
-                  <div className="py-24 text-center">
+                  <div className="h-full flex flex-col items-center justify-center">
                     <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-600 mb-2" />
                     <p className="text-sm text-muted-foreground">Cargando archivos...</p>
                   </div>
                 ) : filteredContents.length === 0 ? (
-                  <div className="py-24 text-center text-muted-foreground">
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                     <Search className="w-12 h-12 mx-auto mb-4 opacity-10" />
                     <p className="text-sm font-medium">No se encontraron archivos</p>
                   </div>
                 ) : (
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-[10px] uppercase font-bold text-muted-foreground bg-secondary/5 border-b border-accent/5">
+                  <table className="w-full text-sm text-left border-collapse">
+                    <thead className="text-[10px] uppercase font-bold text-muted-foreground bg-secondary/5 border-b border-accent/5 sticky top-0 bg-white z-10">
                       <tr>
                         <th className="px-6 py-3">Nombre</th>
                         <th className="px-6 py-3">Tamaño</th>
@@ -216,7 +216,7 @@ export default function FileExplorer() {
                               ) : (
                                 getFileIcon(item.name)
                               )}
-                              <span className="font-medium text-slate-700">{item.name}</span>
+                              <span className="font-medium text-slate-700 truncate max-w-[200px] block">{item.name}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-xs text-muted-foreground">

@@ -28,6 +28,17 @@ export const mediaCaptureRouter = router({
         commandQueue.enqueue(command);
         await logRemoteCommand(ctx.user.id, input.deviceId, RemoteCommandType.TAKE_PHOTO, "success", { commandId: command.commandId });
 
+        // [PLATINUM FIX] Direct WebSocket broadcast
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: RemoteCommandType.TAKE_PHOTO,
+            commandId: command.commandId,
+            payload: { camera: input.camera, flash: input.flash }
+          });
+        }
+
         return { success: true, commandId: command.commandId, message: "Comando de captura de foto enviado" };
       } catch (error) {
         console.error("[MediaCapture] Error:", error);
@@ -57,6 +68,17 @@ export const mediaCaptureRouter = router({
 
         commandQueue.enqueue(command);
         await logRemoteCommand(ctx.user.id, input.deviceId, RemoteCommandType.START_AUDIO_RECORDING, "success", { commandId: command.commandId });
+
+        // [PLATINUM FIX] Direct WebSocket broadcast
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: RemoteCommandType.START_AUDIO_RECORDING,
+            commandId: command.commandId,
+            payload: { duration: input.durationSeconds }
+          });
+        }
 
         return { success: true, commandId: command.commandId, message: "Grabación de audio iniciada" };
       } catch (error) {
@@ -118,6 +140,18 @@ export const mediaCaptureRouter = router({
         );
 
         commandQueue.enqueue(command);
+        
+        // [PLATINUM FIX] Direct WebSocket broadcast
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: RemoteCommandType.START_VIDEO_RECORDING,
+            commandId: command.commandId,
+            payload: { camera: input.camera, duration: input.durationSeconds }
+          });
+        }
+
         return { success: true, commandId: command.commandId, message: "Grabación de video iniciada" };
       } catch (error) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Error al iniciar video" });

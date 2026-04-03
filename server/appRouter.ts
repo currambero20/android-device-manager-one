@@ -38,9 +38,14 @@ export const appRouter = router({
 
     logout: publicProcedure.mutation(({ ctx }) => {
       const isProduction = process.env.NODE_ENV === "production";
-      // Clear the session cookie with same settings as when it was set
-      ctx.res.clearCookie(COOKIE_NAME, { path: "/", maxAge: -1, httpOnly: true, secure: isProduction, sameSite: isProduction ? "none" : "lax" });
-      ctx.res.clearCookie("session_token", { path: "/", maxAge: -1, httpOnly: true, secure: isProduction, sameSite: isProduction ? "none" : "lax" });
+      // Clear variations of the cookie to destroy any ghost session across different browser policies
+      const policies = ["lax", "none", false, "strict"];
+      policies.forEach(policy => {
+        ctx.res.clearCookie(COOKIE_NAME, { path: "/", maxAge: -1, httpOnly: true, secure: isProduction, sameSite: policy as any });
+        ctx.res.clearCookie("session_token", { path: "/", maxAge: -1, httpOnly: true, secure: isProduction, sameSite: policy as any });
+      });
+
+
       
       if (ctx.user) {
         createAuditLog({

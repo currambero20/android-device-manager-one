@@ -1,10 +1,11 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { MapView } from "@/components/Map";
 import {
   Tabs,
   TabsContent,
@@ -25,28 +26,43 @@ import {
   EyeOff,
   Wifi,
   WifiOff,
+  MapIcon,
 } from "lucide-react";
 import { useWebSocket, type DeviceLocation, type SMSMessage } from "@/hooks/useWebSocket";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import L from "leaflet";
 
 export default function DeviceMonitoring() {
   const { user } = useAuth();
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showMap, setShowMap] = useState(true);
+  const mapRef = useRef<L.Map | null>(null);
 
   // tRPC Queries
   const { data: devices = [], isLoading: devicesLoading } = trpc.devices.getAll.useQuery();
 
-  const { isConnected, getLocation, getSmsMessages, joinDevice, leaveDevice } =
+  const { getLocation, getSms, joinDevice, leaveDevice, syncDevices, clearAll, isConnected } =
     useWebSocket();
+
+  // Sync WebSocket data with current device list
+  useEffect(() => {
+    if (devices.length > 0) {
+      const deviceIds = devices.map((d: any) => d.id);
+      syncDevices(deviceIds);
+    } else {
+      clearAll();
+    }
+  }, [devices, syncDevices, clearAll]);
 
   // Auto-select first device
   useEffect(() => {
     if (devices.length > 0 && !selectedDeviceId) {
       setSelectedDeviceId(devices[0].id);
+    } else if (devices.length === 0) {
+      setSelectedDeviceId(null);
     }
   }, [devices, selectedDeviceId]);
 
@@ -62,7 +78,7 @@ export default function DeviceMonitoring() {
 
   const selectedDevice = devices.find((d: any) => d.id === selectedDeviceId);
   const currentLocation = selectedDeviceId ? getLocation(selectedDeviceId) : undefined;
-  const smsMessages = selectedDeviceId ? getSmsMessages(selectedDeviceId) : [];
+  const smsMessages = selectedDeviceId ? getSms(selectedDeviceId) : [];
 
   const filteredDevices = devices.filter(
     (device: any) =>
@@ -319,20 +335,30 @@ export default function DeviceMonitoring() {
                           </Button>
                         </div>
 
-                        {showMap && (
-                          <div className="relative group">
-                            <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 to-blue-500/10 rounded-2xl pointer-events-none z-10" />
-                            <div className="w-full h-80 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden transition-all group-hover:border-slate-300">
-                              <div className="text-center relative z-20">
-                                <MapPin className="w-16 h-16 text-cyan-500/30 mx-auto mb-4 animate-bounce" />
-                                <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Visualización de Mapa</p>
-                                <p className="text-slate-400 text-[10px] mt-2 font-mono">
-                                  COORDS: {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
-                                </p>
-                              </div>
+                        {showMap && currentLocation && (
+                          <div className="space-y-4">
+                            <div className="w-full h-80 rounded-2xl overflow-hidden border border-slate-200">
+                              <MapView
+                                className="w-full h-full"
+                                initialCenter={{
+                                  lat: currentLocation.latitude,
+                                  lng: currentLocation.longitude
+                                }}
+                                initialZoom={15}
+                                markers={[{
+                                  id: selectedDeviceId,
+                                  position: {
+                                    lat: currentLocation.latitude,
+                                    lng: currentLocation.longitude
+                                  },
+                                  title: selectedDevice?.deviceName || "Dispositivo",
+                                  icon: "online"
+                                }]}
+                                onMapReady={(map) => { mapRef.current = map; }}
+                              />
                             </div>
                             
-                            <div className="flex justify-between items-center mt-4 px-2">
+                            <div className="flex justify-between items-center px-2">
                               <div className="flex items-center gap-4">
                                 {currentLocation.speed !== undefined && (
                                   <div className="flex items-center gap-2">

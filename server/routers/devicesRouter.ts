@@ -102,7 +102,7 @@ export const devicesRouter = router({
         const { deleteDevice } = await import("../db");
         await deleteDevice(input.deviceId);
         
-        return { success: true };
+        return { success: true, deviceId: input.deviceId };
       } catch (error) {
         console.error("[Devices Router] Error removing device:", error);
         throw new TRPCError({

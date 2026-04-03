@@ -2,9 +2,10 @@ import { z } from "zod";
 import { publicProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { SignJWT } from "jose";
+import { or } from "drizzle-orm";
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || decrypt("49375ed35668ab6429c6fe9a00f95540:f5193c255f8d8ff7ec140f1d5342ef4c19e122ba2bb4fb2c80b875434a5ca0fb3292fe54f456eb4ea4cd7db10f6c89dc")
+  process.env.JWT_SECRET || "android-device-manager-super-secret-key-2024"
 );
 
 const COOKIE_NAME = "session_token";
@@ -36,10 +37,11 @@ function setCookie(res: any, token: string) {
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
+      sameSite: (isProduction ? "none" : "lax") as any,
       maxAge: COOKIE_MAX_AGE,
       path: "/",
     });
+
   }
 }
 
@@ -60,38 +62,27 @@ export const loginProcedure = publicProcedure
     })
   )
   .mutation(async ({ input, ctx }) => {
-    const adminUsername = decrypt("73fdd631874d5b3895cef37a71207ea9:df67909e91246bb21aecaaf500df85fe");
-    const adminPassword = decrypt("7e6aabdeb55fc2afa3e2f6376d9b1b61:94aed050b4d96284ffeb8084ded814084af43164ff0ad11ef2442857cc945b72");
+    const adminUsername = process.env.ADMIN_USERNAME || "admin";
+    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
 
     // ✅ STEP 1: Try DB user lookup FIRST (allows Profile changes to take effect)
     try {
       const dbInstance = await getDb();
 
       if (dbInstance) {
+        // Search by email OR by name (users may register with a username instead of email)
         const userRows = await dbInstance
           .select()
           .from(users)
-          .where(eq(users.email, input.username))
+          .where(or(eq(users.email, input.username), eq(users.name, input.username)))
           .limit(1);
 
         const dbUser = userRows[0];
 
         if (dbUser && dbUser.passwordHash) {
-          // Define all possible salts for absolute transition safety
-          const masterSecret = 'adm-secure-barranquilla-2017';
-          const rawEncryptedSalt = '0f54de789b0083c0e7bfcc12b3ad593c:879ee2fd7bcf12b8f537c51c5d07d050';
-          const decryptedSalt = decrypt(rawEncryptedSalt); // 'android-device-manager-secure-salt-2024'
-          
-          const saltsToTry = [decryptedSalt, rawEncryptedSalt, masterSecret, ""];
-          let valid = false;
-
-          for (const s of saltsToTry) {
-            const h = createHash("sha256").update(input.password + s).digest("hex");
-            if (h === dbUser.passwordHash) {
-              valid = true;
-              break;
-            }
-          }
+          const appSalt = process.env.APP_ENCRYPTION_KEY || "adm-secure-barranquilla-2017";
+          const computedHash = createHash("sha256").update(input.password + appSalt).digest("hex");
+          const valid = computedHash === dbUser.passwordHash;
           
           if (valid) {
             // Check for 2FA bypass parameter (passed as part of password or a header in the future)
@@ -172,8 +163,10 @@ export const loginProcedure = publicProcedure
         name: "Administrador",
         email: decrypt("53585744f6ef8abf14e43cd74135a8fb:aec6900911a8dc0d9e1e07b69f639741fecce90dff82afc5241ec0964c8afea2"), // admin email
         role: "admin",
+        permissions: ["MENU_DASHBOARD", "MENU_DEVICES", "MENU_APK_BUILDER", "MENU_REMOTE_CONTROL", "MENU_FILE_EXPLORER", "MENU_LOCATION", "MENU_APPS", "MENU_COMMUNICATIONS", "MENU_NOTIFICATIONS"],
         loginMethod: "local",
       });
+
 
       setCookie(ctx.res, token);
       
@@ -223,7 +216,7 @@ export const registerProcedure = publicProcedure
     })
   )
   .mutation(async ({ input }) => {
-    const expectedAdminKey = process.env.ADMIN_REGISTRATION_KEY || decrypt("88df632cb5708bce5419c8a9fc99d34f:d50303ceeb19f2499b0f01e04068887da44e18c89dc5a66590c455c07878f70a");
+    const expectedAdminKey = process.env.ADMIN_REGISTRATION_KEY || "Dylan2017-BackupKey";
 
     if (input.adminKey !== expectedAdminKey) {
       throw new TRPCError({

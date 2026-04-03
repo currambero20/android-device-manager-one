@@ -1,7 +1,8 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
+import { MapView } from "@/components/Map";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +12,11 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   MapPin, Navigation, Plus, Trash2, AlertTriangle,
-  RefreshCw, Signal, Crosshair, Clock, Layers
+  RefreshCw, Signal, Crosshair, Clock, Layers, ExternalLink
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import L from "leaflet";
 
 export default function GpsTracker() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
@@ -54,8 +56,11 @@ export default function GpsTracker() {
     onSuccess: () => refetchFences(),
   });
 
-  const googleMapsUrl = latestLocation
-    ? `https://maps.google.com/?q=${latestLocation.latitude},${latestLocation.longitude}&z=16`
+  const mapRef = useRef<L.Map | null>(null);
+  const [showMap, setShowMap] = useState(false);
+
+  const openStreetMapUrl = latestLocation
+    ? `https://www.openstreetmap.org/?mlat=${latestLocation.latitude}&mlon=${latestLocation.longitude}#map=16/${latestLocation.latitude}/${latestLocation.longitude}`
     : null;
 
   return (
@@ -150,16 +155,23 @@ export default function GpsTracker() {
                           </div>
                         )}
                       </div>
-                      {googleMapsUrl && (
+                      <Button 
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+                        onClick={() => setShowMap(!showMap)}
+                      >
+                        <MapPin className="w-4 h-4 mr-2" />
+                        {showMap ? "Ocultar Mapa" : "Ver Mapa en OSM"}
+                      </Button>
+                      {openStreetMapUrl && (
                         <a
-                          href={googleMapsUrl}
+                          href={openStreetMapUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="block w-full"
+                          className="block w-full mt-2"
                         >
-                          <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm">
-                            <MapPin className="w-4 h-4 mr-2" />
-                            Ver en Google Maps
+                          <Button variant="outline" className="w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-sm">
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            Abrir en OpenStreetMap
                           </Button>
                         </a>
                       )}
@@ -169,6 +181,23 @@ export default function GpsTracker() {
                       <MapPin className="w-10 h-10 mx-auto mb-2 text-muted-foreground/30" />
                       <p className="text-sm">Sin datos de ubicación</p>
                       <p className="text-xs mt-1">El APK enviará la ubicación automáticamente</p>
+                    </div>
+                  )}
+
+                  {showMap && latestLocation && (
+                    <div className="mt-4">
+                      <MapView
+                        className="w-full h-[250px] rounded-lg overflow-hidden"
+                        initialCenter={{ lat: latestLocation.latitude, lng: latestLocation.longitude }}
+                        initialZoom={15}
+                        markers={[{
+                          id: selectedDeviceId,
+                          position: { lat: latestLocation.latitude, lng: latestLocation.longitude },
+                          title: `Dispositivo ${selectedDeviceId}`,
+                          icon: "online"
+                        }]}
+                        onMapReady={(map) => { mapRef.current = map; }}
+                      />
                     </div>
                   )}
                 </CardContent>

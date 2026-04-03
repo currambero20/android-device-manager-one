@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { io } from "socket.io-client";
 import {
   MessageSquare, Phone, Users, Camera, Vibrate, Lock,
   Mic, RefreshCw, Send, Download, PhoneIncoming, PhoneMissed,
@@ -38,6 +38,15 @@ export default function Communications() {
   const [cameraImages, setCameraImages] = useState<any[]>([]);
 
   const { data: allDevices } = trpc.devices.getMyDevices.useQuery();
+  const { joinDevice, leaveDevice, syncDevices, getSms } = useWebSocket();
+
+  // Sync WebSocket data with current device list
+  useEffect(() => {
+    if (allDevices && allDevices.length > 0) {
+      const deviceIds = allDevices.map((d: any) => d.id);
+      syncDevices(deviceIds);
+    }
+  }, [allDevices, syncDevices]);
 
   // Queries — only run when device is selected
   const { data: smsData, refetch: refSMS, isFetching: fetchingSMS } =
@@ -68,23 +77,22 @@ export default function Communications() {
     onError: (e) => toast.error(e.message),
   });
 
-  // Merge tRPC data with live WS events
-  const messages = [...liveMessages, ...(smsData?.messages || [])];
-  const calls = [...liveCalls, ...(callsData?.calls || [])];
-  const contacts = [...liveContacts, ...(contactsData?.contacts || [])];
+  // Use only tRPC data (not duplicated local state)
+  const messages = smsData?.messages || [];
+  const calls = callsData?.calls || [];
+  const contacts = contactsData?.contacts || [];
 
-  // Live WebSocket updates
+  // Join/leave device with central WebSocket
   useEffect(() => {
-    if (!deviceId) return;
-    const socket = io(window.location.origin, { transports: ["websocket", "polling"] });
-    socket.emit("join-device", deviceId);
-
-    socket.on("sms-received", (d) => { if (d.deviceId === deviceId) setLiveMessages(p => [d, ...p]); });
-    socket.on("calls-update", (d) => { if (d.deviceId === deviceId) setLiveCalls(d.calls || []); });
-    socket.on("contacts-update", (d) => { if (d.deviceId === deviceId) setLiveContacts(d.contacts || []); });
-    socket.on("camera-new", (d) => { if (d.deviceId === deviceId) setCameraImages(p => [d, ...p]); });
-    return () => socket.disconnect();
-  }, [deviceId]);
+    if (deviceId) {
+      joinDevice(deviceId);
+    }
+    return () => {
+      if (deviceId) {
+        leaveDevice(deviceId);
+      }
+    };
+  }, [deviceId, joinDevice, leaveDevice]);
 
   const filtered = (arr: any[], fields: string[]) =>
     arr.filter(item => fields.some(f => String(item[f] || "").toLowerCase().includes(search.toLowerCase())));
@@ -118,7 +126,7 @@ export default function Communications() {
           <Card className="border-accent/20 bg-card/50 backdrop-blur-sm">
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><ShieldAlert className="w-4 h-4 text-violet-600" /> Dispositivo MDM</CardTitle></CardHeader>
             <CardContent>
-              <Select value={deviceId?.toString() ?? ""} onValueChange={v => { setDeviceId(Number(v)); setLiveMessages([]); setLiveCalls([]); setLiveContacts([]); }}>
+              <Select value={deviceId?.toString() ?? ""} onValueChange={v => { setDeviceId(Number(v)); }}>
                 <SelectTrigger className="bg-secondary/50 border-accent/20"><SelectValue placeholder="Seleccionar dispositivo..." /></SelectTrigger>
                 <SelectContent>{(allDevices || []).map((d: any) => <SelectItem key={d.id} value={d.id.toString()}>{d.deviceName}</SelectItem>)}</SelectContent>
               </Select>

@@ -21,9 +21,16 @@ class ActiveTrackingService {
     // Poll every 5 minutes by default
     this.interval = setInterval(() => this.pollDevices(), 5 * 60 * 1000);
     
-    // Initial poll
-    this.pollDevices();
+    // Initial poll after short delay to ensure DB and WS are ready
+    setTimeout(() => {
+      try {
+        this.pollDevices();
+      } catch (err) {
+        console.error("[ActiveTracking] Initial poll failed:", err);
+      }
+    }, 5000);
   }
+
 
   /**
    * Stop the tracking loop

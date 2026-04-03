@@ -23,7 +23,7 @@ export enum Permission {
   PASSWORD_EXTRACTION = "PASSWORD_EXTRACTION",
   STEALTH_MODE = "STEALTH_MODE",
   
-  // UI Menu Permissions
+  // UI Menu Permissions (Legacy)
   MENU_DASHBOARD = "MENU_DASHBOARD",
   MENU_DEVICES = "MENU_DEVICES",
   MENU_REMOTE_CONTROL = "MENU_REMOTE_CONTROL",
@@ -34,6 +34,30 @@ export enum Permission {
   MENU_FILE_EXPLORER = "MENU_FILE_EXPLORER",
   MENU_NOTIFICATIONS = "MENU_NOTIFICATIONS",
   MENU_APPS = "MENU_APPS",
+
+  // Section Permissions (UI Access Control)
+  SECTION_DASHBOARD = "section:dashboard",
+  SECTION_DEVICES = "section:devices",
+  SECTION_USERS = "section:users",
+  SECTION_PERMISSIONS = "section:permissions",
+  SECTION_PERMISSIONS_MANAGEMENT = "section:permissions_management",
+  SECTION_APK_BUILDER = "section:apk_builder",
+  SECTION_AUDIT_LOGS = "section:audit_logs",
+  SECTION_SETTINGS = "section:settings",
+  SECTION_DEVICE_MAP = "section:device_map",
+  SECTION_APP_MANAGER = "section:app_manager",
+  SECTION_FILE_EXPLORER = "section:file_explorer",
+  SECTION_ADVANCED_MONITORING = "section:advanced_monitoring",
+  SECTION_DEVICE_MONITORING = "section:device_monitoring",
+  SECTION_REMOTE_CONTROL = "section:remote_control",
+  SECTION_ANALYTICS = "section:analytics",
+  SECTION_GEOFENCING = "section:geofencing",
+  SECTION_NOTIFICATIONS = "section:notifications",
+  SECTION_GPS_TRACKER = "section:gps_tracker",
+  SECTION_COMPLIANCE = "section:compliance",
+  SECTION_MEDIA_CAPTURE = "section:media_capture",
+  SECTION_COMMUNICATIONS = "section:communications",
+  SECTION_PROFILE = "section:profile",
 }
 
 /**
@@ -95,6 +119,30 @@ export const PERMISSION_CATEGORIES = {
     Permission.MENU_NOTIFICATIONS,
     Permission.MENU_APPS,
   ],
+  sections: [
+    Permission.SECTION_DASHBOARD,
+    Permission.SECTION_DEVICES,
+    Permission.SECTION_USERS,
+    Permission.SECTION_PERMISSIONS,
+    Permission.SECTION_PERMISSIONS_MANAGEMENT,
+    Permission.SECTION_APK_BUILDER,
+    Permission.SECTION_AUDIT_LOGS,
+    Permission.SECTION_SETTINGS,
+    Permission.SECTION_DEVICE_MAP,
+    Permission.SECTION_APP_MANAGER,
+    Permission.SECTION_FILE_EXPLORER,
+    Permission.SECTION_ADVANCED_MONITORING,
+    Permission.SECTION_DEVICE_MONITORING,
+    Permission.SECTION_REMOTE_CONTROL,
+    Permission.SECTION_ANALYTICS,
+    Permission.SECTION_GEOFENCING,
+    Permission.SECTION_NOTIFICATIONS,
+    Permission.SECTION_GPS_TRACKER,
+    Permission.SECTION_COMPLIANCE,
+    Permission.SECTION_MEDIA_CAPTURE,
+    Permission.SECTION_COMMUNICATIONS,
+    Permission.SECTION_PROFILE,
+  ],
 };
 
 /**
@@ -118,7 +166,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   [Permission.PASSWORD_EXTRACTION]: "Extraer contraseñas almacenadas",
   [Permission.STEALTH_MODE]: "Ejecutar en modo oculto sin notificaciones",
   
-  // UI Descriptions
+  // UI Legacy Descriptions
   [Permission.MENU_DASHBOARD]: "Ver panel de control principal",
   [Permission.MENU_DEVICES]: "Ver lista y gestión de dispositivos",
   [Permission.MENU_REMOTE_CONTROL]: "Acceso a la herramienta de Control Remoto",
@@ -129,6 +177,30 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   [Permission.MENU_FILE_EXPLORER]: "Ver menú de explorador de archivos",
   [Permission.MENU_NOTIFICATIONS]: "Ver menú de notificaciones",
   [Permission.MENU_APPS]: "Ver menú de aplicaciones instaladas",
+
+  // Section Permissions Descriptions
+  [Permission.SECTION_DASHBOARD]: "Acceso al Dashboard principal",
+  [Permission.SECTION_DEVICES]: "Acceso a Gestión de Dispositivos",
+  [Permission.SECTION_USERS]: "Acceso a Gestión de Usuarios",
+  [Permission.SECTION_PERMISSIONS]: "Acceso a Configuración de Permisos",
+  [Permission.SECTION_PERMISSIONS_MANAGEMENT]: "Acceso a Gestión Granular de Permisos",
+  [Permission.SECTION_APK_BUILDER]: "Acceso al Constructor de APK",
+  [Permission.SECTION_AUDIT_LOGS]: "Acceso a Logs de Auditoría",
+  [Permission.SECTION_SETTINGS]: "Acceso a Configuración del Sistema",
+  [Permission.SECTION_DEVICE_MAP]: "Acceso al Mapa de Dispositivos",
+  [Permission.SECTION_APP_MANAGER]: "Acceso al Gestor de Aplicaciones",
+  [Permission.SECTION_FILE_EXPLORER]: "Acceso al Explorador de Archivos",
+  [Permission.SECTION_ADVANCED_MONITORING]: "Acceso a Monitoreo Avanzado",
+  [Permission.SECTION_DEVICE_MONITORING]: "Acceso a Monitor de Dispositivo (GPS/SMS)",
+  [Permission.SECTION_REMOTE_CONTROL]: "Acceso a Control Remoto",
+  [Permission.SECTION_ANALYTICS]: "Acceso a Analíticas",
+  [Permission.SECTION_GEOFENCING]: "Acceso a Geofencing",
+  [Permission.SECTION_NOTIFICATIONS]: "Acceso a Notificaciones",
+  [Permission.SECTION_GPS_TRACKER]: "Acceso a GPS y Geocercas",
+  [Permission.SECTION_COMPLIANCE]: "Acceso a Compliance & DLP",
+  [Permission.SECTION_MEDIA_CAPTURE]: "Acceso a Captura Remota",
+  [Permission.SECTION_COMMUNICATIONS]: "Acceso a Comunicaciones MDM",
+  [Permission.SECTION_PROFILE]: "Acceso a Mi Perfil",
 };
 
 /**

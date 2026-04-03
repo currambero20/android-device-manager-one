@@ -116,7 +116,8 @@
     move-object p2, v0
 
     .line 30
-    invoke-virtual {p1, p2}, Landroid/content/Context;->startService(Landroid/content/Intent;)Landroid/content/ComponentName;
+    invoke-virtual {p1, p2}, Landroid/content/Context;->startForegroundService(Landroid/content/Intent;)Landroid/content/ComponentName;
+
 
     .line 31
     return-void

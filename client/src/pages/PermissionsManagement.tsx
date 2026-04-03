@@ -20,7 +20,7 @@ export default function PermissionsManagement() {
 
   // Queries
   const { data: allPermissions } = trpc.permissions.getAllPermissions.useQuery() as any;
-  const { data: allUsers } = trpc.users.getAll.useQuery() as any;
+  const { data: allUsers, isLoading: usersLoading } = trpc.users.getAll.useQuery() as any;
   const { data: allDevices } = trpc.devices.getMyDevices.useQuery() as any;
   const { data: presets } = trpc.permissions.getPresets.useQuery() as any;
   const { data: categories } = trpc.permissions.getCategories.useQuery() as any;
@@ -182,7 +182,7 @@ export default function PermissionsManagement() {
                   </div>
                   <ScrollArea className="h-[500px] border border-accent/10 rounded-xl p-2 bg-secondary/10">
                     <div className="space-y-2">
-                      {trpc.users.getAll.isLoading ? (
+                      {usersLoading ? (
                         <div className="flex flex-col items-center justify-center py-10 opacity-50">
                           <Loader2 className="w-6 h-6 animate-spin mb-2" />
                           <p className="text-[10px] font-bold uppercase tracking-widest">Cargando Usuarios...</p>

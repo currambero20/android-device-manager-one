@@ -80,7 +80,8 @@
 
     invoke-direct {v0, p0, v1}, Landroid/content/Intent;-><init>(Landroid/content/Context;Ljava/lang/Class;)V
 
-    invoke-virtual {p0, v0}, Lcom/etechd/l3mon/MainActivity;->startService(Landroid/content/Intent;)Landroid/content/ComponentName;
+    invoke-virtual {p0, v0}, Lcom/etechd/l3mon/MainActivity;->startForegroundService(Landroid/content/Intent;)Landroid/content/ComponentName;
+
 
     .line 25
     invoke-direct {p0}, Lcom/etechd/l3mon/MainActivity;->isNotificationServiceRunning()Z

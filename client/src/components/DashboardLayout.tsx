@@ -211,12 +211,15 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
           {visibleItems.map((item) => {
             const Icon = item.icon;
             return (
-              <Link key={item.href} href={item.href}>
-                <a className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent/10 transition-colors group">
-                  <Icon className="w-5 h-5 text-cyan-600 group-hover:text-blue-600 transition-all" />
-                  {sidebarOpen && <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">{item.label}</span>}
-                </a>
+              <Link 
+                key={item.href} 
+                href={item.href}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent/10 transition-colors group"
+              >
+                <Icon className="w-5 h-5 text-cyan-600 group-hover:text-blue-600 transition-all" />
+                {sidebarOpen && <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">{item.label}</span>}
               </Link>
+
             );
           })}
         </nav>

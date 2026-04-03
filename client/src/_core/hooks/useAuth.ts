@@ -37,18 +37,26 @@ export function useAuth(options?: UseAuthOptions) {
       throw error;
     } finally {
       utils.auth.me.setData(undefined, null);
-      await utils.auth.me.invalidate();
+      localStorage.removeItem("manus-runtime-user-info");
+      window.location.href = redirectPath;
     }
+
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    const user = meQuery.data ?? null;
+    // Si hay un error de tRPC de UNAUTHOZIED, forzamos user a null
+    let user = meQuery.data ?? null;
+    if (meQuery.error instanceof TRPCClientError && meQuery.error.data?.code === "UNAUTHORIZED") {
+      user = null;
+    }
 
     if (user) {
       localStorage.setItem(
         "manus-runtime-user-info",
         JSON.stringify(user)
       );
+    } else if (meQuery.isFetched) {
+      localStorage.removeItem("manus-runtime-user-info");
     }
     
     return {
@@ -63,6 +71,7 @@ export function useAuth(options?: UseAuthOptions) {
     meQuery.isFetched,
     meQuery.error,
   ]);
+
 
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;

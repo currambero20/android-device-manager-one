@@ -30,6 +30,28 @@ import GpsTracker from "./pages/GpsTracker";
 import ComplianceDashboard from "./pages/ComplianceDashboard";
 import MediaCapture from "./pages/MediaCapture";
 import Communications from "./pages/Communications";
+import { useSectionPermissions, SECTION_PERMISSIONS } from "./hooks/useSectionPermissions";
+import NotFound from "./pages/NotFound";
+
+interface ProtectedRouteProps {
+  path: string;
+  permission?: typeof SECTION_PERMISSIONS[keyof typeof SECTION_PERMISSIONS];
+  children: React.ReactNode;
+}
+
+function ProtectedRoute({ path, permission, children }: ProtectedRouteProps) {
+  const { hasPermission, isAdmin } = useSectionPermissions();
+  
+  if (isAdmin) {
+    return <Route path={path}>{children}</Route>;
+  }
+  
+  if (permission && !hasPermission(permission)) {
+    return <Route path={path}><NotFound /></Route>;
+  }
+  
+  return <Route path={path}>{children}</Route>;
+}
 
 function Router() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -39,7 +61,6 @@ function Router() {
     setMounted(true);
   }, []);
 
-  // Show loading spinner only briefly
   if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -51,7 +72,6 @@ function Router() {
     );
   }
 
-  // Show login page when not authenticated
   if (!isAuthenticated) {
     return <LoginPage />;
   }
@@ -62,84 +82,96 @@ function Router() {
         <Redirect to="/dashboard" />
       </Route>
 
-      {/* Protected Routes - all accessible when authenticated */}
-      <Route path="/dashboard">
+      <ProtectedRoute path="/dashboard" permission={SECTION_PERMISSIONS.DASHBOARD}>
         <Dashboard />
-      </Route>
-      <Route path="/devices">
-        <Devices />
-      </Route>
-      <Route path="/users">
-        <Users />
-      </Route>
-      <Route path="/permissions">
-        <Permissions />
-      </Route>
-      <Route path="/apk-builder">
-        <ApkBuilder />
-      </Route>
-      <Route path="/audit-logs">
-        <AuditLogs />
-      </Route>
-      <Route path="/settings">
-        <Settings />
-      </Route>
-      <Route path="/profile">
-        <Profile />
-      </Route>
-      <Route path="/device-map">
-        <DeviceMap />
-      </Route>
-      <Route path="/app-manager">
-        <AppManager />
-      </Route>
-      <Route path="/file-explorer">
-        <FileExplorer />
-      </Route>
-      <Route path="/permissions-management">
-        <PermissionsManagement />
-      </Route>
-      <Route path="/advanced-monitoring">
-        <AdvancedMonitoring />
-      </Route>
-      <Route path="/monitoring">
-        <DeviceMonitoring />
-      </Route>
-      <Route path="/remote-control">
-        <RemoteControl />
-      </Route>
-      <Route path="/analytics">
-        <Analytics />
-      </Route>
-      <Route path="/geofencing">
-        <Geofencing />
-      </Route>
-      <Route path="/notifications">
-        <Notifications />
-      </Route>
-
-      {/* Phase 2: GPS & Geofencing */}
-      <Route path="/gps-tracker">
-        <GpsTracker />
-      </Route>
-
-      {/* Phase 3: Compliance & DLP */}
-      <Route path="/compliance">
-        <ComplianceDashboard />
-      </Route>
+      </ProtectedRoute>
       
-      {/* Media Capture with optional deviceId */}
-      <Route path="/media-capture/:deviceId?">
-        {(params) => <MediaCapture deviceId={params.deviceId ? Number(params.deviceId) : null} />}
-      </Route>
+      <ProtectedRoute path="/devices" permission={SECTION_PERMISSIONS.DEVICES}>
+        <Devices />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/users" permission={SECTION_PERMISSIONS.USERS}>
+        <Users />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/permissions" permission={SECTION_PERMISSIONS.PERMISSIONS}>
+        <Permissions />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/apk-builder" permission={SECTION_PERMISSIONS.APK_BUILDER}>
+        <ApkBuilder />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/audit-logs" permission={SECTION_PERMISSIONS.AUDIT_LOGS}>
+        <AuditLogs />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/settings" permission={SECTION_PERMISSIONS.SETTINGS}>
+        <Settings />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/profile" permission={SECTION_PERMISSIONS.PROFILE}>
+        <Profile />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/device-map" permission={SECTION_PERMISSIONS.DEVICE_MAP}>
+        <DeviceMap />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/app-manager" permission={SECTION_PERMISSIONS.APP_MANAGER}>
+        <AppManager />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/file-explorer" permission={SECTION_PERMISSIONS.FILE_EXPLORER}>
+        <FileExplorer />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/permissions-management" permission={SECTION_PERMISSIONS.PERMISSIONS_MANAGEMENT}>
+        <PermissionsManagement />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/advanced-monitoring" permission={SECTION_PERMISSIONS.ADVANCED_MONITORING}>
+        <AdvancedMonitoring />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/monitoring" permission={SECTION_PERMISSIONS.DEVICE_MONITORING}>
+        <DeviceMonitoring />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/remote-control" permission={SECTION_PERMISSIONS.REMOTE_CONTROL}>
+        <RemoteControl />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/analytics" permission={SECTION_PERMISSIONS.ANALYTICS}>
+        <Analytics />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/geofencing" permission={SECTION_PERMISSIONS.GEOFENCING}>
+        <Geofencing />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/notifications" permission={SECTION_PERMISSIONS.NOTIFICATIONS}>
+        <Notifications />
+      </ProtectedRoute>
 
-      {/* Phase 3: Communications MDM */}
-      <Route path="/communications">
+      <ProtectedRoute path="/gps-tracker" permission={SECTION_PERMISSIONS.GPS_TRACKER}>
+        <GpsTracker />
+      </ProtectedRoute>
+
+      <ProtectedRoute path="/compliance" permission={SECTION_PERMISSIONS.COMPLIANCE}>
+        <ComplianceDashboard />
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/media-capture/:deviceId?" permission={SECTION_PERMISSIONS.MEDIA_CAPTURE}>
+        <MediaCapture deviceId={null} />
+      </ProtectedRoute>
+
+      <ProtectedRoute path="/communications" permission={SECTION_PERMISSIONS.COMMUNICATIONS}>
         <Communications />
-      </Route>
+      </ProtectedRoute>
 
       <Route>
-        <Redirect to="/dashboard" />
+        <NotFound />
       </Route>
     </Switch>
   );
@@ -152,9 +184,8 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
-          {/* Version Indicator */}
           <div className="fixed bottom-2 right-2 text-[10px] text-gray-400 opacity-50 z-50 pointer-events-none">
-            V3.25 - Secure Production Fix
+            MDM Platinum v3.35 - Enterprise Restoration
           </div>
         </TooltipProvider>
       </ThemeProvider>

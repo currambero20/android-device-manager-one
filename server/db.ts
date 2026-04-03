@@ -31,8 +31,7 @@ import { MySql2Database } from "drizzle-orm/mysql2";
  * Uses SHA-256 with a salt for basic security.
  */
 export function hashPassword(password: string): string {
-  // Use encrypted salt to avoid plain text in source
-  const salt = decrypt("0f54de789b0083c0e7bfcc12b3ad593c:879ee2fd7bcf12b8f537c51c5d07d050");
+  const salt = process.env.APP_ENCRYPTION_KEY || "adm-secure-barranquilla-2017";
   return createHash("sha256").update(password + salt).digest("hex");
 }
 
@@ -339,13 +338,25 @@ export async function getDeviceById(deviceId: number) {
 export async function getDevicesByOwnerId(ownerId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(devices).where(eq(devices.ownerId, ownerId));
+  const ownerDevices = await db.select().from(devices).where(eq(devices.ownerId, ownerId));
+  
+  return ownerDevices.filter(d => {
+    if (!d.lastSeen) return false;
+    const hoursSinceLastSeen = (Date.now() - new Date(d.lastSeen).getTime()) / (1000 * 60 * 60);
+    return hoursSinceLastSeen < 24;
+  });
 }
 
 export async function getAllDevices() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(devices);
+  const allDevices = await db.select().from(devices);
+  
+  return allDevices.filter(d => {
+    if (!d.lastSeen) return false;
+    const hoursSinceLastSeen = (Date.now() - new Date(d.lastSeen).getTime()) / (1000 * 60 * 60);
+    return hoursSinceLastSeen < 24;
+  });
 }
 
 export async function registerDevice(device: { 

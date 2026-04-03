@@ -91,9 +91,11 @@ export class APKBuilder {
         enableSSL: config.sslEnabled,
         ports: config.ports,
         payloadCode: config.serverUrl,
+        iconUrl: config.iconUrl,
         obfuscate: false,
         targetArchitectures: ["arm64-v8a", "armeabi-v7a"],
       };
+
 
       // 3. Kick off compilation in the background (don't await)
       // This prevents the HTTP request from timing out while apktool runs

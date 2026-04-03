@@ -1,156 +1,171 @@
-// @ts-nocheck
-/**
- * GOOGLE MAPS FRONTEND INTEGRATION - ESSENTIAL GUIDE
- *
- * USAGE FROM PARENT COMPONENT:
- * ======
- *
- * const mapRef = useRef<google.maps.Map | null>(null);
- *
- * <MapView
- *   initialCenter={{ lat: 40.7128, lng: -74.0060 }}
- *   initialZoom={15}
- *   onMapReady={(map) => {
- *     mapRef.current = map; // Store to control map from parent anytime, google map itself is in charge of the re-rendering, not react state.
- * </MapView>
- *
- * ======
- * Available Libraries and Core Features:
- * -------------------------------
- * 📍 MARKER (from `marker` library)
- * - Attaches to map using { map, position }
- * new google.maps.marker.AdvancedMarkerElement({
- *   map,
- *   position: { lat: 37.7749, lng: -122.4194 },
- *   title: "San Francisco",
- * });
- *
- * -------------------------------
- * 🏢 PLACES (from `places` library)
- * - Does not attach directly to map; use data with your map manually.
- * const place = new google.maps.places.Place({ id: PLACE_ID });
- * await place.fetchFields({ fields: ["displayName", "location"] });
- * map.setCenter(place.location);
- * new google.maps.marker.AdvancedMarkerElement({ map, position: place.location });
- *
- * -------------------------------
- * 🧭 GEOCODER (from `geocoding` library)
- * - Standalone service; manually apply results to map.
- * const geocoder = new google.maps.Geocoder();
- * geocoder.geocode({ address: "New York" }, (results, status) => {
- *   if (status === "OK" && results[0]) {
- *     map.setCenter(results[0].geometry.location);
- *     new google.maps.marker.AdvancedMarkerElement({
- *       map,
- *       position: results[0].geometry.location,
- *     });
- *   }
- * });
- *
- * -------------------------------
- * 📐 GEOMETRY (from `geometry` library)
- * - Pure utility functions; not attached to map.
- * const dist = google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
- *
- * -------------------------------
- * 🛣️ ROUTES (from `routes` library)
- * - Combines DirectionsService (standalone) + DirectionsRenderer (map-attached)
- * const directionsService = new google.maps.DirectionsService();
- * const directionsRenderer = new google.maps.DirectionsRenderer({ map });
- * directionsService.route(
- *   { origin, destination, travelMode: "DRIVING" },
- *   (res, status) => status === "OK" && directionsRenderer.setDirections(res)
- * );
- *
- * -------------------------------
- * 🌦️ MAP LAYERS (attach directly to map)
- * - new google.maps.TrafficLayer().setMap(map);
- * - new google.maps.TransitLayer().setMap(map);
- * - new google.maps.BicyclingLayer().setMap(map);
- *
- * -------------------------------
- * ✅ SUMMARY
- * - “map-attached” → AdvancedMarkerElement, DirectionsRenderer, Layers.
- * - “standalone” → Geocoder, DirectionsService, DistanceMatrixService, ElevationService.
- * - “data-only” → Place, Geometry utilities.
- */
-
-/// <reference types="@types/google.maps" />
-
 import { useEffect, useRef } from "react";
-import { usePersistFn } from "@/hooks/usePersistFn";
 import { cn } from "@/lib/utils";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
-declare global {
-  interface Window {
-    google?: any;
-  }
-}
+const DEFAULT_ICON = L.icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
-const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
-const FORGE_BASE_URL =
-  import.meta.env.VITE_FRONTEND_FORGE_API_URL ||
-  "https://forge.butterfly-effect.dev";
-const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
-
-function loadMapScript() {
-  return new Promise(resolve => {
-    const script = document.createElement("script");
-    script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
-    script.async = true;
-    script.crossOrigin = "anonymous";
-    script.onload = () => {
-      resolve(null);
-      script.remove(); // Clean up immediately
-    };
-    script.onerror = () => {
-      console.error("Failed to load Google Maps script");
-    };
-    document.head.appendChild(script);
-  });
-}
+L.Marker.prototype.options.icon = DEFAULT_ICON;
 
 interface MapViewProps {
   className?: string;
-  initialCenter?: any;
+  initialCenter?: { lat: number; lng: number };
   initialZoom?: number;
-  onMapReady?: (map: any) => void;
+  markers?: Array<{
+    id?: string | number;
+    position: { lat: number; lng: number };
+    title?: string;
+    icon?: "default" | "online" | "offline";
+  }>;
+  onMapReady?: (map: L.Map) => void;
+  onMarkerClick?: (markerId: string | number) => void;
+  selectedMarkerId?: string | number;
+  circles?: Array<{
+    id?: string | number;
+    center: { lat: number; lng: number };
+    radius: number;
+    color?: string;
+    fillColor?: string;
+  }>;
+  polyline?: Array<{ lat: number; lng: number }>;
+  showControls?: boolean;
 }
 
 export function MapView({
   className,
-  initialCenter = { lat: 37.7749, lng: -122.4194 },
-  initialZoom = 12,
+  initialCenter = { lat: 4.6097, lng: -74.0817 },
+  initialZoom = 13,
+  markers = [],
   onMapReady,
+  onMarkerClick,
+  selectedMarkerId,
+  circles = [],
+  polyline = [],
+  showControls = true,
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<any>(null);
-
-  const init = usePersistFn(async () => {
-    await loadMapScript();
-    if (!mapContainer.current) {
-      console.error("Map container not found");
-      return;
-    }
-    map.current = new (window as any).google.maps.Map(mapContainer.current, {
-      zoom: initialZoom,
-      center: initialCenter,
-      mapTypeControl: true,
-      fullscreenControl: true,
-      zoomControl: true,
-      streetViewControl: true,
-      mapId: "DEMO_MAP_ID",
-    });
-    if (onMapReady) {
-      onMapReady(map.current);
-    }
-  });
+  const map = useRef<L.Map | null>(null);
+  const markersLayer = useRef<L.LayerGroup | null>(null);
+  const circlesLayer = useRef<L.LayerGroup | null>(null);
+  const polylineLayer = useRef<L.Polyline | null>(null);
 
   useEffect(() => {
-    init();
-  }, [init]);
+    if (!mapContainer.current || map.current) return;
+
+    map.current = L.map(mapContainer.current, {
+      center: [initialCenter.lat, initialCenter.lng],
+      zoom: initialZoom,
+      zoomControl: showControls,
+      attributionControl: true,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map.current);
+
+    markersLayer.current = L.layerGroup().addTo(map.current);
+    circlesLayer.current = L.layerGroup().addTo(map.current);
+
+    if (onMapReady && map.current) {
+      onMapReady(map.current);
+    }
+
+    return () => {
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!map.current || !markersLayer.current) return;
+
+    markersLayer.current.clearLayers();
+
+    markers.forEach((marker) => {
+      const isSelected = marker.id === selectedMarkerId;
+      const icon = marker.icon === "offline" 
+        ? L.divIcon({
+            className: "custom-marker offline",
+            html: `<div style="background: ${isSelected ? '#3B82F6' : '#6B7280'}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8],
+          })
+        : L.divIcon({
+            className: "custom-marker online",
+            html: `<div style="background: ${isSelected ? '#22C55E' : '#10B981'}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8],
+          });
+
+      const leafletMarker = L.marker([marker.position.lat, marker.position.lng], { icon })
+        .bindPopup(marker.title || `Marker ${marker.id}`);
+
+      if (onMarkerClick && marker.id !== undefined) {
+        leafletMarker.on("click", () => onMarkerClick(marker.id!));
+      }
+
+      markersLayer.current!.addLayer(leafletMarker);
+    });
+  }, [markers, selectedMarkerId, onMarkerClick]);
+
+  useEffect(() => {
+    if (!map.current || !circlesLayer.current) return;
+
+    circlesLayer.current.clearLayers();
+
+    circles.forEach((circle) => {
+      const leafletCircle = L.circle([circle.center.lat, circle.center.lng], {
+        radius: circle.radius,
+        color: circle.color || "#3B82F6",
+        fillColor: circle.fillColor || "#3B82F6",
+        fillOpacity: 0.15,
+        weight: 2,
+      });
+
+      if (circle.id) {
+        leafletCircle.bindPopup(`Geofence ${circle.id}`);
+      }
+
+      circlesLayer.current!.addLayer(leafletCircle);
+    });
+  }, [circles]);
+
+  useEffect(() => {
+    if (!map.current) return;
+
+    if (polylineLayer.current) {
+      map.current.removeLayer(polylineLayer.current);
+      polylineLayer.current = null;
+    }
+
+    if (polyline.length > 1) {
+      const latLngs = polyline.map((p) => [p.lat, p.lng] as [number, number]);
+      polylineLayer.current = L.polyline(latLngs, {
+        color: "#3B82F6",
+        weight: 3,
+        opacity: 0.8,
+      }).addTo(map.current);
+    }
+  }, [polyline]);
 
   return (
-    <div ref={mapContainer} className={cn("w-full h-[500px]", className)} />
+    <div 
+      ref={mapContainer} 
+      className={cn("w-full h-[500px] rounded-lg overflow-hidden", className)} 
+      style={{ zIndex: 0 }}
+    />
   );
 }
+
+export default MapView;

@@ -5,8 +5,10 @@ export function getSessionCookieOptions(req: any) {
   return {
     httpOnly: true,
     secure: isProduction,
-    // ✅ Crucial para comunicación Vercel -> Render
-    sameSite: (isProduction ? "none" : "lax") as const,
+    // Standard policy for local networks
+    sameSite: (isProduction ? "none" : "lax") as any,
+
+
     path: "/",
     domain: undefined,
   };

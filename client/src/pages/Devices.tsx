@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 export default function Devices() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,6 +42,8 @@ export default function Devices() {
     model: "",
     androidVersion: "",
   });
+
+  const { clearDevice } = useWebSocket();
 
   const { data: devices, isLoading } = trpc.devices.getMyDevices.useQuery();
   const registerDevice = trpc.devices.register.useMutation({
@@ -61,8 +64,11 @@ export default function Devices() {
   });
 
   const removeDevice = trpc.devices.remove.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Device removed successfully");
+      if (data?.deviceId) {
+        clearDevice(data.deviceId);
+      }
     },
     onError: (error) => {
       toast.error(error.message || "Failed to remove device");

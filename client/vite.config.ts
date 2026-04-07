@@ -10,9 +10,11 @@ export default defineConfig(({ mode }) => {
 
   const targetUrl = `http://127.0.0.1:${targetPort}`;
 
-
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(), 
+      tailwindcss(),
+    ].filter(Boolean),
     base: '/',
     resolve: {
       alias: {

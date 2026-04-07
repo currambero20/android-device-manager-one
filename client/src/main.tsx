@@ -12,7 +12,8 @@ const queryClient = new QueryClient();
 // ✅ Usar lógica unificada de getBaseUrl
 const API_URL = getBaseUrl();
 
-console.log("Configured API URL:", API_URL);
+console.log("🚀 [Application Start] Environment:", import.meta.env.MODE);
+console.log("🔗 [API Configuration] Target URL:", API_URL);
 
 const trpcClient = trpc.createClient({
   links: [
@@ -29,7 +30,13 @@ const trpcClient = trpc.createClient({
   ],
 });
 
-createRoot(document.getElementById("root")!).render(
+const rootElement = document.getElementById("root");
+if (rootElement) {
+  // Un pequeño aviso visual de bajo nivel por si React tarda en montar
+  rootElement.innerHTML = '<div style="height:100vh;display:flex;align-items:center;justify-center;font-family:sans-serif;color:#666;">Iniciando sistema MDM...</div>';
+}
+
+createRoot(rootElement!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
       <App />

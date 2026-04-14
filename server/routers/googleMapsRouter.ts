@@ -246,8 +246,8 @@ export const googleMapsRouter = router({
             input.bounds.southwest.longitude +
             (input.bounds.northeast.longitude - input.bounds.southwest.longitude) * t;
 
-          const congestionLevel = Math.random() > 0.7 ? "heavy" : Math.random() > 0.4 ? "moderate" : "light";
-          const speedKmh = congestionLevel === "heavy" ? 20 : congestionLevel === "moderate" ? 40 : 60;
+          const congestionLevel = "light";
+          const speedKmh = 60;
 
           trafficSegments.push({
             id: `segment_${i}`,
@@ -351,7 +351,7 @@ export const googleMapsRouter = router({
         // Simular datos de elevación
         const results = input.locations.map((loc) => ({
           location: loc,
-          elevation: Math.random() * 2000, // metros
+          elevation: 0, // metros
           resolution: 4.771976,
         }));
 

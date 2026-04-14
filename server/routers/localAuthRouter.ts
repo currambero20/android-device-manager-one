@@ -19,8 +19,9 @@ import { send2FAEmail } from "../services/mailService";
 import { users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return hashPassword(password) === hash;
+async function verifyPasswordHelper(password: string, hash: string): Promise<boolean> {
+  const { verifyPassword } = await import("../db");
+  return verifyPassword(password, hash);
 }
 
 async function createSessionToken(payload: Record<string, unknown>): Promise<string> {
@@ -80,11 +81,21 @@ export const loginProcedure = publicProcedure
         const dbUser = userRows[0];
 
         if (dbUser && dbUser.passwordHash) {
-          const appSalt = process.env.APP_ENCRYPTION_KEY || "adm-secure-barranquilla-2017";
-          const computedHash = createHash("sha256").update(input.password + appSalt).digest("hex");
-          const valid = computedHash === dbUser.passwordHash;
+          // --- Inicio de protección contra fuerza bruta ---
+          if (dbUser.lockoutUntil && new Date(dbUser.lockoutUntil) > new Date()) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intente más tarde.",
+            });
+          }
+
+          const valid = await verifyPasswordHelper(input.password, dbUser.passwordHash);
           
           if (valid) {
+            // Restablecemos contadores en caso de éxito
+            if (dbUser.failedLoginAttempts > 0 || dbUser.lockoutUntil) {
+              await dbInstance.update(users).set({ failedLoginAttempts: 0, lockoutUntil: null }).where(eq(users.id, dbUser.id));
+            }
             // Check for 2FA bypass parameter (passed as part of password or a header in the future)
             // For now, if user is the adminUsername from env, bypass 2FA just in case
             const bypass2FA = input.username === adminUsername;
@@ -145,6 +156,19 @@ export const loginProcedure = publicProcedure
                 role: dbUser.role || "user",
               },
             };
+          } else {
+             // Incrementar intentos fallidos
+             const attempts = (dbUser.failedLoginAttempts || 0) + 1;
+             if (attempts >= 5) {
+                 const lockout = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+                 await dbInstance.update(users).set({ failedLoginAttempts: attempts, lockoutUntil: lockout }).where(eq(users.id, dbUser.id));
+                 throw new TRPCError({
+                     code: "FORBIDDEN",
+                     message: "Demasiados intentos fallidos. Su cuenta ha sido bloqueada por 15 minutos.",
+                 });
+             } else {
+                 await dbInstance.update(users).set({ failedLoginAttempts: attempts }).where(eq(users.id, dbUser.id));
+             }
           }
         }
       }
@@ -264,4 +288,67 @@ export const registerProcedure = publicProcedure
     });
 
     return { success: true, message: "Usuario creado correctamente" };
+  });
+
+/**
+ * Verify 2FA OTP procedure
+ */
+export const verify2FAPure = publicProcedure
+  .input(
+    z.object({
+      userId: z.number(),
+      otp: z.string().length(6),
+    })
+  )
+  .mutation(async ({ input, ctx }) => {
+    const dbInstance = await getDb();
+    if (!dbInstance) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+    }
+
+    const userRows = await dbInstance
+      .select()
+      .from(users)
+      .where(eq(users.id, input.userId))
+      .limit(1);
+
+    const user = userRows[0];
+
+    if (!user) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Usuario no encontrado" });
+    }
+
+    if (!user.emailOtp || user.emailOtp !== input.otp) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Código de verificación incorrecto" });
+    }
+
+    if (user.emailOtpExpires && user.emailOtpExpires < new Date()) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "El código ha expirado" });
+    }
+
+    // Clear OTP after successful verification
+    const { clearUserEmailOtp } = await import("../db");
+    await clearUserEmailOtp(user.id);
+
+    // Create session token
+    const token = await createSessionToken({
+      sub: String(user.id),
+      openId: user.openId || String(user.id),
+      name: user.name || user.email || "User",
+      email: user.email || "User",
+      role: user.role || "user",
+      loginMethod: "local",
+    });
+
+    setCookie(ctx.res, token);
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name || "",
+        email: user.email || "",
+        role: user.role,
+      },
+    };
   });

@@ -26,9 +26,11 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Settings() {
   const { user, refresh } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [copied, setCopied] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [settings, setSettings] = useState({
@@ -202,7 +204,7 @@ export default function Settings() {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
                   <span className="text-muted-foreground">Versión:</span>
-                  <span className="font-bold text-cyan-400">V3.25</span>
+                  <span className="font-bold text-cyan-400">Enterprise Edition</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
                   <span className="text-muted-foreground">Estado:</span>
@@ -526,10 +528,13 @@ export default function Settings() {
                     <p className="text-sm text-muted-foreground">Use dark theme</p>
                   </div>
                   <Switch
-                    checked={settings.darkMode}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, darkMode: checked })
-                    }
+                    checked={theme === "dark"}
+                    onCheckedChange={(checked) => {
+                      setSettings(prev => ({ ...prev, darkMode: checked }));
+                      if((checked && theme === "light") || (!checked && theme === "dark")) {
+                        toggleTheme?.();
+                      }
+                    }}
                   />
                 </div>
 

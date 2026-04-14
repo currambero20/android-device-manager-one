@@ -25,6 +25,8 @@ import { complianceRouter } from "./routers/complianceRouter";
 import { mediaCaptureRouter } from "./routers/mediaCaptureRouter";
 import { communicationsRouter } from "./routers/communicationsRouter";
 import { notificationsRouter } from "./routers/notificationsRouter";
+import { fcmRouter } from "./routers/fcmRouter";
+import { emailRouter } from "./routers/emailRouter";
 
 export const appRouter = router({
   /**
@@ -108,6 +110,10 @@ export const appRouter = router({
   users: usersRouter,
   // Notifications
   notifications: notificationsRouter,
+  // FCM Push Notifications
+  fcm: fcmRouter,
+  // Email Notifications
+  email: emailRouter,
   // Communications (SMS, Calls, Contacts, Camera, Vibrate, Lock) - Phase 3
   communications: communicationsRouter,
 });

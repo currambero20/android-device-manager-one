@@ -1,5 +1,4 @@
 @import "tailwindcss";
-/* @import "sonner/styles"; */
 
 @theme {
   --color-background: hsl(0 0% 100%);

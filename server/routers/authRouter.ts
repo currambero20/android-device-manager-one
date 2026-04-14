@@ -63,7 +63,7 @@ export const authRouter = router({
       }
 
       const db = await import("../db");
-      const hashedPassword = db.hashPassword(input.newPassword);
+      const hashedPassword = await db.hashPassword(input.newPassword);
       await updateUserPassword(user.id, hashedPassword);
 
       await createAuditLog({

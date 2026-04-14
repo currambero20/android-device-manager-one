@@ -51,7 +51,7 @@ export const fileExplorerRouter = router({
           });
         }
 
-        // [PLATINUM FIX] Real-time folder request
+        // [ADM FIX] Real-time folder request
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
@@ -190,7 +190,7 @@ export const fileExplorerRouter = router({
           });
         }
 
-        // [PLATINUM FIX] Real-time file download request
+        // [ADM FIX] Real-time file download request
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
@@ -237,7 +237,7 @@ export const fileExplorerRouter = router({
           });
         }
 
-        // [PLATINUM FIX] Real-time file deletion
+        // [ADM FIX] Real-time file deletion
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {

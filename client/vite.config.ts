@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
     },
     root: path.resolve(__dirname),
     publicDir: path.resolve(__dirname, "public"),
-    envDir: path.resolve(__dirname, ".."), 
+    envDir: process.env.CI ? path.resolve(__dirname) : path.resolve(__dirname, ".."),
     build: {
       outDir: 'dist',
       emptyOutDir: true,

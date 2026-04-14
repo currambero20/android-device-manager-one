@@ -1,17 +1,18 @@
 import nodemailer from "nodemailer";
 
-const GMAIL_USER = process.env.GMAIL_USER || "pecesitolindo6677@gmail.com";
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD || "ktbt kkrm uyfa wxby";
+const SMTP_USER = process.env.SMTP_USER || "pecesitolindo6677@gmail.com";
+const SMTP_PASS = process.env.SMTP_PASS || "ktbt kkrm uyfa wxby";
+const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
+const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // Use SSL immediately
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_PORT === 465, // Use SSL for 465, TLS for 587
   auth: {
-    user: GMAIL_USER,
-    pass: GMAIL_APP_PASSWORD,
+    user: SMTP_USER,
+    pass: SMTP_PASS,
   },
-  // Removed pool and strict timeouts that cause Connection Timeout on Render
 });
 
 /**
@@ -21,7 +22,7 @@ export async function sendResetEmail(to: string, token: string) {
   const resetUrl = `${process.env.VITE_APP_URL || "http://localhost:5173"}/reset-password?token=${token}`;
   
   const mailOptions = {
-    from: `"Android Device Manager" <${GMAIL_USER}>`,
+    from: SMTP_USER, // Using only the email as From address for better SendPulse compatibility
     to,
     subject: "Recuperación de Contraseña - ADM",
     html: `
@@ -54,7 +55,7 @@ export async function sendResetEmail(to: string, token: string) {
  */
 export async function send2FAEmail(to: string, otp: string) {
   const mailOptions = {
-    from: `"Seguridad ADM" <${GMAIL_USER}>`,
+    from: SMTP_USER, // Using only the email as From address for better SendPulse compatibility
     to,
     subject: "Código de Verificación (2FA) - ADM",
     html: `

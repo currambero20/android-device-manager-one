@@ -2,7 +2,7 @@ import { and, eq, desc, sql } from "drizzle-orm";
 import { decrypt } from "./utils/crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { createHash } from "crypto";
+import bcrypt from "bcrypt";
 import {
   InsertUser,
   users,
@@ -28,11 +28,15 @@ import { MySql2Database } from "drizzle-orm/mysql2";
 
 /**
  * Shared password hashing logic for local authentication.
- * Uses SHA-256 with a salt for basic security.
+ * Uses bcrypt for strong security.
  */
-export function hashPassword(password: string): string {
-  const salt = process.env.APP_ENCRYPTION_KEY || "adm-secure-barranquilla-2017";
-  return createHash("sha256").update(password + salt).digest("hex");
+export async function hashPassword(password: string): Promise<string> {
+  const saltRounds = 10;
+  return bcrypt.hash(password, saltRounds);
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
 }
 
 let _pool: mysql.Pool | null = null;
@@ -51,7 +55,8 @@ export async function getDb(): Promise<MySql2Database | null> {
       _pool = mysql.createPool({
         uri: process.env.DATABASE_URL,
         ssl: isLocal ? undefined : {
-          rejectUnauthorized: true
+          rejectUnauthorized: true,
+          // @ts-ignore
         },
         connectionLimit: 10,
         enableKeepAlive: true,

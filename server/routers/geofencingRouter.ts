@@ -68,7 +68,7 @@ export const geofencingRouter = router({
         isActive: true,
       });
 
-      // [PLATINUM FIX] Real-time sync to device
+      // [ADM FIX] Real-time sync to device
       const { getWebSocketManager } = await import("../websocket");
       const wsManager = getWebSocketManager();
       if (wsManager) {
@@ -97,7 +97,7 @@ export const geofencingRouter = router({
         .where(eq(geofences.id, input.id));
 
       if (geofence.length > 0) {
-        // [PLATINUM FIX] Real-time sync to device
+        // [ADM FIX] Real-time sync to device
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
@@ -124,7 +124,7 @@ export const geofencingRouter = router({
       await db.delete(geofences).where(eq(geofences.id, input.id));
 
       if (geofence.length > 0) {
-        // [PLATINUM FIX] Real-time sync to device
+        // [ADM FIX] Real-time sync to device
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {

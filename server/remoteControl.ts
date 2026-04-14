@@ -42,6 +42,11 @@ export enum RemoteCommandType {
   START_VIDEO_RECORDING = "start_video_recording",
   STOP_VIDEO_RECORDING = "stop_video_recording",
 
+  // Screen Recording (NEW)
+  START_SCREEN_RECORDING = "start_screen_recording",
+  STOP_SCREEN_RECORDING = "stop_screen_recording",
+  START_SCREEN_STREAM = "start_screen_stream",
+
   // Remote File Management (Phase 2/3)
   LIST_FILES = "list_files",
   DOWNLOAD_FILE = "download_file",
@@ -298,6 +303,11 @@ export function getCommandDescription(type: RemoteCommandType): string {
     [RemoteCommandType.STOP_AUDIO_RECORDING]: "Detener Grabación de Audio",
     [RemoteCommandType.START_VIDEO_RECORDING]: "Iniciar Grabación de Video",
     [RemoteCommandType.STOP_VIDEO_RECORDING]: "Detener Grabación de Video",
+
+    // Screen Recording
+    [RemoteCommandType.START_SCREEN_RECORDING]: "Iniciar Grabación de Pantalla",
+    [RemoteCommandType.STOP_SCREEN_RECORDING]: "Detener Grabación de Pantalla",
+    [RemoteCommandType.START_SCREEN_STREAM]: "Iniciar Streaming de Pantalla",
 
     // Files
     [RemoteCommandType.LIST_FILES]: "Listar Archivos del Directorio",

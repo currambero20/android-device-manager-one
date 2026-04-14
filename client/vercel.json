@@ -1,4 +1,11 @@
 {
+  "outputDirectory": "dist",
   "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "vite build"
+  "buildCommand": "vite build",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

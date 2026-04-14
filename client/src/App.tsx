@@ -185,7 +185,7 @@ function App() {
           <Toaster />
           <Router />
           <div className="fixed bottom-2 right-2 text-[10px] text-gray-400 opacity-50 z-50 pointer-events-none">
-            MDM Platinum v3.35 - Enterprise Restoration
+            Android Device Manager - Enterprise Access
           </div>
         </TooltipProvider>
       </ThemeProvider>

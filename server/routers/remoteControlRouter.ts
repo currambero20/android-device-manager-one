@@ -62,7 +62,7 @@ export const remoteControlRouter = router({
           }
         );
 
-        // [PLATINUM FIX] Emit the command in real-time via WebSocket
+        // [ADM FIX] Emit the command in real-time via WebSocket
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {

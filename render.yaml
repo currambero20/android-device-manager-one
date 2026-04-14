@@ -9,13 +9,41 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
+      - key: PORT
+        value: 3001
       - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: APP_ENCRYPTION_KEY
         sync: false
       - key: COOKIE_SECRET
         sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
       - key: FRONTEND_URL
-        value: https://repodeploy.vercel.app
+        value: https://android-device-manager-frontend.vercel.app
+      - key: FIREBASE_SERVICE_ACCOUNT_BASE64
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: SMTP_HOST
+        value: smtp-pulse.com
+      - key: SMTP_PORT
+        value: 465
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false

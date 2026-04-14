@@ -1,1 +1,8 @@
 .vercel
+node_modules/
+dist/
+build/
+*.log
+.env.local
+.env.production
+*.tsbuildinfo

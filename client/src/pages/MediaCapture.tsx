@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   Camera, Mic, Video, Trash2, 
   Download, Play, StopCircle, RefreshCw,
   ShieldAlert, Radio, Zap, Image as ImageIcon,
-  Clock, Ghost, Settings2
+  Clock, Ghost, Settings2, Monitor, Volume2, VolumeX,
+  Wifi, Clock3, Gauge
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -21,6 +24,17 @@ export default function MediaCapture({ deviceId }: { deviceId?: number | null })
   const [selectedCamera, setSelectedCamera] = useState<"front" | "back">("back");
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [isRecordingScreen, setIsRecordingScreen] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  
+  // Screen recording options
+  const [screenDuration, setScreenDuration] = useState(30);
+  const [screenAudio, setScreenAudio] = useState(true);
+  const [screenQuality, setScreenQuality] = useState<"low" | "medium" | "high">("high");
+  
+  // Stream options
+  const [streamQuality, setStreamQuality] = useState<"low" | "medium" | "high">("medium");
+  const [streamFps, setStreamFps] = useState(15);
 
   const { data: devices = [] } = trpc.devices.getAll.useQuery() as any;
   const { data: mediaFiles = [], refetch, isLoading } = trpc.fileExplorer.getMediaFiles.useQuery(
@@ -55,6 +69,30 @@ export default function MediaCapture({ deviceId }: { deviceId?: number | null })
       setIsRecordingVideo(false);
       toast.info("Grabación detenida");
     },
+  });
+
+  const startScreenRecordingMutation = trpc.media.startScreenRecording.useMutation({
+    onSuccess: () => {
+      setIsRecordingScreen(true);
+      toast.success("Grabación de pantalla iniciada");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const stopScreenRecordingMutation = trpc.media.stopScreenRecording.useMutation({
+    onSuccess: () => {
+      setIsRecordingScreen(false);
+      toast.info("Grabación de pantalla finalizada");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const startScreenStreamMutation = trpc.media.startScreenStream.useMutation({
+    onSuccess: (data) => {
+      setIsStreaming(true);
+      toast.success("Streaming de pantalla iniciado");
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   return (
@@ -156,6 +194,132 @@ export default function MediaCapture({ deviceId }: { deviceId?: number | null })
                     <StopCircle className="w-4 h-4 mr-2" /> Detener Captura
                   </Button>
                 )}
+              </div>
+
+              {/* Screen Recording Section */}
+              <div className="space-y-3 pt-4 border-t border-white/5">
+                <label className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-2">
+                  <Monitor className="w-3 h-3" />
+                  Grabación de Pantalla
+                </label>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Duración (seg)</span>
+                    <Input
+                      type="number"
+                      value={screenDuration}
+                      onChange={(e) => setScreenDuration(Number(e.target.value))}
+                      min={5}
+                      max={600}
+                      className="w-20 h-7 bg-white/5 border-white/10 text-white text-xs text-center"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                      {screenAudio ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                      Con Audio
+                    </span>
+                    <Switch
+                      checked={screenAudio}
+                      onCheckedChange={setScreenAudio}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                      <Gauge className="w-3 h-3" />
+                      Calidad
+                    </span>
+                    <Select value={screenQuality} onValueChange={(v: any) => setScreenQuality(v)}>
+                      <SelectTrigger className="w-20 h-7 bg-white/5 border-white/10 text-white text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Baja</SelectItem>
+                        <SelectItem value="medium">Media</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => startScreenRecordingMutation.mutate({ 
+                    deviceId: selectedDeviceId!, 
+                    durationSeconds: screenDuration,
+                    audio: screenAudio,
+                    quality: screenQuality
+                  })}
+                  className={`w-full ${isRecordingScreen ? "bg-rose-600 animate-pulse" : "bg-amber-600 hover:bg-amber-700" }`}
+                  disabled={!selectedDeviceId || startScreenRecordingMutation.isPending}
+                >
+                  <Monitor className="w-4 h-4 mr-2" /> 
+                  {isRecordingScreen ? "Grabando Pantalla..." : "Grabar Pantalla"}
+                </Button>
+
+                {isRecordingScreen && (
+                  <Button 
+                    variant="destructive"
+                    onClick={() => stopScreenRecordingMutation.mutate({ deviceId: selectedDeviceId! })}
+                    className="w-full"
+                  >
+                    <StopCircle className="w-4 h-4 mr-2" /> Detener Grabación
+                  </Button>
+                )}
+              </div>
+
+              {/* Screen Streaming Section */}
+              <div className="space-y-3 pt-4 border-t border-white/5">
+                <label className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-2">
+                  <Wifi className="w-3 h-3" />
+                  Streaming en Vivo
+                </label>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Calidad</span>
+                    <Select value={streamQuality} onValueChange={(v: any) => setStreamQuality(v)}>
+                      <SelectTrigger className="w-20 h-7 bg-white/5 border-white/10 text-white text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Baja</SelectItem>
+                        <SelectItem value="medium">Media</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                      <Clock3 className="w-3 h-3" />
+                      FPS
+                    </span>
+                    <Input
+                      type="number"
+                      value={streamFps}
+                      onChange={(e) => setStreamFps(Number(e.target.value))}
+                      min={1}
+                      max={30}
+                      className="w-20 h-7 bg-white/5 border-white/10 text-white text-xs text-center"
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => startScreenStreamMutation.mutate({ 
+                    deviceId: selectedDeviceId!, 
+                    quality: streamQuality,
+                    fps: streamFps
+                  })}
+                  className={`w-full ${isStreaming ? "bg-green-600 animate-pulse" : "bg-green-600 hover:bg-green-700" }`}
+                  disabled={!selectedDeviceId || startScreenStreamMutation.isPending}
+                >
+                  <Wifi className="w-4 h-4 mr-2" /> 
+                  {isStreaming ? "Streaming Activo" : "Iniciar Stream"}
+                </Button>
               </div>
 
               <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">

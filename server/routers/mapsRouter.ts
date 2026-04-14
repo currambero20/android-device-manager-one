@@ -374,16 +374,27 @@ export const mapsRouter = router({
           });
         }
 
-        // Simular creación de geofence
-        return {
-          success: true,
-          geofenceId: Math.floor(Math.random() * 10000),
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB no disponible" });
+
+        const [newGeofence] = await db.insert(geofences).values({
           name: input.name,
           latitude: input.latitude,
           longitude: input.longitude,
           radius: input.radius,
           type: input.type,
           createdAt: new Date(),
+        }).returning();
+
+        return {
+          success: true,
+          geofenceId: newGeofence.id,
+          name: newGeofence.name,
+          latitude: newGeofence.latitude,
+          longitude: newGeofence.longitude,
+          radius: newGeofence.radius,
+          type: newGeofence.type,
+          createdAt: newGeofence.createdAt,
         };
       } catch (error) {
         console.error("[Maps] Error creating geofence:", error);
@@ -409,7 +420,11 @@ export const mapsRouter = router({
           });
         }
 
-        // Simular eliminación
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB no disponible" });
+
+        await db.delete(geofences).where(eq(geofences.id, input.geofenceId));
+
         return {
           success: true,
           geofenceId: input.geofenceId,

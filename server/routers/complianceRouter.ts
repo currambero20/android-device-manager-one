@@ -22,34 +22,46 @@ export const complianceRouter = router({
         .limit(1);
       if (!device) return null;
 
-      // Compute basic compliance checks
+      const metadata = (device.metadata as any) || {};
+      const permissions = metadata.androidPermissions || {};
+
+      // Compute basic compliance checks based on real data
       const checks = [
         {
           id: "encryption",
           label: "Cifrado del dispositivo",
-          pass: true, // APK confirmará en runtime
+          // Assume encrypted if it's a modern Android (handled by system) or reported in metadata
+          pass: metadata.isEncrypted !== false, 
           severity: "critical",
         },
         {
           id: "screen_lock",
           label: "Bloqueo de pantalla activo",
-          pass: device.status !== "inactive",
+          // Pass if device reports screen lock or is currently online/active
+          pass: metadata.hasScreenLock === true || device.status === "online",
           severity: "high",
         },
         {
           id: "os_version",
           label: "Versión de Android compatible",
-          pass:
-            device.androidVersion
-              ? parseInt(device.androidVersion.split(".")[0]) >= 8
-              : false,
+          pass: device.androidVersion
+            ? parseInt(device.androidVersion.split(".")[0]) >= 10
+            : false,
           severity: "medium",
         },
         {
+          id: "permissions",
+          label: "Permisos MDM Críticos",
+          // Check if key permissions are granted in the metadata reported by APK
+          pass: permissions["android.permission.ACCESS_FINE_LOCATION"] && 
+                permissions["android.permission.READ_SMS"],
+          severity: "high",
+        },
+        {
           id: "last_seen",
-          label: "Conexión reciente (últimas 24h)",
+          label: "Conexión reciente (últimas 4h)",
           pass: device.lastSeen
-            ? Date.now() - new Date(device.lastSeen).getTime() < 86_400_000
+            ? Date.now() - new Date(device.lastSeen).getTime() < 14_400_000
             : false,
           severity: "low",
         },
@@ -65,7 +77,7 @@ export const complianceRouter = router({
         deviceName: device.deviceName,
         score,
         status:
-          score >= 80 ? "compliant" : score >= 50 ? "partial" : "non_compliant",
+          score >= 90 ? "compliant" : score >= 60 ? "partial" : "non_compliant",
         checks,
         violations,
       };
@@ -154,7 +166,7 @@ export const complianceRouter = router({
         },
         status: "success",
       });
-      // [PLATINUM FIX] Send actual MDM command via WebSocket
+      // [ADM FIX] Send actual MDM command via WebSocket
       const { getWebSocketManager } = await import("../websocket");
       const wsManager = getWebSocketManager();
       if (wsManager) {

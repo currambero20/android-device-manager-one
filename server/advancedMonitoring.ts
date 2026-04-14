@@ -170,22 +170,26 @@ class AdvancedMonitoring {
     }
   }
 
-  /**
-   * Registrar captura de media (screenshot, audio, video)
-   */
   async logMediaCapture(capture: MediaCapture): Promise<void> {
     const db = await getDb();
     if (!db) return;
 
     try {
-      // Tabla mediaCaptures no existe aún
-      // await db.insert(mediaCaptures).values({...});
+      const { mediaFiles } = await import("../drizzle/schema");
+      await db.insert(mediaFiles).values({
+        deviceId: capture.deviceId,
+        fileName: capture.fileName,
+        fileType: capture.type as any,
+        fileSize: capture.fileSize,
+        fileUrl: capture.filePath,
+        timestamp: capture.timestamp || new Date(),
+      });
 
       // Registrar en auditoría
       await this.logAuditEvent(
         capture.deviceId,
         "MEDIA_CAPTURED",
-        `${capture.type} capturado: ${capture.fileName}`,
+        `${capture.type.toUpperCase()} capturado`,
         {
           type: capture.type,
           fileName: capture.fileName,
@@ -450,9 +454,6 @@ class AdvancedMonitoring {
     }
   }
 
-  /**
-   * Registrar evento en auditoría
-   */
   private async logAuditEvent(
     deviceId: number,
     action: string,
@@ -466,7 +467,11 @@ class AdvancedMonitoring {
       await db.insert(auditLogs).values({
         action: action,
         actionType: "security_event",
+        resourceType: "device",
+        resourceId: String(deviceId),
+        details: { description, ...metadata },
         deviceId: deviceId,
+        status: "success",
         timestamp: new Date(),
       });
     } catch (error) {

@@ -7,22 +7,19 @@ export const trpc = createTRPCReact<AppRouter>();
 
 export const getBaseUrl = () => {
   if (typeof window !== "undefined") {
-    // Si estamos en producción (Vercel), usamos la URL de Render
-    if (
-      window.location.hostname !== "localhost" &&
-      window.location.hostname !== "127.0.0.1" &&
-      !window.location.hostname.startsWith("192.168.")
-    ) {
-      return import.meta.env.VITE_API_URL || "https://android-device-manager-one-1.onrender.com/api/trpc";
-    }
+    // Si estamos en un entorno de navegador
+    const hostname = window.location.hostname;
     
-    // [PRO-REFAC] Usar ruta relativa para que el Proxy de Vite haga el túnel de red
-    // Esto resuelve 'Failed to fetch' al unificar el tráfico en un solo dominio
+    // Si es local, usamos el puerto 3001 del backend
+    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.")) {
+       return `http://${hostname}:3001/api/trpc`;
+    }
+
+    // En producción (Vercel), primero intentamos usar el propio dominio (Vercel Serverless)
+    // Esto asegura que la navegación inicial sea rápida y no dependa de Render
     return "/api/trpc";
   }
 
-  // Fallback para SSR
-  return import.meta.env.VITE_API_URL || "/api/trpc";
+  // Fallback para SSR o entornos sin window
+  return process.env.VITE_API_URL || "/api/trpc";
 };
-
-

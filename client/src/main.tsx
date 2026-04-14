@@ -35,18 +35,32 @@ const rootElement = document.getElementById("root");
 if (!rootElement) {
   console.error("❌ Fatal Error: Could not find root element!");
 } else {
-  // Low-level visual feedback for slow mounting
-  rootElement.innerHTML = '<div style="height:100vh;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#666;">Iniciando sistema MDM Platinum...</div>';
-  
-  const root = createRoot(rootElement);
-  root.render(
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
-    </trpc.Provider>
-  );
-  
-  console.log("✅ React mounted successfully");
+  try {
+     console.log("🎬 [Mounting] Starting React application...");
+     const root = createRoot(rootElement);
+     root.render(
+       <trpc.Provider client={trpcClient} queryClient={queryClient}>
+         <QueryClientProvider client={queryClient}>
+           <App />
+         </QueryClientProvider>
+       </trpc.Provider>
+     );
+     console.log("✅ React mounted successfully");
+  } catch (error) {
+     console.error("❌ React Mounting Failed:", error);
+     rootElement.innerHTML = `
+       <div style="height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;background:#0a0a0a;color:#fff;text-align:center;padding:20px;">
+         <h1 style="color:#ff4d4d;margin-bottom:10px;">Error de Inicialización</h1>
+         <p style="color:#aaa;max-width:500px;">El sistema no pudo arrancar correctamente. Esto puede deberse a un fallo en la conexión con la API o un error crítico de JavaScript.</p>
+         <pre style="background:#1a1a1a;padding:15px;border-radius:8px;font-size:12px;color:#ff6b6b;margin-top:20px;text-align:left;max-width:90%;">
+Original Error: ${String(error)}
+URL: ${window.location.href}
+API: ${API_URL}
+         </pre>
+         <button onclick="window.location.reload()" style="margin-top:30px;padding:10px 20px;background:#3b82f6;border:none;border-radius:5px;color:white;cursor:pointer;font-weight:bold;">Reintentar Conexión</button>
+       </div>
+     `;
+  }
 }
+
 

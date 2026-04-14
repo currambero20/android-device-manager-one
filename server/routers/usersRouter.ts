@@ -37,7 +37,7 @@ export const usersRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const passwordHash = hashPassword(input.password);
+      const passwordHash = await hashPassword(input.password);
       return await db.createUser({
         name: input.name,
         email: input.email,
@@ -54,7 +54,7 @@ export const usersRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const passwordHash = hashPassword(input.newPassword);
+      const passwordHash = await hashPassword(input.newPassword);
       await db.updateUserPassword(input.id, passwordHash);
       return { success: true };
     }),
@@ -73,7 +73,7 @@ export const usersRouter = router({
       const updates: any = {};
       if (input.name) updates.name = input.name;
       if (input.password) {
-        updates.passwordHash = hashPassword(input.password);
+        updates.passwordHash = await hashPassword(input.password);
       }
 
       const dbInstance = await db.getDb();

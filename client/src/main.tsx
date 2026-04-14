@@ -5,15 +5,12 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import "./index.css";
-import "sonner/dist/styles.css";
+
 
 const queryClient = new QueryClient();
 
 // ✅ Usar lógica unificada de getBaseUrl
 const API_URL = getBaseUrl();
-
-console.log("🚀 [Application Start] Environment:", import.meta.env.MODE);
-console.log("🔗 [API Configuration] Target URL:", API_URL);
 
 const trpcClient = trpc.createClient({
   links: [
@@ -30,16 +27,26 @@ const trpcClient = trpc.createClient({
   ],
 });
 
+console.log("🚀 [Application Start] Environment:", import.meta.env.MODE);
+
+console.log("🔗 [API Configuration] Target URL:", API_URL);
+
 const rootElement = document.getElementById("root");
-if (rootElement) {
-  // Un pequeño aviso visual de bajo nivel por si React tarda en montar
-  rootElement.innerHTML = '<div style="height:100vh;display:flex;align-items:center;justify-center;font-family:sans-serif;color:#666;">Iniciando sistema MDM...</div>';
+if (!rootElement) {
+  console.error("❌ Fatal Error: Could not find root element!");
+} else {
+  // Low-level visual feedback for slow mounting
+  rootElement.innerHTML = '<div style="height:100vh;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#666;">Iniciando sistema MDM Platinum...</div>';
+  
+  const root = createRoot(rootElement);
+  root.render(
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </trpc.Provider>
+  );
+  
+  console.log("✅ React mounted successfully");
 }
 
-createRoot(rootElement!).render(
-  <trpc.Provider client={trpcClient} queryClient={queryClient}>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </trpc.Provider>
-);

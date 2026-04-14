@@ -8,7 +8,7 @@ import { TRPCError } from "@trpc/server";
 import * as fs from "fs";
 import * as path from "path";
 
-import { uploadFile, getDownloadUrl, deleteFile } from "../services/storageService";
+import { uploadFile, getDownloadUrl, deleteFile, getS3Config } from "../services/storageService";
 
 // Reemplazado por storageService.ts
 

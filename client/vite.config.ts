@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(), 
       tailwindcss(),
-    ].filter(Boolean),
+    ],
     base: '/',
     resolve: {
       alias: {
@@ -22,9 +22,6 @@ export default defineConfig(({ mode }) => {
         '@shared': path.resolve(__dirname, '../shared'),
       },
     },
-    root: path.resolve(__dirname),
-    publicDir: path.resolve(__dirname, "public"),
-    envDir: process.env.CI ? path.resolve(__dirname) : path.resolve(__dirname, ".."),
     build: {
       outDir: 'dist',
       emptyOutDir: true,

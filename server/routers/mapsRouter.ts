@@ -377,24 +377,28 @@ export const mapsRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB no disponible" });
 
-        const [newGeofence] = await db.insert(geofences).values({
+        const [result] = await db.insert(geofences).values({
           name: input.name,
           latitude: input.latitude,
           longitude: input.longitude,
           radius: input.radius,
           type: input.type,
           createdAt: new Date(),
-        }).returning();
+        });
 
+        // Simular el regreso del objeto ya que MySQL no soporta RETURNING en Drizzle
+        const insertResult = result as any;
+        const geofenceId = (insertResult as any).insertId || (insertResult[0] as any)?.insertId;
+        
         return {
           success: true,
-          geofenceId: newGeofence.id,
-          name: newGeofence.name,
-          latitude: newGeofence.latitude,
-          longitude: newGeofence.longitude,
-          radius: newGeofence.radius,
-          type: newGeofence.type,
-          createdAt: newGeofence.createdAt,
+          geofenceId: geofenceId,
+          name: input.name,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          radius: input.radius,
+          type: input.type,
+          createdAt: new Date(),
         };
       } catch (error) {
         console.error("[Maps] Error creating geofence:", error);

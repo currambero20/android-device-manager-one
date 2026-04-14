@@ -27,6 +27,7 @@ import { communicationsRouter } from "./routers/communicationsRouter";
 import { notificationsRouter } from "./routers/notificationsRouter";
 import { fcmRouter } from "./routers/fcmRouter";
 import { emailRouter } from "./routers/emailRouter";
+import { settingsRouter } from "./routers/settingsRouter";
 
 export const appRouter = router({
   /**
@@ -114,6 +115,8 @@ export const appRouter = router({
   fcm: fcmRouter,
   // Email Notifications
   email: emailRouter,
+  // Settings
+  settings: settingsRouter,
   // Communications (SMS, Calls, Contacts, Camera, Vibrate, Lock) - Phase 3
   communications: communicationsRouter,
 });

@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "vite build && node scripts/fix-dist-html.js",
     "start": "vite preview --host",
     "check": "tsc --noEmit",
     "format": "prettier --write .",

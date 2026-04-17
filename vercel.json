@@ -13,7 +13,6 @@
       "shared/**/*"
     ]
   },
-  "framework": null,
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/vercel.ts" },
     { "handle": "filesystem" },

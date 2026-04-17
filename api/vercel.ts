@@ -1,6 +1,18 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
-import app from "../../server/_core/index";
+import { createServer as createHttpServer } from "http";
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  return app(req as any, res as any);
+export default async function handler(req: any, res: any) {
+  try {
+    const { app } = await import("../../server/_core/index.js");
+    const httpServer = createHttpServer(app);
+    
+    await new Promise<void>((resolve) => {
+      httpServer.once("request", (_req: any, _res: any) => {
+        _res.on("finish", resolve);
+      });
+      httpServer.emit("request", req, res);
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 }

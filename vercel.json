@@ -1,7 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd client && npm install --legacy-peer-deps && npm run build",
-  "outputDirectory": "client/dist",
+  "buildCommand": "npm run build",
   "cleanUrls": true,
   "functions": {
     "api/index.ts": {
@@ -11,7 +10,7 @@
     }
   },
   "routes": [
-    { "src": "/api/(.*)", "dest": "api/index.ts" },
+    { "src": "/api/(.*)", "dest": "/api/index.ts" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

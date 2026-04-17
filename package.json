@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "npm run dev --prefix client",
-    "build": "npm install --prefix client --legacy-peer-deps && npm run build --prefix client",
+    "build": "npm install --prefix client --legacy-peer-deps && npm run build --prefix client && mkdir -p public && cp -r client/dist/* public/",
     "start": "npx tsx --watch --env-file=.env server/_core/index.ts"
   },
   "dependencies": {

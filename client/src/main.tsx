@@ -36,9 +36,14 @@ if (!rootElement) {
   console.error("❌ Fatal Error: Could not find root element!");
 } else {
   try {
-     console.log("🎬 [Mounting] Starting React application...");
-     const root = createRoot(rootElement);
-     root.render(
+console.log("🎬 [Mounting] Starting React application...");
+      
+      if (!window.location.hostname) {
+        throw new Error("No se pudo obtener la información del host");
+      }
+      
+      const root = createRoot(rootElement);
+      root.render(
        <trpc.Provider client={trpcClient} queryClient={queryClient}>
          <QueryClientProvider client={queryClient}>
            <App />

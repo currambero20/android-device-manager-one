@@ -9,6 +9,9 @@
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["./shared/*"]
-    }
-  }
+    },
+    "outDir": "dist"
+  },
+  "include": ["api/**/*", "server/**/*", "shared/**/*"],
+  "exclude": ["node_modules", "client"]
 }

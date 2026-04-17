@@ -12,11 +12,19 @@ import { appRouter } from "../appRouter";
 import { createContext } from "./context";
 import { runMigrations } from "../db";
 import { xssMiddleware } from "./xssProtection";
+import fs from "fs";
 
-// ✅ CARGAR DOTENV
+// ✅ CARGAR DOTENV - Soporte para Render y local
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: resolve(join(__dirname, "../../.env")) });
+const envPath = resolve(join(__dirname, "../../.env"));
+
+// Solo cargar .env si existe (en local), en Render las vars ya están en env
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+} else {
+  console.log("[Server] Running with environment variables (Render)");
+}
 
 export const app = express();
 const server = createServer(app);

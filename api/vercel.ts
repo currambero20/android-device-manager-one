@@ -2,7 +2,7 @@ import { createServer as createHttpServer } from "http";
 
 export default async function handler(req: any, res: any) {
   try {
-    const { app } = await import("../../server/_core/index.js");
+    const { app } = await import("../server_files/_core/index.js");
     const httpServer = createHttpServer(app);
     
     await new Promise<void>((resolve) => {

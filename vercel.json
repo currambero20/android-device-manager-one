@@ -7,10 +7,14 @@
   "build": {
     "env": {
       "NODE_OPTIONS": "--require tsx"
-    }
+    },
+    "includeFiles": [
+      "server/**/*",
+      "shared/**/*"
+    ]
   },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.ts" },
+    { "src": "/api/(.*)", "dest": "/api/vercel.ts" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

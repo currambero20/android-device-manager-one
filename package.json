@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "npm run dev --prefix client",
     "build": "npm install --prefix client --legacy-peer-deps && npm run build --prefix client && mkdir -p public && cp -r client/dist/* public/",
-    "start": "npx tsx server/_core/index.ts"
+    "start": "npx tsx server/_core/index.ts",
+    "postinstall": "npm install --prefix client --legacy-peer-deps"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1024.0",

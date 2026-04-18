@@ -18,9 +18,23 @@ const trpcClient = trpc.createClient({
       url: API_URL,
       transformer: superjson,
       fetch(input, init) {
+        const url = typeof input === 'string' ? input : input.url;
+        console.log("📡 [Request]", url);
+        
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+          mode: "cors",
+        }).then(async (res) => {
+          console.log("📬 [Response] Status:", res.status, res.statusText);
+          if (!res.ok) {
+            const text = await res.text();
+            console.error("❌ [Response Error]", text);
+          }
+          return res;
+        }).catch((err) => {
+          console.error("❌ [Fetch Error]", err.message, err.cause);
+          throw err;
         });
       },
     }),

@@ -54,7 +54,20 @@ app.use(helmet({
 
 app.use(xssMiddleware);
 app.use(cors({
-  origin: "*",
+  origin: (origin, callback) => {
+    // Allow Vercel frontends
+    const allowedOrigins = [
+      "https://repodeploy.vercel.app",
+      "https://jorges-projects-a59a5a05.vercel.app",
+      "http://localhost:5173",
+      "http://localhost:3000"
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow for now
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-TRPC-Source"]

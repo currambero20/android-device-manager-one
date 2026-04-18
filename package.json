@@ -35,7 +35,8 @@
     "speakeasy": "^2.0.0",
     "superjson": "^1.13.3",
     "tsx": "^4.19.1",
-    "xss": "^1.0.15"
+    "xss": "^1.0.15",
+    "helmet": "^8.1.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -46,7 +47,6 @@
     "@types/nodemailer": "^7.0.11",
     "@vercel/node": "^5.7.10",
     "drizzle-kit": "^0.31.10",
-    "helmet": "^8.1.0",
     "javascript-obfuscator": "^5.4.1",
     "typescript": "^5.7.2",
     "vite-plugin-javascript-obfuscator": "^3.1.0",

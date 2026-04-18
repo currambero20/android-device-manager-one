@@ -396,6 +396,5 @@ export default function AdvancedMonitoring() {
         </div>
       </div>
     </DashboardLayout>
-ardLayout>
   );
 }

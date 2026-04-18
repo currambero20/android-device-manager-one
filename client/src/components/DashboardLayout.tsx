@@ -183,90 +183,129 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
   });
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-screen bg-black text-white font-sans overflow-hidden relative">
+      <div className="cyber-scanline pointer-events-none" />
+      
+      {/* Dynamic Background */}
+      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.05),transparent_70%)] pointer-events-none" />
+
       {/* Sidebar */}
       <aside
         className={`${
-          sidebarOpen ? "w-64" : "w-20"
-        } border-r border-accent/20 bg-card/80 backdrop-blur-md transition-all duration-300 flex flex-col overflow-hidden shadow-sm`}
+          sidebarOpen ? "w-72" : "w-24"
+        } glass-panel border-r border-cyan-500/10 transition-all duration-500 flex flex-col overflow-hidden relative z-20 shadow-[20px_0_50px_rgba(0,0,0,0.5)]`}
       >
+        <div className="absolute inset-y-0 right-0 w-[1px] bg-gradient-to-b from-transparent via-cyan-500/30 to-transparent" />
+
         {/* Logo */}
-        <div className="p-4 border-b border-accent/10 flex items-center justify-between">
+        <div className="p-8 pb-10 flex items-center justify-between border-b border-cyan-500/5">
           {sidebarOpen && (
-            <div className="flex items-center gap-2">
-              <Smartphone className="w-6 h-6 text-cyan-600" />
-              <span className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700">ADM</span>
+            <div className="flex items-center gap-4 group">
+              <div className="p-2 rounded-xl bg-cyan-500/5 border border-cyan-500/20 group-hover:rotate-12 transition-transform duration-500">
+                <Smartphone className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-black text-2xl tracking-tighter uppercase gradient-text italic">ADM_OS</span>
+                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-cyan-500/50 -mt-1 italic">CORE_V4.0</span>
+              </div>
             </div>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1 hover:bg-accent/10 rounded transition-colors text-muted-foreground hover:text-foreground"
+            className="p-3 glass-panel border-cyan-500/20 rounded-xl hover:text-cyan-400 hover:border-cyan-400/50 transition-all duration-300 shadow-[0_0_15px_rgba(34,211,238,0.1)] group"
           >
-            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {sidebarOpen ? <X className="w-5 h-5 group-hover:rotate-90 transition-transform" /> : <Menu className="w-5 h-5 group-hover:scale-110 transition-transform" />}
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        <nav className="flex-1 p-6 space-y-3 overflow-y-auto custom-scrollbar">
           {visibleItems.map((item) => {
             const Icon = item.icon;
+            const isActive = window.location.pathname === item.href;
             return (
               <Link 
                 key={item.href} 
                 href={item.href}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent/10 transition-colors group"
+                className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 group relative overflow-hidden ${
+                  isActive 
+                  ? "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.1)]" 
+                  : "hover:bg-cyan-500/5 border border-transparent text-cyan-100/50 hover:text-cyan-200"
+                }`}
               >
-                <Icon className="w-5 h-5 text-cyan-600 group-hover:text-blue-600 transition-all" />
-                {sidebarOpen && <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">{item.label}</span>}
+                {isActive && (
+                  <div className="absolute left-0 top-0 h-full w-1 bg-cyan-400 shadow-[0_0_10px_#22d3ee]" />
+                )}
+                <Icon className={`w-5 h-5 transition-all duration-300 ${isActive ? "scale-110" : "group-hover:scale-110 group-hover:text-cyan-400"}`} />
+                {sidebarOpen && (
+                  <span className="text-[10px] font-black uppercase tracking-widest italic">{item.label}</span>
+                )}
+                {!sidebarOpen && (
+                   <div className="absolute left-20 bg-black/90 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-widest text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                    {item.label}
+                   </div>
+                )}
               </Link>
-
             );
           })}
         </nav>
 
         {/* User Section */}
-        <div className="border-t border-accent/20 p-4 space-y-3">
+        <div className="p-6 border-t border-cyan-500/5 space-y-4">
           {sidebarOpen && (
-            <div className="bg-accent/5 border border-accent/10 rounded-lg p-3">
-              <p className="text-[10px] font-bold text-cyan-600 uppercase tracking-wider mb-1">Usuario Actual</p>
-              <p className="text-sm font-medium truncate">{user?.name || "Usuario"}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+            <div className="glass-panel border-cyan-500/10 p-5 group hover:border-cyan-500/30 transition-all duration-500 bg-black/40">
+              <p className="text-[8px] font-black text-cyan-500/40 uppercase tracking-[0.4em] mb-2 italic">Session_Active</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center group-hover:rotate-3 transition-transform">
+                  <span className="text-cyan-400 font-black text-sm italic">{user?.name?.[0]?.toUpperCase() || "U"}</span>
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <p className="text-[10px] font-black text-white truncate uppercase tracking-tight italic">{user?.name || "SYS_OPERATOR"}</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                    <p className="text-[8px] font-black text-cyan-500/60 uppercase tracking-widest">{user?.role}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           <Button
             onClick={logout}
             variant="ghost"
-            size="sm"
-            className="w-full justify-start hover:bg-destructive/10 hover:text-destructive"
+            className={`w-full h-14 justify-start glass-panel border-rose-500/10 hover:border-rose-500/40 hover:bg-rose-500/5 text-rose-500 font-black uppercase tracking-widest text-[9px] italic group transition-all duration-500 ${!sidebarOpen && "justify-center"}`}
           >
-            {sidebarOpen ? (
-              <>
-                <LogOut className="w-4 h-4 mr-2" />
-                Cerrar Sesión
-              </>
-            ) : (
-              <LogOut className="w-4 h-4" />
-            )}
+            <LogOut className={`w-5 h-5 transition-transform duration-500 group-hover:-translate-x-1 ${sidebarOpen && "mr-3"}`} />
+            {sidebarOpen && "CIERRE_SESION"}
           </Button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10 bg-black/20">
         {/* Top Bar */}
-        <header className="border-b border-accent/20 bg-background/80 backdrop-blur-md z-10">
-          <div className="px-6 py-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 lowercase">{title || "dashboard"}</h1>
-            <div className="flex items-center gap-4">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Sistema Activo</span>
+        <header className="glass-panel border-b border-cyan-500/5 sticky top-0 z-40 bg-black/40">
+          <div className="px-10 py-6 flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="w-1 h-8 bg-gradient-to-b from-cyan-400 to-transparent" />
+              <h1 className="text-3xl font-black text-white uppercase italic tracking-tighter mix-blend-difference">
+                {title || "dashboard_root"}
+              </h1>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col items-end">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_#22d3ee]" />
+                  <span className="text-[9px] font-black text-cyan-400 uppercase tracking-[0.3em] italic">System_Live</span>
+                </div>
+                <span className="text-[7px] font-black text-cyan-700 uppercase tracking-widest mt-1">Buffer: Optimal • Uplink: Stable</span>
+              </div>
             </div>
           </div>
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 overflow-auto">
-          <div className="p-6">{children}</div>
+        <main className="flex-1 overflow-auto custom-scrollbar p-10">
+          <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
     </div>

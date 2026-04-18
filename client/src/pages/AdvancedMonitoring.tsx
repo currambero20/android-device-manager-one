@@ -86,25 +86,27 @@ export default function AdvancedMonitoring() {
     }
   };
 
-  return (
-    <DashboardLayout title="Monitoreo Avanzado">
-      <div className="space-y-6">
+  return (    <DashboardLayout title="monitoreo avanzado">
+      {/* Scanline Effect */}
+      <div className="cyber-scanline" />
+      
+      <div className="space-y-6 relative z-10">
         {/* Header Section */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-primary/10 rounded-2xl shadow-sm">
-              <ShieldAlert className="w-8 h-8 text-primary" />
+            <div className="p-3 bg-cyan-500/10 rounded-2xl shadow-[0_0_15px_rgba(34,211,238,0.2)] border border-cyan-500/30">
+              <ShieldAlert className="w-8 h-8 text-cyan-400" />
             </div>
             <div>
-              <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase mr-3">
+              <h1 className="text-3xl font-black tracking-tighter uppercase gradient-text">
                 Inteligencia de Dispositivo
               </h1>
-              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest">Auditoría y Monitoreo MDM Activo</p>
+              <p className="text-cyan-500/60 text-xs font-bold uppercase tracking-[0.2em]">Auditoría y Monitoreo MDM Activo</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-             <Badge variant="outline" className="px-3 py-1 bg-green-50 text-green-700 border-green-200">
-               <Zap className="w-3 h-3 mr-1 fill-green-700" /> Sistema Seguro
+             <Badge variant="outline" className="px-3 py-1 bg-cyan-500/10 text-cyan-300 border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)]">
+               <Zap className="w-3 h-3 mr-1 fill-cyan-400 animate-pulse" /> Sistema Seguro
              </Badge>
           </div>
         </div>
@@ -112,21 +114,21 @@ export default function AdvancedMonitoring() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar - Device Selection & Stats */}
           <div className="lg:col-span-1 space-y-6">
-            <Card className="border-accent/20 shadow-xl rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
-              <div className="p-4 border-b border-accent/10 bg-accent/5">
-                <h2 className="text-xs font-black uppercase tracking-widest text-slate-500">Filtrar Objetivo</h2>
+            <Card className="glass-panel overflow-hidden border-cyan-500/20 shadow-2xl">
+              <div className="p-4 border-b border-cyan-500/10 bg-cyan-500/5">
+                <h2 className="text-[10px] font-black uppercase tracking-widest text-cyan-500/70">Filtrar Objetivo</h2>
               </div>
               <div className="p-4 space-y-4">
                 <Select
                   value={selectedDeviceId?.toString() ?? ""}
                   onValueChange={(v) => setSelectedDeviceId(Number(v))}
                 >
-                  <SelectTrigger className="w-full h-12 rounded-xl bg-white border-accent/20 font-bold">
+                  <SelectTrigger className="w-full h-12 rounded-xl bg-black/40 border-cyan-500/20 font-bold text-cyan-100 hover:border-cyan-400/50 transition-all">
                     <SelectValue placeholder="Seleccionar..." />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-accent/20">
+                  <SelectContent className="rounded-xl border-cyan-500/20 bg-black/90 backdrop-blur-xl text-cyan-100">
                     {(devices as any[]).map((d: any) => (
-                      <SelectItem key={d.id} value={d.id.toString()}>
+                      <SelectItem key={d.id} value={d.id.toString()} className="focus:bg-cyan-500/20 focus:text-cyan-300 pointer-events-auto cursor-pointer">
                         {d.deviceName}
                       </SelectItem>
                     ))}
@@ -135,28 +137,24 @@ export default function AdvancedMonitoring() {
 
                 {stats && (
                   <div className="space-y-3 pt-2">
-                    <div className="p-3 bg-blue-50/50 rounded-2xl border border-blue-100/50 flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase text-blue-600">Eventos Clipboard</span>
-                      <span className="text-lg font-black text-blue-700">{stats.totalClipboardEntries}</span>
+                    <div className="p-3 bg-cyan-500/5 rounded-2xl border border-cyan-500/10 flex items-center justify-between group hover:border-cyan-500/30 transition-all">
+                      <span className="text-[9px] font-black uppercase text-cyan-500/60">Eventos Clipboard</span>
+                      <span className="text-lg font-black text-cyan-400 group-hover:scale-110 transition-transform">{stats.totalClipboardEntries}</span>
                     </div>
-                    <div className="p-3 bg-purple-50/50 rounded-2xl border border-purple-100/50 flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase text-purple-600">Notificaciones</span>
-                      <span className="text-lg font-black text-purple-700">{stats.totalNotifications}</span>
-                    </div>
-                    <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-100/50 flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase text-amber-600">Wifi Escaneados</span>
-                      <span className="text-lg font-black text-amber-700">{wifiLogs.length}</span>
+                    <div className="p-3 bg-fuchsia-500/5 rounded-2xl border border-fuchsia-500/10 flex items-center justify-between group hover:border-fuchsia-500/30 transition-all">
+                      <span className="text-[9px] font-black uppercase text-fuchsia-500/60">Notificaciones</span>
+                      <span className="text-lg font-black text-fuchsia-400 group-hover:scale-110 transition-transform">{stats.totalNotifications}</span>
                     </div>
                   </div>
                 )}
               </div>
             </Card>
 
-            <div className="p-4 bg-slate-900 rounded-3xl text-white space-y-3 shadow-2xl">
-              <div className="p-2 bg-white/10 rounded-xl inline-flex">
-                <ShieldAlert className="w-4 h-4 text-rose-500" />
+            <div className="p-5 glass-panel space-y-3 shadow-2xl border-rose-500/20">
+              <div className="p-2 bg-rose-500/10 rounded-xl inline-flex">
+                <ShieldAlert className="w-4 h-4 text-rose-500 animate-pulse" />
               </div>
-              <h3 className="text-sm font-bold uppercase tracking-tight">Protocolo de Privacidad</h3>
+              <h3 className="text-xs font-bold uppercase tracking-tight text-rose-400">Protocolo de Privacidad</h3>
               <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
                 Todo el monitoreo activo debe estar alineado con la política de seguridad corporativa.
                 Las grabaciones e historial de red son recolectados bajo auditoría legal automatizada.
@@ -165,125 +163,100 @@ export default function AdvancedMonitoring() {
           </div>
 
           {/* Main Content Area */}
-          <Card className="lg:col-span-3 border-accent/20 shadow-2xl rounded-[32px] overflow-hidden bg-white/50 backdrop-blur-sm">
+          <Card className="lg:col-span-3 glass-panel overflow-hidden border-cyan-500/20">
             <Tabs 
               defaultValue="clipboard" 
               value={activeTab} 
               onValueChange={setActiveTab}
-              className="w-full h-full flex flex-col"
+              className="w-full flex flex-col"
             >
-              <div className="px-6 pt-6 pb-2 border-b border-accent/10 bg-white/60">
-                <TabsList className="bg-accent/10 p-1 rounded-2xl h-12 w-full max-w-2xl border border-accent/5">
-                  <TabsTrigger 
-                    value="clipboard" 
-                    className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xl font-bold text-xs"
-                  >
-                    <ClipboardList className="w-3.5 h-3.5 mr-2" />
-                    PORTAPAPELES
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="notifications" 
-                    className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xl font-bold text-xs"
-                  >
-                    <Bell className="w-3.5 h-3.5 mr-2" />
-                    NOTIFICACIONES
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="wifi" 
-                    className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xl font-bold text-xs"
-                  >
-                    <Zap className="w-3.5 h-3.5 mr-2" />
-                    HISTORIAL WIFI
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="activity" 
-                    className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xl font-bold text-xs"
-                  >
-                    <BarChart3 className="w-3.5 h-3.5 mr-2" />
-                    RESUMEN
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="keylogger" 
-                    className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xl font-bold text-xs"
-                  >
-                    <Keyboard className="w-3.5 h-3.5 mr-2" />
-                    KEYLOGS
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="permissions" 
-                    className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xl font-bold text-xs"
-                  >
-                    <Lock className="w-3.5 h-3.5 mr-2" />
-                    PERMISOS
-                  </TabsTrigger>
+              <div className="px-4 py-3 border-b border-cyan-500/10 bg-black/20">
+                <TabsList className="bg-transparent flex flex-wrap h-auto gap-2 p-1">
+                  {[
+                    { val: "clipboard", label: "Portapapeles", icon: ClipboardList },
+                    { val: "notifications", label: "Notificaciones", icon: Bell },
+                    { val: "wifi", label: "Wifi", icon: Zap },
+                    { val: "activity", label: "Resumen", icon: BarChart3 },
+                    { val: "keylogger", label: "Keylogger", icon: Keyboard },
+                    { val: "permissions", label: "Permisos", icon: Lock },
+                  ].map((tab) => (
+                    <TabsTrigger 
+                      key={tab.val}
+                      value={tab.val} 
+                      className="flex-1 min-w-[120px] h-10 rounded-xl data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:neon-border-cyan font-bold text-[10px] uppercase tracking-wider transition-all"
+                    >
+                      <tab.icon className="w-3.5 h-3.5 mr-2" />
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
               </div>
 
-              <div className="flex-1 min-h-[600px] p-6">
+              <div className="p-6 min-h-[500px]">
                 {!selectedDeviceId ? (
-                  <div className="h-[500px] flex flex-col items-center justify-center text-slate-300">
-                    <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6 border border-slate-200 shadow-inner">
-                      <Search className="w-12 h-12 text-slate-300" />
+                  <div className="py-32 flex flex-col items-center justify-center text-cyan-900/40">
+                    <div className="w-20 h-20 bg-cyan-500/5 rounded-full flex items-center justify-center mb-6 border border-cyan-500/10 shadow-[inset_0_0_20px_rgba(0,0,0,0.4)]">
+                      <Search className="w-10 h-10 animate-pulse" />
                     </div>
-                    <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">Esperando Objetivo...</p>
-                    <p className="text-xs mt-2 font-bold text-slate-400">Selecciona un dispositivo del panel izquierdo para iniciar la auditoría</p>
+                    <p className="text-xs font-black uppercase tracking-[0.4em] text-cyan-500/60">Esperando Objetivo...</p>
+                    <p className="text-[10px] mt-4 font-bold text-cyan-900/60 uppercase">Selecciona un dispositivo para iniciar</p>
                   </div>
                 ) : (
                   <>
-                    <div className="flex justify-end mb-4">
+                    <div className="flex justify-end mb-6">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="rounded-xl border-accent/20 hover:bg-primary/5 hover:text-primary transition-all font-bold text-[10px] uppercase"
+                        className="rounded-xl border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/20 text-cyan-300 font-bold text-[9px] uppercase tracking-[0.1em] h-9"
                         onClick={() => triggerRefresh(activeTab)}
                         disabled={sendCommand.isPending}
                       >
-                        <RefreshCw className={`w-3 h-3 mr-2 ${sendCommand.isPending ? "animate-spin" : ""}`} />
-                        Sincronizar Datos {activeTab}
+                        <RefreshCw className={`w-3.5 h-3.5 mr-2 ${sendCommand.isPending ? "animate-spin" : ""}`} />
+                        Sincronizar {activeTab}
                       </Button>
                     </div>
 
                     <TabsContent value="clipboard" className="mt-0 focus-visible:ring-0">
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="relative flex-1 max-w-md">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <div className="flex items-center gap-3 mb-8">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-700" />
                           <Input 
                             placeholder="Buscar en el portapapeles..." 
-                            className="pl-10 rounded-2xl border-accent/20 bg-white"
+                            className="input-neon h-12 pl-12"
                           />
                         </div>
-                        <Button variant="outline" size="icon" className="rounded-2xl h-11 w-11 ml-3 border-accent/20 bg-white" onClick={() => refetchClipboard()}>
+                        <Button variant="outline" size="icon" className="rounded-xl h-12 w-12 border-cyan-500/20 bg-cyan-500/5 text-cyan-400 hover:border-cyan-400" onClick={() => refetchClipboard()}>
                           <RefreshCw className="w-4 h-4" />
                         </Button>
                       </div>
 
-                      <div className="grid gap-4">
+                      <div className="space-y-4">
                         {clipboardLogs.length === 0 ? (
-                          <div className="py-24 text-center">
-                            <ClipboardList className="w-12 h-12 mx-auto mb-4 opacity-5 text-slate-400" />
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sin capturas de portapapeles</p>
+                          <div className="py-20 text-center">
+                            <ClipboardList className="w-16 h-16 mx-auto mb-4 text-cyan-900/20" />
+                            <p className="text-[10px] font-black text-cyan-900/40 uppercase tracking-[0.2em]">Cámara de portapapeles vacía</p>
                           </div>
                         ) : (
                           clipboardLogs.map((log: any, idx: number) => (
-                            <div key={idx} className="group p-5 bg-white border border-accent/10 rounded-[24px] shadow-sm hover:shadow-xl hover:border-primary/20 transition-all duration-300">
-                              <div className="flex items-start justify-between mb-3">
+                            <div key={idx} className="group p-5 bg-black/20 border border-cyan-500/10 rounded-2xl hover:border-cyan-500/40 transition-all duration-300">
+                              <div className="flex items-start justify-between mb-4">
                                 <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-accent/5 rounded-xl">
+                                  <div className="p-2.5 bg-cyan-500/5 rounded-xl border border-cyan-500/10">
                                     {getContentIcon(log.dataType)}
                                   </div>
                                   <div>
-                                    <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none text-[9px] font-black px-2 mb-1">
-                                      {log.dataType.toUpperCase()}
+                                    <Badge className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-[9px] font-black px-2.5 mb-1.5 uppercase tracking-tighter">
+                                      {log.dataType}
                                     </Badge>
-                                    <p className="text-[10px] text-muted-foreground font-bold">{new Date(log.timestamp).toLocaleString()}</p>
+                                    <p className="text-[9px] text-cyan-900 font-bold uppercase">{new Date(log.timestamp).toLocaleString()}</p>
                                   </div>
                                 </div>
-                                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 rounded-xl h-8 w-8 hover:bg-accent/20">
-                                  <ChevronRight className="w-4 h-4" />
+                                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 rounded-xl h-9 w-9 text-cyan-500 hover:bg-cyan-500/10">
+                                  <ChevronRight className="w-5 h-5" />
                                 </Button>
                               </div>
-                              <div className="p-4 bg-slate-50/50 border border-accent/5 rounded-2xl">
-                                <p className="text-sm font-mono text-slate-700 break-all leading-relaxed">{log.content}</p>
+                              <div className="p-4 bg-black/40 border border-cyan-500/5 rounded-xl">
+                                <p className="text-sm font-mono text-cyan-100/80 break-all leading-relaxed">{log.content}</p>
                               </div>
                             </div>
                           ))
@@ -292,25 +265,25 @@ export default function AdvancedMonitoring() {
                     </TabsContent>
 
                     <TabsContent value="notifications" className="mt-0 focus-visible:ring-0">
-                       <div className="grid gap-4">
+                       <div className="space-y-4">
                         {notificationLogs.length === 0 ? (
-                          <div className="py-24 text-center">
-                            <Bell className="w-12 h-12 mx-auto mb-4 opacity-5 text-slate-400" />
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sin notificaciones interceptadas</p>
+                          <div className="py-20 text-center">
+                            <Bell className="w-16 h-16 mx-auto mb-4 text-cyan-900/20" />
+                            <p className="text-[10px] font-black text-cyan-900/40 uppercase tracking-[0.2em]">Sin notificaciones activas</p>
                           </div>
                         ) : (
                           notificationLogs.map((notif: any, idx: number) => (
-                            <div key={idx} className="p-4 bg-white border border-accent/10 rounded-3xl flex gap-4 items-center shadow-sm">
-                              <div className="w-12 h-12 bg-accent/10 rounded-2xl flex items-center justify-center font-black text-xl text-primary/40">
+                            <div key={idx} className="p-5 bg-black/20 border border-cyan-500/10 rounded-2xl flex gap-5 items-center hover:border-fuchsia-500/30 transition-all">
+                              <div className="w-14 h-14 bg-gradient-to-br from-cyan-500/10 to-fuchsia-500/10 rounded-2xl flex items-center justify-center font-black text-2xl text-cyan-400 border border-cyan-500/20">
                                 {notif.appName?.charAt(0)}
                               </div>
                               <div className="flex-1">
-                                <div className="flex justify-between items-start mb-1">
-                                  <h4 className="text-xs font-black uppercase text-primary">{notif.appName}</h4>
-                                  <span className="text-[9px] font-bold text-muted-foreground">{new Date(notif.timestamp).toLocaleTimeString()}</span>
+                                <div className="flex justify-between items-center mb-1.5">
+                                  <h4 className="text-[10px] font-black uppercase text-cyan-400 tracking-wider font-mono">{notif.appName}</h4>
+                                  <span className="text-[9px] font-bold text-cyan-900 font-mono tracking-tighter">{new Date(notif.timestamp).toLocaleTimeString()}</span>
                                 </div>
-                                <p className="text-sm font-bold text-slate-800">{notif.title}</p>
-                                <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">{notif.content}</p>
+                                <p className="text-sm font-bold text-cyan-100/90 mb-1">{notif.title}</p>
+                                <p className="text-[11px] text-cyan-900/80 line-clamp-2 leading-relaxed font-medium">{notif.content}</p>
                               </div>
                             </div>
                           ))
@@ -318,148 +291,98 @@ export default function AdvancedMonitoring() {
                       </div>
                     </TabsContent>
 
+                    {/* Additional Tab Contents simplified with Cyberpunk flavor */}
                     <TabsContent value="wifi" className="mt-0 focus-visible:ring-0">
-                      <div className="grid gap-3">
-                        {wifiLogs.length === 0 ? (
-                          <div className="py-24 text-center">
-                            <Zap className="w-12 h-12 mx-auto mb-4 opacity-5" />
-                            <p className="text-xs font-bold text-slate-400">Sin redes escaneadas aún</p>
-                          </div>
-                        ) : (
-                          wifiLogs.map((log: any, idx: number) => (
-                            <div key={idx} className="p-4 bg-white border border-accent/10 rounded-3xl flex items-center justify-between shadow-sm hover:shadow-md transition-all">
-                              <div className="flex items-center gap-4">
-                                <div className="p-3 bg-accent/5 rounded-2xl text-primary">
-                                  <Zap className="w-5 h-5" />
-                                </div>
-                                <div>
-                                  <h4 className="text-sm font-black text-slate-800">{log.ssid}</h4>
-                                  <p className="text-[10px] font-mono text-slate-400">{log.bssid}</p>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <Badge className="bg-green-100 text-green-700 border-none font-bold text-[10px] mb-1">
-                                  {log.signalStrength} dBm
-                                </Badge>
-                                <p className="text-[10px] font-bold text-muted-foreground">{new Date(log.timestamp).toLocaleTimeString()}</p>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
+                       <div className="space-y-4">
+                        {wifiLogs.map((log: any, idx: number) => (
+                           <div key={idx} className="p-4 bg-black/20 border border-cyan-500/10 rounded-2xl flex items-center justify-between hover:border-cyan-400/40 transition-all">
+                             <div className="flex items-center gap-4">
+                               <div className="p-3 bg-cyan-500/10 rounded-xl text-cyan-400">
+                                 <Zap className="w-5 h-5" />
+                               </div>
+                               <div>
+                                 <h4 className="text-sm font-black text-cyan-100">{log.ssid}</h4>
+                                 <p className="text-[10px] font-mono text-cyan-900 uppercase">{log.bssid}</p>
+                               </div>
+                             </div>
+                             <div className="text-right">
+                               <Badge className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-black text-[10px] px-3">
+                                 {log.signalStrength} DB
+                               </Badge>
+                             </div>
+                           </div>
+                        ))}
+                       </div>
                     </TabsContent>
 
                     <TabsContent value="keylogger" className="mt-0 focus-visible:ring-0">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-sm font-black uppercase text-slate-500">Historial del Teclado</h3>
-                        <Button variant="outline" size="icon" onClick={() => refetchKeylogs()}>
-                          <RefreshCw className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <div className="space-y-3">
-                        {keylogs.length === 0 ? (
-                          <div className="py-24 text-center text-slate-400">
-                             <Keyboard className="w-12 h-12 mx-auto mb-4 opacity-5" />
-                             <p className="text-xs font-bold uppercase">Sin capturas de teclado</p>
-                          </div>
-                        ) : (
-                          keylogs.map((log: any, idx: number) => (
-                            <div key={idx} className="p-4 bg-white border border-accent/10 rounded-2xl shadow-sm">
-                              <div className="flex items-center justify-between mb-2">
-                                <Badge variant="outline" className="text-[9px] font-black uppercase bg-blue-50 text-blue-600 border-blue-100">
-                                  {log.metadata?.app || "Desconocido"}
-                                </Badge>
-                                <span className="text-[10px] font-bold text-muted-foreground">{new Date(log.timestamp).toLocaleString()}</span>
-                              </div>
-                              <p className="text-sm font-mono text-slate-800 bg-slate-50 p-3 rounded-xl border border-dashed">{log.description}</p>
-                            </div>
-                          ))
-                        )}
-                      </div>
+                       <div className="space-y-4">
+                        {keylogs.map((log: any, idx: number) => (
+                           <div key={idx} className="p-5 bg-black/20 border border-cyan-500/10 rounded-2xl hover:border-purple-500/30 transition-all">
+                             <div className="flex items-center justify-between mb-3">
+                               <Badge className="bg-purple-500/10 text-purple-400 border border-purple-500/30 text-[9px] font-black px-3">
+                                 {log.metadata?.app || "SYSTEM"}
+                               </Badge>
+                               <span className="text-[9px] font-mono text-cyan-900 uppercase">{new Date(log.timestamp).toLocaleString()}</span>
+                             </div>
+                             <div className="p-4 bg-black/30 border border-dashed border-purple-500/20 rounded-xl">
+                               <p className="text-sm font-mono text-purple-200/80 leading-relaxed italic">{log.description}</p>
+                             </div>
+                           </div>
+                        ))}
+                       </div>
                     </TabsContent>
 
                     <TabsContent value="permissions" className="mt-0 focus-visible:ring-0">
-                       <div className="flex items-center justify-between mb-6">
-                        <div>
-                          <h3 className="text-sm font-black uppercase text-slate-500">Matriz de Permisos Android</h3>
-                          <p className="text-[10px] text-muted-foreground font-bold">Estado Real del Payload en el Sistema</p>
-                        </div>
-                        <Button variant="outline" size="icon" onClick={() => refetchPermissions()}>
-                          <RefreshCw className="w-4 h-4" />
-                        </Button>
-                      </div>
-
-                      {!androidPermissions || !androidPermissions.permissions || androidPermissions.permissions.length === 0 ? (
-                        <div className="py-24 text-center text-slate-400">
-                           <Lock className="w-12 h-12 mx-auto mb-4 opacity-5" />
-                           <p className="text-xs font-bold uppercase">Pendiente de Sincronización</p>
-                           <p className="text-[10px] mt-1">El dispositivo debe reportar su estado de permisos</p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {androidPermissions.permissions.map((perm: any, idx: number) => (
-                            <div key={idx} className={`p-4 rounded-2xl border flex items-center gap-3 ${
-                              perm.granted ? "bg-green-50 border-green-100" : "bg-red-50 border-red-100"
-                            }`}>
-                              {perm.granted ? (
-                                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                              ) : (
-                                <AlertTriangle className="w-5 h-5 text-red-600" />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-xs font-black truncate uppercase ${
-                                  perm.granted ? "text-green-800" : "text-red-800"
-                                }`}>
-                                  {perm.name.replace("android.permission.", "")}
-                                </p>
-                                <p className="text-[9px] font-bold text-slate-500 truncate">{perm.granted ? "Autorizado" : "Denegado"}</p>
-                              </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {androidPermissions?.permissions?.map((perm: any, idx: number) => (
+                          <div key={idx} className={`p-4 rounded-2xl border flex items-center gap-4 transition-all ${
+                            perm.granted ? "bg-cyan-500/5 border-cyan-500/20" : "bg-rose-500/5 border-rose-500/20 opacity-60"
+                          }`}>
+                            <div className={`p-2 rounded-xl ${perm.granted ? "bg-cyan-500/10" : "bg-rose-500/10"}`}>
+                              {perm.granted ? <CheckCircle2 className="w-5 h-5 text-cyan-400" /> : <AlertTriangle className="w-5 h-5 text-rose-500" />}
                             </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {androidPermissions?.lastSync && (
-                        <p className="mt-6 text-[10px] font-bold text-center text-muted-foreground uppercase tracking-widest">
-                          Sincronizado por última vez: {new Date(androidPermissions.lastSync).toLocaleString()}
-                        </p>
-                      )}
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-[10px] font-black truncate uppercase tracking-tighter ${perm.granted ? "text-cyan-300" : "text-rose-400"}`}>
+                                {perm.name.split('.').pop()}
+                              </p>
+                              <p className="text-[9px] font-bold text-cyan-900 uppercase">{perm.granted ? "Access Granted" : "Restricted"}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </TabsContent>
 
                     <TabsContent value="activity" className="mt-0 focus-visible:ring-0">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="p-6 rounded-3xl border-accent/10 bg-white/50 shadow-none border-dashed">
-                          <h4 className="text-xs font-black uppercase mb-4 text-slate-400">Distribución de Portapapeles</h4>
-                          <div className="space-y-4">
-                            {!summary?.topClipboardTypes || summary.topClipboardTypes.length === 0 ? (
-                              <p className="text-xs text-slate-400 italic font-bold">Sin datos para distribuir</p>
-                            ) : (
-                              summary.topClipboardTypes.map((t) => (
-                                <div key={t.type} className="space-y-1">
-                                  <div className="flex justify-between text-[10px] font-black uppercase">
+                        <Card className="p-6 rounded-2xl border border-cyan-500/10 bg-black/40">
+                          <h4 className="text-[10px] font-black uppercase mb-6 text-cyan-500/60 tracking-[0.2em]">Distribución Térmica</h4>
+                          <div className="space-y-5">
+                            {summary?.topClipboardTypes?.map((t) => (
+                                <div key={t.type} className="space-y-2">
+                                  <div className="flex justify-between text-[9px] font-black uppercase text-cyan-400">
                                     <span>{t.type}</span>
                                     <span>{t.count}</span>
                                   </div>
-                                  <div className="h-2 bg-accent/10 rounded-full overflow-hidden">
+                                  <div className="h-1.5 bg-black rounded-full p-[1px]">
                                     <div 
-                                      className="h-full bg-primary" 
+                                      className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.5)]" 
                                       style={{ width: `${(t.count / (summary.clipboardActivity || 1)) * 100}%` }}
                                     />
                                   </div>
                                 </div>
-                              ))
-                            )}
+                              ))}
                           </div>
                         </Card>
                         
-                        <Card className="p-6 rounded-3xl border-accent/10 bg-slate-900 text-white flex flex-col justify-center items-center gap-4 text-center">
-                           <div className="p-4 bg-white/10 rounded-full">
-                             <Bell className="w-8 h-8 text-rose-500" />
+                        <Card className="p-8 rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-950/20 via-black to-black flex flex-col justify-center items-center text-center group">
+                           <div className="p-5 bg-rose-500/10 rounded-full border border-rose-500/20 group-hover:bg-rose-500/20 transition-all duration-500 shadow-[0_0_30px_rgba(244,63,94,0.1)] mb-6">
+                             <Bell className="w-10 h-10 text-rose-500 animate-pulse" />
                            </div>
                            <div>
-                             <p className="text-xs font-bold uppercase text-slate-400 mb-1">App más activa</p>
-                             <p className="text-2xl font-black text-rose-500 uppercase tracking-tighter">
-                               {summary?.mostActiveApp || "Ninguna"}
+                             <p className="text-[10px] font-black uppercase text-rose-500/60 mb-2 tracking-[0.2em]">Punto de Calor MDM</p>
+                             <p className="text-3xl font-black text-rose-500 uppercase tracking-tighter filter drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]">
+                               {summary?.mostActiveApp || "SISTEMA"}
                              </p>
                            </div>
                         </Card>
@@ -473,5 +396,6 @@ export default function AdvancedMonitoring() {
         </div>
       </div>
     </DashboardLayout>
+ardLayout>
   );
 }

@@ -63,10 +63,18 @@ function Router() {
 
   if (!mounted || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-500 text-sm">Cargando sistema...</p>
+      <div className="min-h-screen flex items-center justify-center bg-black relative overflow-hidden">
+        <div className="cyber-scanline" />
+        <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-cyan-500/5 blur-[150px] rounded-full animate-pulse" />
+        <div className="text-center relative z-10">
+          <div className="w-20 h-20 mx-auto mb-8 relative">
+            <div className="absolute inset-0 rounded-2xl border-2 border-cyan-500/20 animate-spin" style={{ animationDuration: '3s' }} />
+            <div className="absolute inset-2 rounded-xl border border-cyan-500/40 animate-spin" style={{ animationDuration: '2s', animationDirection: 'reverse' }} />
+            <div className="absolute inset-4 rounded-lg bg-cyan-500/5 flex items-center justify-center">
+              <div className="w-4 h-4 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_20px_rgba(34,211,238,0.8)]" />
+            </div>
+          </div>
+          <p className="text-[10px] font-black text-cyan-500/50 uppercase tracking-[0.4em] italic animate-pulse">Cargando Protocolo_ADM...</p>
         </div>
       </div>
     );
@@ -180,12 +188,12 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
           <Router />
-          <div className="fixed bottom-2 right-2 text-[10px] text-gray-400 opacity-50 z-50 pointer-events-none">
-            Android Device Manager - Enterprise Access
+          <div className="fixed bottom-4 right-4 text-[8px] font-black text-cyan-900 uppercase tracking-[0.4em] z-50 pointer-events-none italic opacity-30">
+            ADM_OS • V04.0 • REPO_DEPLOY
           </div>
         </TooltipProvider>
       </ThemeProvider>

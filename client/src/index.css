@@ -70,7 +70,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 180 100% 30%;
     --input: 240 20% 10%;
-    --ring: 300 100% 50%;
+    --ring: 180 100% 50%;
   }
 }
 
@@ -84,115 +84,165 @@
   }
   .dark body {
     font-family: 'Orbitron', 'Inter', monospace;
-    background-image: radial-gradient(circle at center, rgba(16, 24, 39, 1) 0%, rgba(0, 0, 0, 1) 100%);
+    background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+    background-attachment: fixed;
   }
 }
 
 @layer utilities {
-  @keyframes rgbGlow {
-    0% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.4), inset 0 0 5px rgba(255, 0, 0, 0.2); border-color: rgba(255, 0, 0, 0.6); }
-    33% { box-shadow: 0 0 10px rgba(0, 255, 0, 0.4), inset 0 0 5px rgba(0, 255, 0, 0.2); border-color: rgba(0, 255, 0, 0.6); }
-    66% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.4), inset 0 0 5px rgba(0, 255, 255, 0.2); border-color: rgba(0, 255, 255, 0.6); }
-    100% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.4), inset 0 0 5px rgba(255, 0, 0, 0.2); border-color: rgba(255, 0, 0, 0.6); }
+  @keyframes scanline {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.5; filter: drop-shadow(0 0 5px currentColor); }
+    50% { opacity: 1; filter: drop-shadow(0 0 15px currentColor); }
+  }
+
+  .cyber-scanline {
+    @apply pointer-events-none fixed inset-0 z-50 overflow-hidden;
+  }
+  .dark .cyber-scanline::after {
+    content: "";
+    @apply absolute inset-0 w-full h-[100vh] bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent;
+    animation: scanline 8s linear infinite;
   }
 
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 to-blue-700;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-600;
   }
   .dark .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-purple-600;
-    text-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-purple-500;
+    filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.3));
   }
-  .glow-cyan {
-    filter: drop-shadow(0 0 4px rgba(8, 145, 178, 0.3));
-  }
-  .dark .glow-cyan {
-    filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.8));
-  }
-  .glow-purple {
-    filter: drop-shadow(0 0 4px rgba(147, 51, 234, 0.3));
-  }
-  .dark .glow-purple {
-    filter: drop-shadow(0 0 15px rgba(255, 0, 255, 0.8));
-  }
+
   .glass-panel {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.1)] rounded-xl text-foreground;
+    @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl rounded-2xl;
   }
   .dark .glass-panel {
-    @apply bg-black/70 backdrop-blur-3xl rounded-xl text-cyan-300;
-    animation: rgbGlow 8s infinite linear;
+    @apply bg-black/60 backdrop-blur-3xl border border-cyan-500/20 shadow-[0_0_20px_rgba(0,0,0,0.4)] rounded-2xl;
   }
-  .card-neon {
-    @apply bg-white border border-slate-200 hover:border-purple-500/50 transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(168,85,247,0.1)];
+
+  .neon-border-cyan {
+    @apply border border-cyan-500/30 hover:border-cyan-400 transition-all duration-300;
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.1);
   }
-  .dark .card-neon {
-    @apply bg-black/60 backdrop-blur-2xl border border-fuchsia-500/40 hover:border-fuchsia-400 transition-all duration-300 text-fuchsia-100;
-    box-shadow: 0 0 15px rgba(217, 70, 239, 0.2);
-  }
-  .dark .card-neon:hover {
-    box-shadow: 0 0 25px rgba(217, 70, 239, 0.6), inset 0 0 10px rgba(217, 70, 239, 0.3);
-  }
-  .card-neon-cyan {
-    @apply bg-white border border-slate-200 hover:border-cyan-500/50 transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(34,211,238,0.1)];
-  }
-  .dark .card-neon-cyan {
-    @apply bg-black/60 backdrop-blur-2xl border border-cyan-500/40 hover:border-cyan-400 transition-all duration-300 text-cyan-100;
+  .dark .neon-border-cyan {
+    @apply border border-cyan-500/50 hover:border-cyan-300 transition-all duration-300;
     box-shadow: 0 0 15px rgba(34, 211, 238, 0.2);
   }
-  .dark .card-neon-cyan:hover {
-    box-shadow: 0 0 25px rgba(34, 211, 238, 0.6), inset 0 0 10px rgba(34, 211, 238, 0.3);
+  .dark .neon-border-cyan:hover {
+    box-shadow: 0 0 25px rgba(34, 211, 238, 0.4), inset 0 0 5px rgba(34, 211, 238, 0.1);
   }
-  .btn-neon {
-    @apply relative overflow-hidden bg-white border border-purple-500/30 text-purple-600 hover:bg-purple-50 hover:border-purple-600 hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all;
+
+  .neon-border-magenta {
+    @apply border border-fuchsia-500/30 hover:border-fuchsia-400 transition-all duration-300;
+    box-shadow: 0 0 10px rgba(217, 70, 239, 0.1);
   }
-  .dark .btn-neon {
-    @apply relative overflow-hidden bg-fuchsia-900/30 border border-fuchsia-500/80 text-fuchsia-300 hover:bg-fuchsia-600/50 hover:border-fuchsia-400 hover:shadow-[0_0_20px_rgba(217,70,239,0.8)] hover:text-white transition-all backdrop-blur-md uppercase tracking-wider font-bold;
+  .dark .neon-border-magenta {
+    @apply border border-fuchsia-500/50 hover:border-fuchsia-300 transition-all duration-300;
+    box-shadow: 0 0 15px rgba(217, 70, 239, 0.2);
   }
-  .btn-neon-cyan {
-    @apply relative overflow-hidden bg-white border border-cyan-500/30 text-cyan-600 hover:bg-cyan-50 hover:border-cyan-600 hover:shadow-[0_0_15px_rgba(34,211,238,0.2)] transition-all;
+
+  .text-glow-cyan {
+    @apply text-cyan-600;
   }
-  .dark .btn-neon-cyan {
-    @apply relative overflow-hidden bg-cyan-900/30 border border-cyan-500/80 text-cyan-300 hover:bg-cyan-600/50 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.8)] hover:text-white transition-all backdrop-blur-md uppercase tracking-wider font-bold;
+  .dark .text-glow-cyan {
+    @apply text-cyan-400;
+    text-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
   }
-  .status-online {
-    @apply w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)];
-  }
-  .dark .status-online {
-    @apply bg-lime-400 shadow-[0_0_15px_rgba(163,230,53,0.8)];
-  }
-  .status-offline {
-    @apply w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)];
-  }
-  .dark .status-offline {
-    @apply bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.8)];
-  }
-  .status-inactive {
-    @apply w-3 h-3 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)];
-  }
-  .dark .status-inactive {
-    @apply bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.8)];
-  }
-  .border-glow {
-    @apply border border-slate-200 shadow-sm hover:border-primary/40 transition-all;
-  }
-  .dark .border-glow {
-    @apply border border-fuchsia-500/50 shadow-[0_0_10px_rgba(217,70,239,0.2)] hover:border-fuchsia-400 hover:shadow-[0_0_20px_rgba(217,70,239,0.6)] transition-all;
-  }
-  .border-glow-cyan {
-    @apply border border-slate-200 shadow-sm hover:border-cyan-500/40 transition-all;
-  }
-  .dark .border-glow-cyan {
-    @apply border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.6)] transition-all;
-  }
+
   .input-neon {
-    @apply bg-white border border-slate-200 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/10 transition-all text-gray-900;
+    @apply bg-white/50 border border-slate-200 focus:border-cyan-500 rounded-xl transition-all;
   }
   .dark .input-neon {
-    @apply bg-black/80 border border-cyan-500/40 focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-500/50 transition-all text-cyan-200 placeholder:text-cyan-800 font-mono shadow-[inset_0_0_10px_rgba(0,0,0,0.8)];
+    @apply bg-black/40 border border-cyan-500/30 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-500/50 rounded-xl transition-all text-cyan-100 placeholder:text-cyan-900;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+  }
+
+  /* ═══ Button Neon Cyan ═══ */
+  .btn-neon-cyan {
+    @apply bg-cyan-500 text-black font-black rounded-xl border border-cyan-400/50 transition-all duration-300;
+  }
+  .btn-neon-cyan:hover {
+    @apply bg-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.4)];
+  }
+  .btn-neon-cyan:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+
+  /* ═══ Button Neon Fuchsia ═══ */
+  .btn-neon-fuchsia {
+    @apply bg-fuchsia-600 text-white font-black rounded-xl border border-fuchsia-500/50 transition-all duration-300;
+  }
+  .btn-neon-fuchsia:hover {
+    @apply bg-fuchsia-500 shadow-[0_0_25px_rgba(217,70,239,0.4)];
+  }
+
+  /* ═══ Card Neon ═══ */
+  .card-neon {
+    @apply rounded-2xl border transition-all;
+  }
+  .dark .card-neon {
+    @apply bg-black/40 border-cyan-500/10 shadow-[0_0_15px_rgba(0,0,0,0.3)];
+  }
+
+  .card-neon-cyan {
+    @apply rounded-2xl border transition-all;
+  }
+  .dark .card-neon-cyan {
+    @apply bg-black/40 border-cyan-500/20 shadow-[0_0_15px_rgba(34,211,238,0.05)] p-6;
+  }
+
+  /* ═══ Glow Labels ═══ */
+  .glow-cyan {
+    @apply text-cyan-400;
+    filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.5));
+  }
+  .glow-purple {
+    @apply text-fuchsia-400;
+    filter: drop-shadow(0 0 4px rgba(217, 70, 239, 0.5));
+  }
+
+  /* ═══ Border Glow ═══ */
+  .border-glow {
+    @apply border-cyan-500/30;
+  }
+  .border-glow-cyan {
+    @apply border-b border-cyan-500/20;
+  }
+
+  /* ═══ Status Indicators ═══ */
+  .status-online {
+    @apply w-3 h-3 rounded-full bg-cyan-400 animate-pulse;
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+  }
+  .status-offline {
+    @apply w-3 h-3 rounded-full bg-slate-500;
+  }
+  .status-inactive {
+    @apply w-3 h-3 rounded-full bg-amber-500;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+  }
+
+  /* ═══ Custom Scrollbar ═══ */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(34, 211, 238, 0.15);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(34, 211, 238, 0.3);
   }
 }
-}
 
+/* ═══ Leaflet Map Overrides ═══ */
 .leaflet-container {
   font-family: inherit;
 }
@@ -207,11 +257,37 @@
   border-radius: 8px;
 }
 
+.dark .leaflet-popup-content-wrapper {
+  background: rgba(0, 0, 0, 0.9) !important;
+  color: #22d3ee !important;
+  border: 1px solid rgba(34, 211, 238, 0.3);
+}
+
 .leaflet-control-zoom a {
   background-color: white !important;
   color: #333 !important;
 }
 
+.dark .leaflet-control-zoom a {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  color: #22d3ee !important;
+  border-color: rgba(34, 211, 238, 0.2) !important;
+}
+
 .leaflet-control-zoom a:hover {
   background-color: #f0f0f0 !important;
 }
+
+.dark .leaflet-control-zoom a:hover {
+  background-color: rgba(34, 211, 238, 0.1) !important;
+}
+
+/* ═══ Global Dark Mode Body ═══ */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background: #000 !important;
+}
+

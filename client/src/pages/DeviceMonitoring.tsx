@@ -101,134 +101,144 @@ export default function DeviceMonitoring() {
     return "▁".repeat(strength || 0) + "▔".repeat(Math.max(0, 5 - (strength || 0)));
   };
 
-  return (
-    <DashboardLayout title="Monitoreo de Dispositivos">
-      <div className="space-y-6 max-w-7xl mx-auto">
+  return    <DashboardLayout title="Monitoreo de Dispositivos">
+      <div className="cyber-scanline" />
+      <div className="space-y-8 relative z-10">
         {/* Header con Estado de Conexión */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-accent/20 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-cyan-500/10">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Panel de Monitoreo</h1>
-            <p className="text-muted-foreground italic">Supervisión en tiempo real de ubicación y mensajes</p>
+            <h1 className="text-4xl font-black tracking-tighter uppercase gradient-text flex items-center gap-3">
+              <Activity className="w-10 h-10 text-cyan-400" />
+              Centro de Telemétrica
+            </h1>
+            <p className="text-cyan-500/60 text-[10px] font-black uppercase tracking-[0.3em] mt-1 italic">Vigilancia de Nodos en Tiempo Real</p>
           </div>
           
-          <div className={`flex items-center gap-3 px-4 py-2 rounded-full border transition-all ${
-            isConnected ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-[0_0_15px_rgba(16,185,129,0.1)]" : "bg-rose-50 border-rose-200 text-rose-700"
+          <div className={`flex items-center gap-4 px-6 py-3 rounded-2xl border transition-all ${
+            isConnected 
+              ? "bg-cyan-500/10 border-cyan-500/40 text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.2)]" 
+              : "bg-rose-500/10 border-rose-500/40 text-rose-500"
           }`}>
-            <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
-            <span className="text-xs font-bold uppercase tracking-wider">
-              Servidor: {isConnected ? "Conectado" : "Desconectado/Reconectando..."}
+            <div className={`w-3 h-3 rounded-full ${isConnected ? "bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,1)] animate-pulse" : "bg-rose-500"}`} />
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Nivel_Enlace: {isConnected ? "ESTABLE" : "FUERA_DE_LINEA"}
             </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Device List (Sidebar-like on large screens) */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
-            <div className="bg-white border border-accent/20 rounded-2xl p-5 shadow-sm overflow-hidden flex flex-col h-[700px]">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-slate-700 flex items-center gap-2">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Device List */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            <div className="glass-panel border-cyan-500/20 shadow-2xl p-6 flex flex-col h-[750px]">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-black text-cyan-100 flex items-center gap-3 uppercase text-xs tracking-widest italic">
                   <Smartphone className="w-5 h-5 text-cyan-500" />
-                  Dispositivos ({devices.length})
+                  Nodos_Activos ({devices.length})
                 </h3>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50">
-                  <RefreshCw className="w-4 h-4" />
+                <Button variant="ghost" size="icon" className="h-10 w-10 text-cyan-700 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-xl border border-cyan-500/5">
+                  <RefreshCw className="w-5 h-5" />
                 </Button>
               </div>
 
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <div className="relative mb-6">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-700" />
                 <Input
-                  placeholder="Buscar por nombre o número..."
+                  placeholder="IDENTIFICAR_NODO..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-slate-50 border-slate-200 focus:border-cyan-400 focus:ring-cyan-400/20"
+                  className="input-neon h-12 pl-12"
                 />
               </div>
 
-              <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-                {devicesLoading ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                    <RefreshCw className="w-8 h-8 animate-spin mb-2 opacity-20" />
-                    <p className="text-sm">Cargando dispositivos...</p>
-                  </div>
-                ) : filteredDevices.length > 0 ? (
-                  filteredDevices.map((device: any) => (
-                    <button
-                      key={device.id}
-                      onClick={() => setSelectedDeviceId(device.id)}
-                      className={`w-full group p-4 rounded-xl border-2 transition-all text-left relative overflow-hidden ${
-                        selectedDeviceId === device.id
-                          ? "border-cyan-500 bg-cyan-50/50 shadow-md shadow-cyan-500/5"
-                          : "border-slate-100 bg-slate-50/30 hover:border-slate-200 hover:bg-white"
-                      }`}
-                    >
-                      {selectedDeviceId === device.id && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-500" />
-                      )}
-                      
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex flex-col">
-                          <span className={`font-bold text-sm ${selectedDeviceId === device.id ? "text-cyan-700" : "text-slate-700"}`}>
-                            {device.deviceName}
-                          </span>
-                          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70">
-                            {device.model || "Modelo Desconocido"}
-                          </span>
+              <ScrollArea className="flex-1 pr-2 cyber-scrollbar">
+                <div className="space-y-3">
+                  {devicesLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-cyan-500/20">
+                      <RefreshCw className="w-10 h-10 animate-spin mb-4" />
+                      <p className="text-[9px] font-black uppercase tracking-widest">Sincronizando...</p>
+                    </div>
+                  ) : filteredDevices.length > 0 ? (
+                    filteredDevices.map((device: any) => (
+                      <button
+                        key={device.id}
+                        onClick={() => setSelectedDeviceId(device.id)}
+                        className={`w-full group p-5 rounded-2xl border transition-all text-left relative overflow-hidden ${
+                          selectedDeviceId === device.id
+                            ? "border-cyan-500/50 bg-cyan-500/10 shadow-[inset_0_0_20px_rgba(34,211,238,0.1)]"
+                            : "border-cyan-500/5 bg-black/40 hover:border-cyan-500/30"
+                        }`}
+                      >
+                        <div className="relative z-10">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex flex-col">
+                              <span className={`font-black text-xs uppercase tracking-tight transition-colors ${selectedDeviceId === device.id ? "text-cyan-300" : "text-cyan-100"}`}>
+                                {device.deviceName}
+                              </span>
+                              <span className="text-[9px] uppercase font-bold tracking-[0.2em] text-cyan-900 mt-1">
+                                {device.model || "GENERIC_HW"}
+                              </span>
+                            </div>
+                            <div className={`text-[8px] px-2.5 py-1 rounded-lg border font-black uppercase tracking-widest ${
+                              device.status === 'online' ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-500'
+                            }`}>
+                              {device.status === 'online' ? 'ACTIVE' : 'IDLE'}
+                            </div>
+                          </div>
+                          
+                          <p className="text-[10px] text-cyan-900 mb-4 font-mono font-bold tracking-widest">{device.phoneNumber || "NO_SIM_ID"}</p>
+                          
+                          <div className="flex items-center gap-5 text-[10px] font-black text-cyan-700">
+                            <div className="flex items-center gap-2">
+                              <Battery className={`w-4 h-4 ${device.batteryLevel < 20 ? "text-rose-500" : "text-cyan-400"}`} />
+                              <span>{device.batteryLevel}%</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Signal className="w-4 h-4 text-fuchsia-500" />
+                              <span className="font-mono tracking-tighter">{getSignalBars(device.signalStrength)}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className={`text-[10px] px-2 py-0.5 rounded-full border font-bold uppercase ${getStatusColor(device.status)}`}>
-                          {device.status === 'online' ? 'En línea' : 'Desconectado'}
-                        </div>
-                      </div>
-                      
-                      <p className="text-xs text-slate-500 mb-3 font-mono">{device.phoneNumber || "S/N"}</p>
-                      
-                      <div className="flex items-center gap-4 text-xs font-semibold text-slate-600">
-                        <div className="flex items-center gap-1.5">
-                          <Battery className={`w-3.5 h-3.5 ${device.batteryLevel < 20 ? "text-rose-500" : "text-emerald-500"}`} />
-                          <span>{device.batteryLevel}%</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Signal className="w-3.5 h-3.5 text-blue-500" />
-                          <span>{getSignalBars(device.signalStrength)}</span>
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="text-center py-12">
-                    <Smartphone className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                    <p className="text-sm text-slate-400">No se encontraron dispositivos</p>
-                  </div>
-                )}
-              </div>
+                        {selectedDeviceId === device.id && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,1)]" />
+                        )}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="text-center py-20">
+                      <Smartphone className="w-16 h-16 text-cyan-900/10 mx-auto mb-4" />
+                      <p className="text-[10px] text-cyan-900 font-black uppercase tracking-widest italic">No se detectaron frecuencias</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </div>
           </div>
 
           {/* Main Monitoring Detail Area */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
+          <div className="lg:col-span-8 flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-500">
             {selectedDevice ? (
               <>
                 {/* Active Device Quick Stats */}
-                <div className="bg-white border border-cyan-100 rounded-2xl p-6 shadow-sm relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-full -mr-16 -mt-16 opacity-50" />
+                <div className="glass-panel border-cyan-500/20 shadow-2xl p-8 relative overflow-hidden group">
+                   <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-cyan-500/10 transition-all duration-1000" />
                    
-                   <div className="flex flex-wrap items-center justify-between gap-4 relative z-10 mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center text-cyan-600 shadow-inner">
-                        <Smartphone className="w-6 h-6" />
+                   <div className="flex flex-wrap items-center justify-between gap-6 relative z-10 mb-8 border-b border-cyan-500/10 pb-6">
+                    <div className="flex items-center gap-5">
+                      <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[inset_0_0_20px_rgba(34,211,238,0.2)]">
+                        <Smartphone className="w-8 h-8 animate-pulse" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold text-slate-800">{selectedDevice.deviceName}</h2>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground uppercase tracking-widest font-semibold">
-                          <span className="text-cyan-600">{selectedDevice.model || "Premium"}</span>
-                          <span>•</span>
-                          <span>{selectedDevice.phoneNumber || "Sin número"}</span>
+                        <h2 className="text-3xl font-black text-cyan-100 italic tracking-tighter uppercase">{selectedDevice.deviceName}</h2>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em]">{selectedDevice.model || "ELITE_CLASS"}</span>
+                          <div className="w-1.5 h-1.5 rounded-full bg-cyan-900" />
+                          <span className="text-[10px] font-black text-fuchsia-500 uppercase tracking-widest font-mono">{selectedDevice.phoneNumber || "ENCRYPTED_ID"}</span>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => {
+                    <div className="flex gap-3">
+                      <Button variant="ghost" className="btn-neon-cyan h-12 px-6 rounded-xl border border-cyan-500/30 font-black text-[10px] uppercase tracking-widest" onClick={() => {
                         if (!selectedDevice) return;
                         const csvContent = [
                           ["Propiedad", "Valor"],
@@ -246,40 +256,39 @@ export default function DeviceMonitoring() {
                         const url = URL.createObjectURL(blob);
                         const link = document.createElement("a");
                         link.setAttribute("href", url);
-                        link.setAttribute("download", `reporte_${selectedDevice.deviceName.replace(/\s/g, "_")}.csv`);
+                        link.setAttribute("download", `telemetria_${selectedDevice.deviceName.replace(/\s/g, "_")}.csv`);
                         link.style.visibility = "hidden";
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-                        
-                        toast.success("Reporte generado exitosamente");
+                        toast.success("Telemetría exportada");
                       }}>
-                        <Download className="w-4 h-4 mr-2" /> Reporte
+                        <Download className="w-5 h-5 mr-3" /> Export_CSV
                       </Button>
-                      <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => {
+                      <Button className="btn-neon-cyan h-12 px-6 rounded-xl font-black text-[10px] uppercase tracking-widest" onClick={() => {
                          trpc.devices.refreshStatus.useMutation().mutate({ deviceId: selectedDeviceId! });
-                         toast.success("Solicitud de actualización enviada al dispositivo");
+                         toast.success("Sincronización forzada enviada");
                       }}>
-                        <RefreshCw className="w-4 h-4 mr-2" /> Actualizar
+                        <RefreshCw className="w-5 h-5 mr-3" /> Force_Sync
                       </Button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
                     {[
-                      { label: "Batería", value: `${selectedDevice.batteryLevel}%`, icon: Battery, color: "text-emerald-500", bg: "bg-emerald-50" },
-                      { label: "Nivel de Señal", value: getSignalBars(selectedDevice.signalStrength), icon: Signal, color: "text-blue-500", bg: "bg-blue-50" },
-                      { label: "Estado del Sistema", value: selectedDevice.status === "online" ? "Activo" : "Inactivo", icon: Activity, color: "text-violet-500", bg: "bg-violet-50" },
-                      { label: "Última Actividad", value: currentLocation ? formatDistanceToNow(new Date(currentLocation.timestamp), { addSuffix: true, locale: es }) : "Hace instantes", icon: Clock, color: "text-amber-500", bg: "bg-amber-50" },
+                      { label: "Batería", value: `${selectedDevice.batteryLevel}%`, icon: Battery, color: "text-cyan-400", bg: "bg-cyan-500/10" },
+                      { label: "Signal_Link", value: getSignalBars(selectedDevice.signalStrength), icon: Signal, color: "text-fuchsia-500", bg: "bg-fuchsia-500/10" },
+                      { label: "Node_Status", value: selectedDevice.status === "online" ? "ACTIVE" : "IDLE", icon: Activity, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+                      { label: "Last_Heartbeat", value: currentLocation ? formatDistanceToNow(new Date(currentLocation.timestamp), { addSuffix: true, locale: es }).toUpperCase() : "SYNCING...", icon: Clock, color: "text-amber-400", bg: "bg-amber-500/10" },
                     ].map((stat, i) => (
-                      <div key={i} className="p-4 rounded-xl border border-slate-100 bg-white/50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className={`p-1.5 rounded-lg ${stat.bg} ${stat.color}`}>
-                            <stat.icon className="w-3.5 h-3.5" />
+                      <div key={i} className="p-5 rounded-2xl border border-cyan-500/5 bg-black/40 hover:border-cyan-500/20 transition-all group/stat">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className={`p-2 rounded-xl ${stat.bg} ${stat.color} border border-transparent group-hover/stat:border-current transition-all`}>
+                            <stat.icon className="w-4 h-4" />
                           </div>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.label}</span>
+                          <span className="text-[9px] font-black text-cyan-900 uppercase tracking-widest">{stat.label}</span>
                         </div>
-                        <p className="text-sm font-black text-slate-700">{stat.value}</p>
+                        <p className={`text-sm font-black uppercase tracking-tight ${stat.color} transition-all group-hover/stat:scale-105 origin-left`}>{stat.value}</p>
                       </div>
                     ))}
                   </div>
@@ -287,57 +296,57 @@ export default function DeviceMonitoring() {
 
                 {/* Tracking Tabs */}
                 <Tabs defaultValue="gps" className="w-full">
-                  <TabsList className="flex gap-2 bg-transparent h-auto p-0 mb-4">
-                    <TabsTrigger value="gps" className="flex-1 py-3 rounded-xl border border-slate-200 bg-white data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:border-cyan-600 data-[state=active]:shadow-lg data-[state=active]:shadow-cyan-600/20 transition-all font-bold">
-                      <MapPin className="w-4 h-4 mr-2" />
-                      Rastreo GPS
+                  <TabsList className="bg-black/40 border border-cyan-500/20 p-1.5 h-16 rounded-2xl gap-3 mb-8">
+                    <TabsTrigger value="gps" className="flex-1 rounded-xl data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:neon-border-cyan font-black text-xs uppercase tracking-widest transition-all">
+                      <MapPin className="w-5 h-5 mr-3" />
+                      Geolocalización
                     </TabsTrigger>
-                    <TabsTrigger value="sms" className="flex-1 py-3 rounded-xl border border-slate-200 bg-white data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-600/20 transition-all font-bold">
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Bandeja SMS ({smsMessages.length})
+                    <TabsTrigger value="sms" className="flex-1 rounded-xl data-[state=active]:bg-fuchsia-500/20 data-[state=active]:text-fuchsia-300 data-[state=active]:neon-border-magenta font-black text-xs uppercase tracking-widest transition-all">
+                      <MessageSquare className="w-5 h-5 mr-3" />
+                      Payload SMS ({smsMessages.length})
                     </TabsTrigger>
                   </TabsList>
 
                   {/* GPS View */}
-                  <TabsContent value="gps" className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mt-0 outline-none">
+                  <TabsContent value="gps" className="glass-panel border-cyan-500/10 shadow-2xl p-8 mt-0 animate-in fade-in duration-500">
                     {currentLocation ? (
-                      <div className="space-y-6">
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-2 md:grid-cols-3 gap-6">
+                      <div className="space-y-8">
+                        <div className="bg-black/40 p-6 rounded-2xl border border-cyan-500/10 grid grid-cols-2 md:grid-cols-3 gap-8">
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Latitud</p>
-                            <p className="text-sm font-mono font-bold text-slate-700">{currentLocation.latitude.toFixed(6)}</p>
+                            <p className="text-[9px] font-black text-cyan-500 uppercase tracking-[0.3em] mb-2">Latitude_Coord</p>
+                            <p className="text-base font-mono font-bold text-cyan-100">{currentLocation.latitude.toFixed(6)}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Longitud</p>
-                            <p className="text-sm font-mono font-bold text-slate-700">{currentLocation.longitude.toFixed(6)}</p>
+                            <p className="text-[9px] font-black text-cyan-500 uppercase tracking-[0.3em] mb-2">Longitude_Coord</p>
+                            <p className="text-base font-mono font-bold text-cyan-100">{currentLocation.longitude.toFixed(6)}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Precisión</p>
-                            <div className="flex items-center gap-1.5 capitalize font-bold text-slate-700 text-sm">
-                              <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                            <p className="text-[9px] font-black text-cyan-500 uppercase tracking-[0.3em] mb-2">Accuracy_Radius</p>
+                            <div className="flex items-center gap-3 font-black text-cyan-400 text-base">
+                              <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(34,211,238,1)]" />
                               ± {currentLocation.accuracy.toFixed(1)}m
                             </div>
                           </div>
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <h4 className="font-bold text-slate-700 flex items-center gap-2">
-                             <Activity className="w-4 h-4 text-cyan-500" />
-                             Mapa de Ubicación
+                          <h4 className="font-black text-cyan-100 flex items-center gap-3 uppercase text-xs tracking-widest italic">
+                             <MapIcon className="w-5 h-5 text-cyan-500" />
+                             Interfaz Visual de Rastreo
                           </h4>
                           <Button 
                             variant="ghost" 
                             size="sm" 
                             onClick={() => setShowMap(!showMap)}
-                            className="text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 font-bold text-xs"
+                            className="text-cyan-500 hover:text-cyan-300 hover:bg-cyan-500/10 font-black text-[9px] uppercase tracking-widest rounded-xl border border-cyan-500/20 px-4"
                           >
-                            {showMap ? <><EyeOff className="w-4 h-4 mr-2" /> Ocultar Mapa</> : <><Eye className="w-4 h-4 mr-2" /> Mostrar Mapa</>}
+                            {showMap ? <><EyeOff className="w-4 h-4 mr-3" /> Hide_Map</> : <><Eye className="w-4 h-4 mr-3" /> Show_Map</>}
                           </Button>
                         </div>
 
                         {showMap && currentLocation && (
-                          <div className="space-y-4">
-                            <div className="w-full h-80 rounded-2xl overflow-hidden border border-slate-200">
+                          <div className="space-y-6">
+                            <div className="w-full h-[450px] rounded-3xl overflow-hidden border-2 border-cyan-500/30 shadow-[0_0_40px_rgba(34,211,238,0.1)] grayscale">
                               <MapView
                                 className="w-full h-full"
                                 initialCenter={{
@@ -351,112 +360,123 @@ export default function DeviceMonitoring() {
                                     lat: currentLocation.latitude,
                                     lng: currentLocation.longitude
                                   },
-                                  title: selectedDevice?.deviceName || "Dispositivo",
+                                  title: selectedDevice?.deviceName || "NODO_ACTIVO",
                                   icon: "online"
                                 }]}
                                 onMapReady={(map) => { mapRef.current = map; }}
                               />
                             </div>
                             
-                            <div className="flex justify-between items-center px-2">
-                              <div className="flex items-center gap-4">
+                            <div className="flex justify-between items-center px-4 py-4 bg-cyan-500/5 rounded-2xl border border-cyan-500/10">
+                              <div className="flex items-center gap-5">
                                 {currentLocation.speed !== undefined && (
-                                  <div className="flex items-center gap-2">
-                                    <div className="p-1 px-2 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase">
-                                       Velocidad: {Math.round(currentLocation.speed * 3.6)} km/h
-                                    </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-[8px] font-black text-cyan-900 uppercase mb-1">Velocity_Vector</span>
+                                    <span className="text-xs font-black text-cyan-400 uppercase tracking-tighter">{Math.round(currentLocation.speed * 3.6)} km/h</span>
                                   </div>
                                 )}
                                 {currentLocation.bearing !== undefined && (
-                                  <div className="flex items-center gap-2">
-                                    <div className="p-1 px-2 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
-                                       Rumbo: {Math.round(currentLocation.bearing)}°
-                                    </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-[8px] font-black text-cyan-900 uppercase mb-1">Compass_Bearing</span>
+                                    <span className="text-xs font-black text-cyan-400 uppercase tracking-tighter">{Math.round(currentLocation.bearing)}°</span>
                                   </div>
                                 )}
                               </div>
-                              <span className="text-[10px] text-muted-foreground italic">Sincronizado vía WebSocket</span>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                                <span className="text-[9px] text-cyan-900 font-black uppercase italic tracking-widest">WS_STREAMING_ACTIVE</span>
+                              </div>
                             </div>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div className="text-center py-20 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                        <MapPin className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-                        <h4 className="text-lg font-bold text-slate-400">Sin Ubicación</h4>
-                        <p className="text-sm text-slate-400 max-w-xs mx-auto mt-2">No hemos recibido coordenadas recientes de este dispositivo.</p>
+                      <div className="text-center py-32 bg-cyan-950/20 rounded-3xl border-2 border-dashed border-cyan-500/10">
+                        <MapPin className="w-20 h-20 text-cyan-900/20 mx-auto mb-6" />
+                        <h4 className="text-xl font-black text-cyan-100 uppercase tracking-widest italic">Signal_Lost</h4>
+                        <p className="text-[10px] text-cyan-900 font-bold uppercase tracking-[0.3em] max-w-xs mx-auto mt-6">Sin coordenadas de telemetría recientes para este nodo.</p>
                       </div>
                     )}
                   </TabsContent>
 
                   {/* SMS View */}
-                  <TabsContent value="sms" className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mt-0 outline-none">
-                    <div className="flex items-center justify-between mb-6">
-                       <h4 className="font-bold text-slate-700 flex items-center gap-2">
-                          <MessageSquare className="w-4 h-4 text-blue-500" />
-                          Historial de SMS
+                  <TabsContent value="sms" className="glass-panel border-fuchsia-500/10 shadow-2xl p-8 mt-0 animate-in fade-in duration-500">
+                    <div className="flex items-center justify-between mb-8 border-b border-fuchsia-500/10 pb-6">
+                       <h4 className="font-black text-cyan-100 flex items-center gap-3 uppercase text-xs tracking-widest italic">
+                          <MessageSquare className="w-5 h-5 text-fuchsia-500" />
+                          Registro de Intercepciones
                        </h4>
-                       <div className="flex items-center gap-2">
-                         <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Entrante</span>
+                       <div className="flex items-center gap-6">
+                         <div className="flex items-center gap-2.5">
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">IN_STREAM</span>
                          </div>
-                         <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-blue-500" />
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Saliente</span>
+                         <div className="flex items-center gap-2.5">
+                            <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                            <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">OUT_STREAM</span>
                          </div>
                        </div>
                     </div>
 
                     {smsMessages.length > 0 ? (
-                      <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                        {smsMessages.map((sms: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className={`p-4 rounded-2xl border transition-all hover:shadow-sm ${
-                              sms.direction === "incoming"
-                                ? "border-emerald-100 bg-emerald-50/30 ml-0 mr-12"
-                                : "border-blue-100 bg-blue-50/30 ml-12 mr-0"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                                sms.direction === "incoming" 
-                                  ? "bg-emerald-100 border-emerald-200 text-emerald-700" 
-                                  : "bg-blue-100 border-blue-200 text-blue-700"
-                              }`}>
-                                {sms.phoneNumber}
-                              </span>
-                              <span className="text-[10px] font-bold text-slate-400">
-                                {formatDistanceToNow(new Date(sms.timestamp), { addSuffix: true, locale: es })}
-                              </span>
+                      <ScrollArea className="h-[550px] pr-6 cyber-scrollbar">
+                        <div className="space-y-5">
+                          {smsMessages.map((sms: any, idx: number) => (
+                            <div
+                              key={idx}
+                              className={`p-6 rounded-3xl border transition-all group ${
+                                sms.direction === "incoming"
+                                  ? "border-emerald-500/20 bg-emerald-500/5 ml-0 mr-20 hover:border-emerald-500/40"
+                                  : "border-blue-500/20 bg-blue-500/5 ml-20 mr-0 hover:border-blue-500/40"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-4">
+                                <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-xl border tracking-widest ${
+                                  sms.direction === "incoming" 
+                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                                    : "bg-blue-500/10 border-blue-500/30 text-blue-400"
+                                }`}>
+                                  {sms.phoneNumber}
+                                </span>
+                                <span className="text-[9px] font-bold text-cyan-900 group-hover:text-cyan-500 transition-colors uppercase italic font-mono">
+                                  {formatDistanceToNow(new Date(sms.timestamp), { addSuffix: true, locale: es }).toUpperCase()}
+                                </span>
+                              </div>
+                              <p className="text-sm text-cyan-100 leading-relaxed font-bold font-mono tracking-tight group-hover:text-cyan-300 transition-colors">{sms.message}</p>
                             </div>
-                            <p className="text-sm text-slate-700 leading-relaxed font-medium">{sms.message}</p>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
                     ) : (
-                      <div className="text-center py-20 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                        <MessageSquare className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-                        <h4 className="text-lg font-bold text-slate-400">Bandeja Vacía</h4>
-                        <p className="text-sm text-slate-400 max-w-xs mx-auto mt-2">No se han registrado mensajes SMS recientemente.</p>
+                      <div className="text-center py-32 bg-fuchsia-950/10 rounded-3xl border-2 border-dashed border-fuchsia-500/10">
+                        <MessageSquare className="w-20 h-20 text-fuchsia-900/10 mx-auto mb-6" />
+                        <h4 className="text-xl font-black text-cyan-100 uppercase tracking-widest italic">Inbox_Empty</h4>
+                        <p className="text-[10px] text-cyan-900 font-bold uppercase tracking-[0.3em] max-w-xs mx-auto mt-6">No se han interceptado transmisiones de datos SMS recientemente.</p>
                       </div>
                     )}
                   </TabsContent>
                 </Tabs>
               </>
             ) : (
-              <div className="bg-white border border-slate-200 rounded-3xl p-20 text-center flex flex-col items-center justify-center h-full shadow-sm">
-                <div className="w-24 h-24 rounded-full bg-slate-50 flex items-center justify-center mb-6">
-                   <Smartphone className="w-12 h-12 text-slate-200" />
+              <div className="glass-panel border-cyan-500/10 shadow-2xl p-20 text-center flex flex-col items-center justify-center h-full group border-dashed">
+                <div className="w-32 h-32 rounded-full bg-cyan-500/5 flex items-center justify-center mb-10 border border-cyan-500/10 shadow-[inset_0_0_40px_rgba(34,211,238,0.1)] group-hover:shadow-[inset_0_0_60px_rgba(34,211,238,0.2)] transition-all duration-700">
+                   <Smartphone className="w-16 h-16 text-cyan-500/20 group-hover:text-cyan-500/40 group-hover:scale-110 transition-all duration-700 animate-pulse" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-400">Seleccione un Dispositivo</h3>
-                <p className="text-slate-400 text-sm mt-3 max-w-sm">
-                  Elija un dispositivo de la lista lateral para comenzar el monitoreo en tiempo real de su ubicación y comunicaciones.
+                <h3 className="text-2xl font-black text-cyan-100 uppercase tracking-[0.2em] italic gradient-text">Seleccionar Nodo de Red</h3>
+                <p className="text-cyan-900 font-bold uppercase text-[10px] tracking-[0.4em] max-w-sm mt-8 leading-relaxed">
+                  Elija un terminal activo de la matriz lateral para inicializar el protocolo de monitoreo remoto y telemetría de campo.
                 </p>
+                <div className="mt-12 flex gap-4">
+                   <div className="h-0.5 w-16 bg-cyan-500/20" />
+                   <div className="h-0.5 w-6 bg-cyan-500/60 animate-bounce" />
+                   <div className="h-0.5 w-16 bg-cyan-500/20" />
+                </div>
               </div>
             )}
           </div>
+        </div>
+      </div>
+    </DashboardLayout>
         </div>
       </div>
       

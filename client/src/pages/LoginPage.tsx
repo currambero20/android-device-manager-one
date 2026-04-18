@@ -90,65 +90,94 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      {/* Background Pattern */}
-      <div
-        className="absolute inset-0 opacity-5"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, #1a1a2e 1px, transparent 0)",
-          backgroundSize: "40px 40px",
-        }}
-      />
+    <div className="min-h-screen flex items-center justify-center bg-transparent relative overflow-hidden font-sans">
+      <div className="cyber-scanline" />
+      
+      {/* Dynamic Background Elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-fuchsia-500/10 blur-[120px] rounded-full animate-pulse [animation-delay:2s]" />
 
-      <div className="relative w-full max-w-md px-6">
+      <div className="relative w-full max-w-lg px-6 z-10">
         {/* Logo & Header */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-2xl mb-5 shadow-lg shadow-blue-200">
-            <Smartphone className="w-10 h-10 text-white" />
+        <div className="text-center mb-12 group">
+          <div className="inline-flex items-center justify-center w-24 h-24 glass-panel border-cyan-500/20 mb-6 shadow-[0_0_30px_rgba(34,211,238,0.2)] group-hover:scale-110 group-hover:rotate-6 transition-all duration-700">
+            <Smartphone className="w-12 h-12 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Android Device Manager
+          <h1 className="text-5xl font-black tracking-tighter uppercase gradient-text italic mb-3">
+            ADM_OS v4.0
           </h1>
-          <p className="text-gray-500 text-sm">
-            Gestión central de dispositivos Android
+          <p className="text-cyan-500/50 text-[10px] font-black uppercase tracking-[0.4em] italic mb-2">
+            Protocolo de Acceso Seguro de Nivel 7
           </p>
+          <div className="w-32 h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent mx-auto opacity-30" />
         </div>
 
         {/* Login Card */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-8">
-
+        <div className="glass-panel border-cyan-500/20 shadow-2xl p-10 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50" />
+          
           {/* ─── STEP: LOGIN ─── */}
           {step === "login" && (
             <>
-              <div className="flex items-center gap-2 mb-6">
-                <Shield className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-800">Iniciar Sesión</h2>
+              <div className="flex items-center gap-3 mb-10">
+                <Shield className="w-5 h-5 text-cyan-400 animate-pulse" />
+                <h2 className="text-xs font-black uppercase tracking-[0.3em] text-cyan-100 italic">Auth_Sequence</h2>
               </div>
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Usuario</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="correo@ejemplo.com" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" disabled={loading} autoComplete="username" />
+              <form onSubmit={handleLogin} className="space-y-8">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest ml-1">Terminal_ID</label>
+                  <div className="relative group/input">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-900 group-focus-within/input:text-cyan-400 transition-colors" />
+                    <input 
+                      type="text" 
+                      value={username} 
+                      onChange={(e) => setUsername(e.target.value)} 
+                      placeholder="USER@NETWORK.NET" 
+                      className="w-full pl-12 pr-4 py-4 bg-black/40 border border-cyan-500/10 rounded-2xl text-cyan-100 placeholder-cyan-900 focus:outline-none focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-500/30 transition-all font-mono text-sm tracking-tight" 
+                      disabled={loading} 
+                      autoComplete="username" 
+                    />
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Contraseña</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full pl-10 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" disabled={loading} autoComplete="current-password" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest ml-1">Pass_Key</label>
+                  <div className="relative group/input">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-900 group-focus-within/input:text-cyan-400 transition-colors" />
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      placeholder="••••••••" 
+                      className="w-full pl-12 pr-14 py-4 bg-black/40 border border-cyan-500/10 rounded-2xl text-cyan-100 placeholder-cyan-900 focus:outline-none focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-500/30 transition-all font-mono text-sm" 
+                      disabled={loading} 
+                      autoComplete="current-password" 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)} 
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-cyan-900 hover:text-cyan-400 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
-                <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-blue-200 mt-2">
-                  {loading ? (<><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Iniciando...</>) : "Iniciar Sesión"}
+                <button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="btn-neon-cyan w-full py-4 font-black uppercase tracking-[0.3em] text-xs h-14 flex items-center justify-center gap-3 group/btn hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_20px_rgba(34,211,238,0.1)]"
+                >
+                  {loading ? (
+                    <><div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />ANALYZING...</>
+                  ) : (
+                    <>INICIAR_SESIÓN<ArrowLeft className="w-4 h-4 rotate-180 group-hover:translate-x-1 transition-transform" /></>
+                  )}
                 </button>
               </form>
-              <button onClick={() => setStep("forgot")} className="w-full mt-4 text-sm text-blue-600 hover:text-blue-800 transition-colors text-center">
-                ¿Olvidaste tu contraseña?
+              <button 
+                onClick={() => setStep("forgot")} 
+                className="w-full mt-8 text-[9px] font-black text-cyan-900 hover:text-cyan-400 uppercase tracking-widest transition-colors text-center italic"
+              >
+                ¿Credenciales perdidas? Recuperar enlace_
               </button>
             </>
           )}
@@ -156,22 +185,41 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
           {/* ─── STEP: 2FA ─── */}
           {step === "twofa" && (
             <>
-              <div className="flex items-center gap-2 mb-6">
-                <KeyRound className="w-5 h-5 text-violet-600" />
-                <h2 className="text-lg font-semibold text-gray-800">Verificación en 2 Pasos</h2>
+              <div className="flex items-center gap-3 mb-10">
+                <KeyRound className="w-5 h-5 text-fuchsia-400 animate-pulse" />
+                <h2 className="text-xs font-black uppercase tracking-[0.3em] text-fuchsia-400 italic">Verify_Identity</h2>
               </div>
-              <p className="text-sm text-gray-500 mb-5">Ingresa el código de 6 dígitos enviado a tu correo electrónico.</p>
-              <form onSubmit={handle2FA} className="space-y-5">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Código de verificación</label>
-                  <input type="text" value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" className="w-full text-center text-3xl tracking-[0.5em] py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all" disabled={loading} maxLength={6} inputMode="numeric" />
+              <p className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest mb-8 leading-relaxed italic">
+                Carga de token de seguridad... Inyecta el código de 6 dígitos enviado a tu nodo de comunicación.
+              </p>
+              <form onSubmit={handle2FA} className="space-y-8">
+                <div className="space-y-3">
+                  <input 
+                    type="text" 
+                    value={otpCode} 
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))} 
+                    placeholder="000000" 
+                    className="w-full text-center text-4xl tracking-[0.6em] py-6 bg-black/40 border border-fuchsia-500/20 rounded-3xl text-fuchsia-400 placeholder-fuchsia-900 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/30 transition-all font-mono italic" 
+                    disabled={loading} 
+                    maxLength={6} 
+                    inputMode="numeric" 
+                  />
                 </div>
-                <button type="submit" disabled={loading || otpCode.length !== 6} className="w-full py-3 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300 text-white font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-violet-200">
-                  {loading ? (<><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Verificando...</>) : "Verificar Código"}
+                <button 
+                  type="submit" 
+                  disabled={loading || otpCode.length !== 6} 
+                  className="btn-neon-fuchsia w-full py-4 bg-fuchsia-600 hover:bg-fuchsia-500 disabled:bg-fuchsia-900/50 text-white font-black h-14 uppercase tracking-[0.3em] text-xs shadow-[0_0_20px_rgba(217,70,239,0.2)] transition-all"
+                >
+                  {loading ? (
+                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />DECRYPTING...</>
+                  ) : "AUTENTICAR_TOKEN"}
                 </button>
               </form>
-              <button onClick={() => { setStep("login"); setOtpCode(""); }} className="flex items-center gap-1 mt-5 text-sm text-gray-500 hover:text-gray-700 transition-colors mx-auto">
-                <ArrowLeft className="w-4 h-4" /> Volver al login
+              <button 
+                onClick={() => { setStep("login"); setOtpCode(""); }} 
+                className="flex items-center gap-2 mt-8 text-[9px] font-black text-cyan-900 hover:text-cyan-400 uppercase tracking-widest transition-colors mx-auto italic"
+              >
+                <ArrowLeft className="w-4 h-4" /> ABORTAR_SECUENCIA
               </button>
             </>
           )}
@@ -179,49 +227,76 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
           {/* ─── STEP: FORGOT PASSWORD ─── */}
           {step === "forgot" && (
             <>
-              <div className="flex items-center gap-2 mb-6">
-                <Mail className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-800">Recuperar Contraseña</h2>
+              <div className="flex items-center gap-3 mb-10">
+                <Mail className="w-5 h-5 text-cyan-400 animate-pulse" />
+                <h2 className="text-xs font-black uppercase tracking-[0.3em] text-cyan-100 italic">Recovery_Link</h2>
               </div>
-              <p className="text-sm text-gray-500 mb-5">Te enviaremos un enlace para restablecer tu contraseña.</p>
-              <form onSubmit={handleForgot} className="space-y-5">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Correo electrónico</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="tu@correo.com" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" disabled={loading} />
+              <p className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest mb-8 leading-relaxed italic">
+                Enviando sonda de recuperación... Ingresa tu dirección de red para recibir el enlace de acceso.
+              </p>
+              <form onSubmit={handleForgot} className="space-y-8">
+                <div className="space-y-3">
+                  <div className="relative group/input">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-900 group-focus-within/input:text-cyan-400 transition-colors" />
+                    <input 
+                      type="email" 
+                      value={resetEmail} 
+                      onChange={(e) => setResetEmail(e.target.value)} 
+                      placeholder="USER@NETWORK.NET" 
+                      className="w-full pl-12 pr-4 py-4 bg-black/40 border border-cyan-500/10 rounded-2xl text-cyan-100 placeholder-cyan-900 focus:outline-none focus:ring-1 focus:ring-cyan-500/50 transition-all font-mono text-sm" 
+                      disabled={loading} 
+                    />
                   </div>
                 </div>
-                <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-blue-200">
-                  {loading ? (<><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Enviando...</>) : "Enviar Enlace"}
+                <button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="btn-neon-cyan w-full py-4 text-xs h-14 font-black uppercase tracking-[0.3em] shadow-[0_0_20px_rgba(34,211,238,0.1)] transition-all"
+                >
+                  {loading ? (
+                    <><div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />SENDING...</>
+                  ) : "ENVIAR_SONDA"}
                 </button>
               </form>
-              <button onClick={() => setStep("login")} className="flex items-center gap-1 mt-5 text-sm text-gray-500 hover:text-gray-700 transition-colors mx-auto">
-                <ArrowLeft className="w-4 h-4" /> Volver al login
+              <button 
+                onClick={() => setStep("login")} 
+                className="flex items-center gap-2 mt-8 text-[9px] font-black text-cyan-900 hover:text-cyan-400 uppercase tracking-widest transition-colors mx-auto italic"
+              >
+                <ArrowLeft className="w-4 h-4" /> VOLVER_AL_NODO
               </button>
             </>
           )}
 
           {/* ─── STEP: EMAIL SENT ─── */}
           {step === "reset-sent" && (
-            <div className="text-center py-4">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                <Mail className="w-8 h-8 text-green-600" />
+            <div className="text-center py-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-cyan-500/10 border border-cyan-500/30 rounded-full mb-8 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+                <Mail className="w-10 h-10 text-cyan-400 animate-bounce" />
               </div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">¡Correo Enviado!</h2>
-              <p className="text-sm text-gray-500 mb-6">Revisa tu bandeja de entrada y haz clic en el enlace para cambiar tu contraseña.</p>
-              <button onClick={() => setStep("login")} className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 mx-auto">
-                <ArrowLeft className="w-4 h-4" /> Volver al login
+              <h2 className="text-xl font-black text-white uppercase tracking-tighter italic mb-4">¡SONDA ENVIADA!</h2>
+              <p className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest mb-10 leading-relaxed italic">
+                Sincronización en proceso. Revisa tu inbox para completar la secuencia de restablecimiento.
+              </p>
+              <button 
+                onClick={() => setStep("login")} 
+                className="text-[9px] font-black text-cyan-400 hover:text-cyan-100 uppercase tracking-[0.3em] flex items-center gap-2 mx-auto transition-all bg-cyan-500/5 px-6 py-3 rounded-full border border-cyan-500/20"
+              >
+                <ArrowLeft className="w-4 h-4" /> RETORNAR_LOGIN
               </button>
             </div>
           )}
-
         </div>
 
-
-        {/* Version Tag */}
-        <div className="text-center text-xs text-muted-foreground mt-8">
-          Secure Production Environment
+        {/* System Footer */}
+        <div className="mt-12 text-center overflow-hidden">
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="h-[1px] w-12 bg-gradient-to-r from-transparent to-cyan-500/30" />
+            <span className="text-[10px] font-black text-cyan-900 uppercase tracking-[0.4em] italic">SECURE_ENVIRONMENT</span>
+            <div className="h-[1px] w-12 bg-gradient-to-l from-transparent to-cyan-500/30" />
+          </div>
+          <p className="text-[8px] font-black text-cyan-900/40 uppercase tracking-[0.2em] animate-pulse">
+            ENCRYPTED WITH AES-256-GCM • STATUS: NOMINAL
+          </p>
         </div>
       </div>
     </div>

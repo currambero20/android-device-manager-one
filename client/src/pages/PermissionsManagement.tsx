@@ -134,203 +134,184 @@ export default function PermissionsManagement() {
   );
 
   return (
-    <DashboardLayout title="Gestión de Permisos">
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+    <DashboardLayout title="Permisos Granulares">
+      <div className="cyber-scanline" />
+      <div className="space-y-8 relative z-10">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-6 border-b border-cyan-500/10">
           <div>
-            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700">
-              Gestión de Permisos
+            <h1 className="text-4xl font-black tracking-tighter uppercase gradient-text flex items-center gap-3">
+              <Shield className="w-10 h-10 text-cyan-400" />
+              Matriz de Seguridad
             </h1>
-            <p className="text-muted-foreground mt-2">Administra permisos granulares de usuarios y dispositivos</p>
+            <p className="text-cyan-500/60 text-[10px] font-black uppercase tracking-[0.3em] mt-1 italic">Control de Accesos de Nivel Superior</p>
           </div>
-          <Shield className="w-12 h-12 text-primary opacity-80" />
+          <div className="flex items-center gap-4">
+             <div className="p-3 bg-fuchsia-500/10 rounded-2xl border border-fuchsia-500/30 text-fuchsia-400 shadow-[0_0_15px_rgba(217,70,239,0.2)]">
+               <Lock className="w-6 h-6 animate-pulse" />
+             </div>
+          </div>
         </div>
 
         <Tabs defaultValue="matrix" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-secondary/30 border border-accent/20 p-1 h-11 rounded-xl">
-            <TabsTrigger value="matrix" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary text-xs font-semibold">
-              Matriz de Permisos
+          <TabsList className="bg-black/40 border border-cyan-500/20 p-1.5 h-14 rounded-2xl gap-2 mb-8">
+            <TabsTrigger value="matrix" className="flex-1 rounded-xl data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:neon-border-cyan font-black text-xs uppercase tracking-widest transition-all">
+              Matriz de Dispositivos
             </TabsTrigger>
-            <TabsTrigger value="permissions" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary text-xs font-semibold">
-              Permisos por Categoría
+            <TabsTrigger value="permissions" className="flex-1 rounded-xl data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:neon-border-cyan font-black text-xs uppercase tracking-widest transition-all">
+              Categorías de Payload
             </TabsTrigger>
-            <TabsTrigger value="presets" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary text-xs font-semibold">
-              Presets Rápidos
+            <TabsTrigger value="presets" className="flex-1 rounded-xl data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:neon-border-cyan font-black text-xs uppercase tracking-widest transition-all">
+              Presets de Rango
             </TabsTrigger>
           </TabsList>
 
           {/* Matriz de Permisos */}
-          <TabsContent value="matrix" className="space-y-4 mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <TabsContent value="matrix" className="space-y-6 mt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               {/* Selección de Usuario */}
-              <Card className="lg:col-span-1 border-accent/20 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Users className="w-5 h-5 text-primary" />
-                    Usuarios
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar usuario..."
-                      value={searchUser}
-                      onChange={(e) => setSearchUser(e.target.value)}
-                      className="pl-9 bg-secondary/50 border-accent/20"
-                    />
+              <div className="lg:col-span-1 space-y-4">
+                <Card className="glass-panel overflow-hidden border-cyan-500/20 shadow-2xl">
+                  <div className="p-5 border-b border-cyan-500/10 bg-cyan-500/5 items-center flex justify-between">
+                    <h2 className="text-[10px] font-black uppercase tracking-widest text-cyan-500/70">Asignar Operador</h2>
+                    <Users className="w-4 h-4 text-cyan-500/50" />
                   </div>
-                  <ScrollArea className="h-[500px] border border-accent/10 rounded-xl p-2 bg-secondary/10">
-                    <div className="space-y-2">
-                      {usersLoading ? (
-                        <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                          <Loader2 className="w-6 h-6 animate-spin mb-2" />
-                          <p className="text-[10px] font-bold uppercase tracking-widest">Cargando Usuarios...</p>
-                        </div>
-                      ) : filteredUsers?.length === 0 ? (
-                        <div className="text-center py-10 text-muted-foreground">
-                          <p className="text-xs italic">No se encontraron usuarios</p>
-                        </div>
-                      ) : (
-                        filteredUsers?.map((user: any) => (
+                  <CardContent className="p-4 space-y-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-700" />
+                      <Input
+                        placeholder="ID_BUSQUEDA..."
+                        value={searchUser}
+                        onChange={(e) => setSearchUser(e.target.value)}
+                        className="input-neon h-12 pl-10"
+                      />
+                    </div>
+                    <ScrollArea className="h-[550px] pr-2 cyber-scrollbar">
+                      <div className="space-y-2.5">
+                        {usersLoading ? (
+                          <div className="flex flex-col items-center justify-center py-20 text-cyan-500/30">
+                            <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em]">Sincronizando...</p>
+                          </div>
+                        ) : filteredUsers?.map((user: any) => (
                           <button
                             key={user.id}
                             onClick={() => setSelectedUser(user.id)}
-                            className={`w-full text-left p-3 rounded-xl transition-all border ${
+                            className={`w-full text-left p-4 rounded-2xl transition-all border group relative overflow-hidden ${
                               selectedUser === user.id
-                                ? "bg-primary/10 border-primary/30 shadow-sm"
-                                : "bg-background border-transparent hover:border-accent/20 hover:bg-secondary/50"
+                                ? "bg-cyan-500/10 border-cyan-500/40 shadow-[0_0_20px_rgba(34,211,238,0.1)]"
+                                : "bg-black/20 border-cyan-500/5 hover:border-cyan-500/30"
                             }`}
                           >
-                            <div className="font-bold text-sm text-foreground">{user.name || "Sin nombre"}</div>
-                            <div className="text-[10px] text-muted-foreground font-medium truncate">{user.email || "Sin email"}</div>
-                            <Badge variant="outline" className={`mt-2 text-[10px] uppercase tracking-wider font-bold ${getRoleColor(user.role || "")}`}>
-                              {user.role}
-                            </Badge>
+                            <div className="relative z-10">
+                              <div className={`font-black text-xs uppercase mb-1 transition-colors ${selectedUser === user.id ? "text-cyan-300" : "text-cyan-100/70"}`}>
+                                {user.name || "UNIDENTIFIED"}
+                              </div>
+                              <div className="text-[9px] text-cyan-900 font-bold uppercase tracking-tighter truncate mb-3">{user.email || "NO_IDENTITY"}</div>
+                              <Badge className={`${
+                                user.role === 'admin' ? "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30" : "bg-cyan-500/10 text-cyan-400 border-cyan-500/30"
+                              } border text-[8px] font-black px-2 py-0.5 tracking-widest`}>
+                                {user.role}
+                              </Badge>
+                            </div>
+                            {selectedUser === user.id && (
+                              <div className="absolute right-0 top-0 bottom-0 w-1 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,1)]" />
+                            )}
                           </button>
-                        ))
-                      )}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Contenido de Permisos */}
               {selectedUser ? (
-                <div className="lg:col-span-3 space-y-4">
+                <div className="lg:col-span-3 space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                   {/* Acciones Rápidas */}
-                  <Card className="border-accent/20 shadow-sm">
-                    <CardHeader className="py-4">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-primary" />
-                        Acciones Rápidas
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-wrap gap-2 pt-0">
-                      <Button
-                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "admin" as any })}
-                        variant="outline"
-                        size="sm"
-                        className="border-destructive/30 hover:bg-destructive/10 text-destructive text-xs font-bold"
-                        disabled={assignPresetMutation.isPending}
-                      >
-                        Administrador (Full)
-                      </Button>
-                      <Button
-                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "manager" as any })}
-                        variant="outline"
-                        size="sm"
-                        className="border-amber-500/30 hover:bg-amber-500/10 text-amber-600 text-xs font-bold"
-                        disabled={assignPresetMutation.isPending}
-                      >
-                        Gestor (Manager)
-                      </Button>
-                      <Button
-                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "user" as any })}
-                        variant="outline"
-                        size="sm"
-                        className="border-primary/30 hover:bg-primary/10 text-primary text-xs font-bold"
-                        disabled={assignPresetMutation.isPending}
-                      >
-                        Usuario Estándar
-                      </Button>
-                      <Button
-                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "viewer" as any })}
-                        variant="outline"
-                        size="sm"
-                        className="border-muted-foreground/30 hover:bg-secondary text-muted-foreground text-xs font-bold"
-                        disabled={assignPresetMutation.isPending}
-                      >
-                        Observador (Viewer)
-                      </Button>
-                      <div className="ml-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card className="glass-panel border-fuchsia-500/20 shadow-xl overflow-hidden group">
+                      <div className="p-4 border-b border-fuchsia-500/10 bg-fuchsia-500/5 flex items-center justify-between">
+                         <CardTitle className="text-xs font-black uppercase tracking-widest text-fuchsia-400 flex items-center gap-2">
+                           <Zap className="w-4 h-4" /> Protocolos de Rango
+                         </CardTitle>
+                      </div>
+                      <CardContent className="p-5 flex flex-wrap gap-2.5">
                         <Button
+                          onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "admin" as any })}
+                          className="flex-1 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30 rounded-xl h-10 font-black text-[9px] uppercase tracking-widest transition-all"
+                          disabled={assignPresetMutation.isPending}
+                        >
+                          FULL_ADMIN
+                        </Button>
+                        <Button
+                          onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "manager" as any })}
+                          className="flex-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-xl h-10 font-black text-[9px] uppercase tracking-widest transition-all"
+                          disabled={assignPresetMutation.isPending}
+                        >
+                          SECTOR_LEAD
+                        </Button>
+                        <Button
+                          onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: "user" as any })}
+                          className="flex-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-xl h-10 font-black text-[9px] uppercase tracking-widest transition-all"
+                          disabled={assignPresetMutation.isPending}
+                        >
+                          FIELD_ENTRY
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="glass-panel border-rose-500/20 shadow-xl flex flex-col justify-center p-6 text-center overflow-hidden group relative">
+                       <div className="absolute top-0 left-0 w-full h-1 bg-rose-500 opacity-20 group-hover:opacity-60 transition-opacity" />
+                       <p className="text-[10px] font-black uppercase text-rose-500/60 mb-2 tracking-[0.3em]">Directiva de Purga</p>
+                       <Button
                           onClick={() => clearPermissionsMutation.mutate({ userId: selectedUser })}
                           variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:bg-destructive/5 text-xs font-bold"
+                          className="text-rose-400 hover:text-rose-100 hover:bg-rose-500/20 font-black text-[10px] uppercase tracking-[0.2em] border border-rose-500/20 rounded-xl py-6"
                           disabled={clearPermissionsMutation.isPending}
                         >
-                          Limpiar Todos los Permisos
+                          REVOCAR TODA AUTORIZACIÓN
                         </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </Card>
+                  </div>
 
-                  {/* Permisos Granulares */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="border-accent/20 shadow-sm">
-                      <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Lock className="w-5 h-5 text-primary" />
-                          Permisos Globales
-                        </CardTitle>
-                        <CardDescription>
-                          {userPermissions?.length || 0} permisos asignados actualmente
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <ScrollArea className="h-[400px] pr-4">
-                          <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Permisos Globales */}
+                    <Card className="glass-panel border-cyan-500/20 shadow-2xl h-[600px] flex flex-col">
+                      <div className="p-5 border-b border-cyan-500/10 bg-cyan-500/5 flex items-center justify-between">
+                         <CardTitle className="text-xs font-black uppercase tracking-widest text-cyan-400 flex items-center gap-3">
+                           <Lock className="w-5 h-5" /> Privilegios Globales
+                         </CardTitle>
+                         <Badge className="bg-cyan-500/10 text-cyan-400 border-none font-black text-[9px] px-3">{userPermissions?.length || 0}_ACT</Badge>
+                      </div>
+                      <CardContent className="p-4 flex-1 overflow-hidden">
+                        <ScrollArea className="h-full pr-4 cyber-scrollbar">
+                          <div className="space-y-2.5">
                             {allPermissions?.map((perm: any) => {
                               const hasPermission = userPermissions?.some((p: any) => p.code === perm.code);
                               return (
                                 <div
                                   key={perm.code}
-                                  className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${
+                                  className={`flex items-center gap-4 p-4 rounded-2xl border transition-all group ${
                                     hasPermission
-                                      ? "bg-primary/5 border-primary/20"
-                                      : "bg-background border-accent/10 hover:border-accent/30"
+                                      ? "bg-cyan-500/10 border-cyan-500/40 shadow-[inset_0_0_15px_rgba(34,211,238,0.1)]"
+                                      : "bg-black/20 border-cyan-500/5 hover:border-cyan-500/20"
                                   }`}
                                 >
                                   <Checkbox
                                     id={`perm-${perm.code}`}
                                     checked={hasPermission}
                                     onCheckedChange={(checked) => {
-                                      if (checked) {
-                                        assignPermissionMutation.mutate({
-                                          userId: selectedUser,
-                                          permission: perm.code as any,
-                                        });
-                                      } else {
-                                        revokePermissionMutation.mutate({
-                                          userId: selectedUser,
-                                          permission: perm.code as any,
-                                        });
-                                      }
+                                      if (checked) assignPermissionMutation.mutate({ userId: selectedUser, permission: perm.code as any });
+                                      else revokePermissionMutation.mutate({ userId: selectedUser, permission: perm.code as any });
                                     }}
                                     disabled={assignPermissionMutation.isPending || revokePermissionMutation.isPending}
+                                    className="border-cyan-500/50 data-[state=checked]:bg-cyan-400 data-[state=checked]:text-black"
                                   />
-                                  <label 
-                                    htmlFor={`perm-${perm.code}`}
-                                    className="flex-1 cursor-pointer"
-                                  >
-                                    <div className="font-bold text-sm text-foreground">{perm.code}</div>
-                                    <div className="text-[10px] text-muted-foreground line-clamp-1">{perm.description}</div>
+                                  <label htmlFor={`perm-${perm.code}`} className="flex-1 cursor-pointer">
+                                    <div className={`font-black text-[11px] uppercase tracking-tight mb-1 ${hasPermission ? "text-cyan-300" : "text-cyan-100/60"}`}>{perm.code}</div>
+                                    <div className="text-[9px] text-cyan-900 font-bold uppercase italic line-clamp-1">{perm.description}</div>
                                   </label>
-                                  <Badge variant="secondary" className="text-[9px] uppercase tracking-tighter bg-secondary/50 font-bold">
-                                    {perm.category}
-                                  </Badge>
+                                  <Badge className="bg-black/40 text-[8px] font-black uppercase border-cyan-500/10 text-cyan-900 px-2">{perm.category}</Badge>
                                 </div>
                               );
                             })}
@@ -340,40 +321,36 @@ export default function PermissionsManagement() {
                     </Card>
 
                     {/* Matriz Usuario-Dispositivo */}
-                    <Card className="border-accent/20 shadow-sm">
-                      <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Smartphone className="w-5 h-5 text-primary" />
-                          Permisos por Dispositivo
-                        </CardTitle>
-                        <CardDescription>
-                          Ajusta privilegios específicos en cada equipo
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="relative mb-4">
-                          <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                    <Card className="glass-panel border-cyan-500/20 shadow-2xl h-[600px] flex flex-col">
+                      <div className="p-5 border-b border-cyan-500/10 bg-cyan-500/5 flex items-center justify-between">
+                         <CardTitle className="text-xs font-black uppercase tracking-widest text-cyan-400 flex items-center gap-3">
+                           <Smartphone className="w-5 h-5" /> Excepciones por Hardware
+                         </CardTitle>
+                      </div>
+                      <CardContent className="p-4 flex-1 overflow-hidden flex flex-col">
+                        <div className="relative mb-6">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-700" />
                           <Input
-                            placeholder="Buscar dispositivo..."
+                            placeholder="HARDWARE_ID..."
                             value={searchDevice}
                             onChange={(e) => setSearchDevice(e.target.value)}
-                            className="pl-9 bg-secondary/50 border-accent/20"
+                            className="input-neon h-12 pl-10"
                           />
                         </div>
-                        <ScrollArea className="h-[344px] pr-4">
-                          <div className="space-y-4">
+                        <ScrollArea className="flex-1 pr-4 cyber-scrollbar">
+                          <div className="space-y-6">
                             {filteredDevices?.map((device: any) => (
-                              <div key={device.id} className="p-4 bg-secondary/10 rounded-xl border border-accent/10">
-                                <div className="flex items-center justify-between mb-3">
+                              <div key={device.id} className="p-5 bg-black/30 rounded-2xl border border-cyan-500/10 group hover:border-cyan-500/30 transition-all">
+                                <div className="flex items-center justify-between mb-5">
                                   <div>
-                                    <div className="font-bold text-sm text-foreground">{device.deviceName}</div>
-                                    <div className="text-[10px] text-muted-foreground font-medium">{device.model}</div>
+                                    <div className="font-black text-xs uppercase text-cyan-100 group-hover:text-cyan-400 transition-colors tracking-tight">{device.deviceName}</div>
+                                    <div className="text-[9px] text-cyan-900 font-bold uppercase tracking-[0.2em]">{device.model}</div>
                                   </div>
-                                  <Badge variant="outline" className="text-[9px] font-bold bg-white/50">
-                                    v{device.androidVersion}
+                                  <Badge className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-black text-[9px] px-2.5">
+                                    V_SYS_{device.androidVersion}
                                   </Badge>
                                 </div>
-                                <div className="flex flex-wrap gap-1.5">
+                                <div className="flex flex-wrap gap-2">
                                   {allPermissions?.map((perm: any) => {
                                     const devicePerms = permissionMatrix?.[device.id] || [];
                                     const hasPermission = devicePerms.includes(perm.code);
@@ -382,24 +359,19 @@ export default function PermissionsManagement() {
                                     return (
                                       <div
                                         key={`${device.id}-${perm.code}`}
-                                        className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[9px] font-bold uppercase transition-all whitespace-nowrap ${
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[8px] font-black uppercase tracking-tighter transition-all ${
                                           hasPermission
-                                            ? "bg-primary/10 border-primary/20 text-primary"
-                                            : "bg-white border-accent/10 text-muted-foreground hover:border-accent/30"
+                                            ? "bg-cyan-500/10 border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.1)]"
+                                            : "bg-black/40 border-cyan-500/5 text-cyan-900 hover:border-cyan-500/20"
                                         }`}
                                       >
                                         <Checkbox
                                           checked={hasPermission}
-                                          onCheckedChange={(checked) => {
-                                            handleMatrixPermissionChange(device.id, perm.code, Boolean(checked));
-                                          }}
+                                          onCheckedChange={(checked) => handleMatrixPermissionChange(device.id, perm.code, Boolean(checked))}
                                           disabled={isLoading}
-                                          className="w-3 h-3 h-3 mt-0"
+                                          className="w-3.5 h-3.5 border-cyan-500/40"
                                         />
                                         <span>{perm.code}</span>
-                                        {isLoading && (
-                                          <Loader2 className="w-2 h-2 animate-spin text-primary" />
-                                        )}
                                       </div>
                                     );
                                   })}
@@ -413,43 +385,45 @@ export default function PermissionsManagement() {
                   </div>
                 </div>
               ) : (
-                <Card className="lg:col-span-3 border-accent/20 shadow-sm border-dashed">
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col items-center justify-center h-[600px] text-center">
-                      <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-6 border border-primary/10 shadow-inner">
-                        <Users className="w-10 h-10 text-primary/40" />
-                      </div>
-                      <h3 className="text-xl font-bold text-foreground">Selecciona un Usuario</h3>
-                      <p className="text-muted-foreground max-w-xs mt-2">Escoge un miembro de la lista izquierda para gestionar sus privilegios granulares.</p>
-                      <Button variant="outline" className="mt-8 border-accent/20 hover:bg-secondary shadow-sm">
-                        Ver Todos los Usuarios
-                      </Button>
+                <div className="lg:col-span-3">
+                  <Card className="glass-panel border-cyan-500/10 shadow-2xl border-dashed h-[700px] flex flex-col items-center justify-center p-12 text-center group">
+                    <div className="w-32 h-32 bg-cyan-500/5 rounded-full flex items-center justify-center mb-10 border border-cyan-500/10 shadow-[inset_0_0_40px_rgba(34,211,238,0.1)] group-hover:shadow-[inset_0_0_60px_rgba(34,211,238,0.2)] transition-all duration-700">
+                      <Users className="w-16 h-16 text-cyan-500/20 group-hover:text-cyan-500/40 group-hover:scale-110 transition-all duration-700 animate-pulse" />
                     </div>
-                  </CardContent>
-                </Card>
+                    <h3 className="text-2xl font-black text-cyan-100 uppercase tracking-[0.2em] italic gradient-text">Identificar Operador</h3>
+                    <p className="text-cyan-900 font-bold uppercase text-[10px] tracking-[0.4em] max-w-xs mt-6 leading-relaxed">Escoge un miembro de la red para reconfigurar sus protocolos de acceso granulares.</p>
+                    <div className="mt-12 flex gap-4">
+                       <div className="h-0.5 w-12 bg-cyan-500/20" />
+                       <div className="h-0.5 w-4 bg-cyan-500/60 animate-bounce" />
+                       <div className="h-0.5 w-12 bg-cyan-500/20" />
+                    </div>
+                  </Card>
+                </div>
               )}
             </div>
           </TabsContent>
 
           {/* Permisos por Categoría */}
-          <TabsContent value="permissions" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <TabsContent value="permissions" className="mt-0 space-y-8 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {categories?.map((category: any) => (
-                <Card key={category.name} className="border-accent/20 shadow-sm overflow-hidden group hover:border-primary/30 transition-all">
-                  <div className="h-1 bg-gradient-to-r from-primary to-blue-500 opacity-50 group-hover:opacity-100 transition-opacity" />
-                  <CardHeader className="bg-secondary/20">
-                    <CardTitle className="text-lg capitalize flex items-center justify-between">
-                      {category.name}
-                      <Badge variant="secondary" className="font-bold text-[10px] bg-white shadow-sm border-accent/10">{category.count}</Badge>
-                    </CardTitle>
-                    <CardDescription>Permisos de sistema asociados</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2 pt-4">
+                <Card key={category.name} className="glass-panel border-cyan-500/10 shadow-xl overflow-hidden group hover:border-cyan-500/40 transition-all duration-500">
+                  <div className="h-1 bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-cyan-500 opacity-20 group-hover:opacity-100 group-hover:shadow-[0_0_15px_rgba(34,211,238,0.5)] transition-all duration-700" />
+                  <div className="p-6 border-b border-cyan-500/10 bg-black/20 flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-cyan-100 italic group-hover:text-cyan-400 transition-colors">
+                        {category.name}
+                      </CardTitle>
+                      <p className="text-[9px] font-bold text-cyan-900 uppercase mt-1">Directivas_Payload</p>
+                    </div>
+                    <Badge className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-black text-[10px] px-3 py-1">#{category.count}</Badge>
+                  </div>
+                  <CardContent className="p-5 space-y-2.5">
                     {category.permissions.map((perm: any) => (
-                      <div key={perm} className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl border border-accent/10 group/item hover:bg-secondary/50">
-                        <span className="text-sm font-semibold text-foreground group-hover/item:text-primary transition-colors">{perm}</span>
-                        <div className="p-1.5 bg-background rounded-lg shadow-sm border border-accent/10">
-                            <Lock className="w-3.5 h-3.5 text-primary/60" />
+                      <div key={perm} className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-cyan-500/5 group/item hover:border-cyan-500/30 transition-all">
+                        <span className="text-[11px] font-black text-cyan-100/70 group-hover/item:text-cyan-300 transition-colors tracking-tight uppercase">{perm}</span>
+                        <div className="p-2 bg-cyan-500/5 rounded-xl border border-cyan-500/10 group-hover/item:bg-cyan-500/20 transition-all">
+                            <Lock className="w-4 h-4 text-cyan-500/40 group-hover/item:text-cyan-400 transition-all" />
                         </div>
                       </div>
                     ))}
@@ -460,40 +434,38 @@ export default function PermissionsManagement() {
           </TabsContent>
 
           {/* Presets Rápidos */}
-          <TabsContent value="presets" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <TabsContent value="presets" className="mt-0 space-y-8 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {presets?.map((preset: any) => (
-                <Card key={preset.name} className="border-accent/20 shadow-sm hover:border-primary/30 transition-all bg-gradient-to-br from-white to-secondary/20">
-                  <CardHeader>
-                    <CardTitle className="capitalize text-xl font-bold flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-xl">
-                        <Zap className="w-5 h-5 text-primary" />
+                <Card key={preset.name} className="glass-panel border-cyan-500/10 shadow-2xl hover:border-fuchsia-500/40 transition-all duration-700 group bg-gradient-to-br from-black/60 to-black/20">
+                  <div className="p-8 pb-4">
+                    <CardTitle className="text-3xl font-black flex items-center gap-5 italic gradient-text uppercase tracking-tighter">
+                      <div className="p-4 bg-fuchsia-500/10 rounded-2xl border border-fuchsia-500/30 shadow-[0_0_20px_rgba(217,70,239,0.1)] group-hover:shadow-[0_0_30px_rgba(217,70,239,0.3)] transition-all">
+                        <Zap className="w-8 h-8 text-fuchsia-400 animate-pulse" />
                       </div>
                       {preset.name}
                     </CardTitle>
-                    <CardDescription className="text-sm font-medium">{preset.count} privilegios incluidos en esta plantilla</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2">
+                    <div className="mt-8 flex items-center justify-between border-b border-cyan-500/10 pb-4">
+                       <p className="text-[10px] font-black text-cyan-500/60 uppercase tracking-[0.3em]">Protocolo_Batch</p>
+                       <p className="text-[10px] font-black text-fuchsia-500 uppercase tracking-widest">{preset.count}_PRIVS_ENABLED</p>
+                    </div>
+                  </div>
+                  <CardContent className="p-8 pt-4 space-y-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-4 cyber-scrollbar">
                       {preset.permissions.map((perm: any) => (
-                        <div key={perm.code} className="p-2.5 bg-background rounded-xl border border-accent/10 shadow-sm">
-                          <div className="font-bold text-xs text-primary">{perm.code}</div>
-                          <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{perm.description}</div>
+                        <div key={perm.code} className="p-4 bg-black/40 rounded-2xl border border-cyan-500/5 hover:border-fuchsia-500/20 transition-all">
+                          <div className="font-black text-[10px] text-fuchsia-400 uppercase tracking-tight mb-1">{perm.code}</div>
+                          <div className="text-[9px] text-cyan-900 font-bold uppercase italic line-clamp-2 leading-relaxed">{perm.description}</div>
                         </div>
                       ))}
                     </div>
                     {selectedUser && (
                       <Button
-                        onClick={() =>
-                          assignPresetMutation.mutate({
-                            userId: selectedUser,
-                            preset: preset.name as "admin" | "manager" | "user" | "viewer",
-                          })
-                        }
-                        className="w-full h-11 text-sm font-bold shadow-lg shadow-primary/20"
+                        onClick={() => assignPresetMutation.mutate({ userId: selectedUser, preset: preset.name as any })}
+                        className="w-full btn-neon-cyan h-16 font-black text-xs tracking-[0.2em] shadow-2xl shadow-cyan-500/20 uppercase"
                         disabled={assignPresetMutation.isPending}
                       >
-                        Asignar Plantilla a {filteredUsers?.find((u: any) => u.id === selectedUser)?.name || "Usuario"}
+                        INYECTAR PROTOCOLO EN {filteredUsers?.find((u: any) => u.id === selectedUser)?.name || "ENTRY"}
                       </Button>
                     )}
                   </CardContent>
@@ -504,32 +476,34 @@ export default function PermissionsManagement() {
         </Tabs>
 
         {/* Información de Seguridad */}
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-primary/20 shadow-sm mt-8 overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Shield className="w-24 h-24 text-primary" />
+        <div className="glass-panel border-cyan-500/20 bg-gradient-to-r from-cyan-950/20 via-black to-blue-950/20 p-8 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity duration-1000">
+            <Shield className="w-32 h-32 text-cyan-400 rotate-12" />
           </div>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary font-bold">
-              <AlertCircle className="w-5 h-5" />
-              Directivas de Control de Acceso
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground space-y-3 relative z-10 max-w-2xl">
-            <div className="flex gap-4">
-               <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-               <p><span className="font-bold text-foreground">Jerarquía de Permisos:</span> Los permisos de usuario actúan como una capa global, mientras que la matriz por dispositivo permite excepciones específicas.</p>
-            </div>
-            <div className="flex gap-4">
-               <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-               <p><span className="font-bold text-foreground">Registros de Auditoría:</span> Cada cambio realizado en esta sección se asocia a su cuenta y se registra permanentemente en el sistema de logs.</p>
-            </div>
-            <div className="flex gap-4">
-               <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-               <p><span className="font-bold text-foreground">Consistencia de Roles:</span> Los presets están diseñados basándose en las mejores prácticas de seguridad (Principio de Menor Privilegio).</p>
-            </div>
-          </CardContent>
-        </Card>
+          <div className="flex items-center gap-4 mb-6 relative z-10">
+             <div className="p-3 bg-cyan-500/10 rounded-xl border border-cyan-500/20">
+               <AlertCircle className="w-6 h-6 text-cyan-400" />
+             </div>
+             <h3 className="text-xl font-black uppercase tracking-[0.2em] gradient-text italic">Directivas de Integridad MDM</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+             {[
+               { t: "Jerarquía Dinámica", d: "Los permisos de usuario actúan como una capa global, mientras que la matriz por hardware permite excepciones críticas de seguridad." },
+               { t: "Rastro Digital", d: "Cada reconfiguración de privilegios activa una entrada inmutable en el registro de auditoría asociada a su firma de administrador." },
+               { t: "Consistencia SQL", d: "Los presets siguen el Principio de Menor Privilegio (PoLP) para asegurar la integridad de la red y evitar fugas de datos de telemetría." }
+             ].map((item, i) => (
+               <div key={i} className="space-y-3">
+                 <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 bg-fuchsia-400 rounded-full shadow-[0_0_8px_rgba(217,70,239,1)]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-cyan-100">{item.t}</span>
+                 </div>
+                 <p className="text-[10px] text-cyan-900 leading-relaxed font-bold font-mono tracking-tight">{item.d}</p>
+               </div>
+             ))}
+          </div>
+        </div>
       </div>
     </DashboardLayout>
+
   );
 }

@@ -69,8 +69,12 @@ app.use((req, res, next) => {
 });
 
 // Rutas Estáticas
+app.get("/", (req, res) => {
+  res.json({ message: "Android Device Manager API", status: "ok" });
+});
+
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", environment: process.env.NODE_ENV || "development" });
+  res.json({ status: "ok", environment: process.env.NODE_ENV || "production" });
 });
 
 // [MOD L3MON] Register APK Download Route

@@ -1,22 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "public",
-  "cleanUrls": true,
-  "installCommand": "npm install",
-  "build": {
-    "env": {
-      "NODE_OPTIONS": "--require tsx"
-    }
-  },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/vercel.ts" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ],
-  "functions": {
-    "api/vercel.ts": {
-      "runtime": "@vercel/node@2.0.0"
-    }
-  }
+  "buildCommand": "npm run build --prefix client",
+  "outputDirectory": "client/dist"
 }

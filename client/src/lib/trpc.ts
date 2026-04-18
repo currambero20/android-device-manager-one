@@ -4,7 +4,10 @@ import type { AppRouter } from "../../../server/appRouter";
 export const trpc = createTRPCReact<AppRouter>();
 
 // Render backend URL - Production
-const RENDER_BACKEND_URL = "https://android-device-manager-one.onrender.com";
+const RENDER_BACKEND_URL = "https://android-device-manager-one.onrender.com"; // Backend en Render
+
+// Fallback - si el anterior no funciona, usar este
+const RENDER_BACKEND_FALLBACK = "http://localhost:3001";
 
 export const getBaseUrl = () => {
   if (typeof window !== "undefined") {

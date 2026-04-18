@@ -31,9 +31,9 @@ services:
       - key: APP_ID
         value: "android-device-manager"
       
-      # Frontend URL
+      # Frontend URL (Vercel)
       - key: FRONTEND_URL
-        value: "https://android-device-manager-l8ha1t40j-jorges-projects-a59a5a05.vercel.app"
+        value: "https://repodeploy.vercel.app"
         sync: false
       
       # Email SMTP (configurar en panel de Render)

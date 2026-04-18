@@ -34,4 +34,4 @@ if ($status -ne $null -and $status -ne "") {
 
 Write-Host "`n--- DESPLIEGUE FINALIZADO ---" -ForegroundColor Cyan
 Write-Host "ACCESO: https://android-device-manager-frontend.vercel.app"
-Write-Host "API: https://android-device-manager-backend.onrender.com"
+Write-Host "API: https://android-device-manager-one.onrender.com"

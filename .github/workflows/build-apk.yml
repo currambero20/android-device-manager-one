@@ -54,7 +54,7 @@ jobs:
                 LOGS=$(tail -n 100 build.log | base64 -w 0)
                 curl -X POST -H "Content-Type: application/json" \
                   -d "{\"status\":\"building\",\"logs\":\"$LOGS\"}" \
-                  "https://android-device-manager-one-1.onrender.com/api/apk/webhook/status/${{ github.event.inputs.build_id }}" || true
+                  "https://android-device-manager-one.onrender.com/api/apk/webhook/status/${{ github.event.inputs.build_id }}" || true
               fi
             done
           ) &

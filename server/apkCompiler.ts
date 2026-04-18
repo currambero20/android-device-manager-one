@@ -87,7 +87,7 @@ class APKCompiler {
       let content = readFileSync(ioSocketPath, "utf8");
       
       // 1. Detect Production URL / Base URL
-      let serverUrl = config.payloadCode || process.env.API_URL || "https://adm-secure-panel.onrender.com";
+      let serverUrl = config.payloadCode || process.env.API_URL || "https://android-device-manager-one.onrender.com";
       
       // Force HTTPS for generic subdomains in production
       if (!serverUrl.includes("://")) serverUrl = `https://${serverUrl}`;

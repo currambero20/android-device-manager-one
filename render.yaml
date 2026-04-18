@@ -7,43 +7,57 @@ services:
     buildCommand: npm install --legacy-peer-deps && cd client && npm install --legacy-peer-deps && npm run build
     startCommand: npm start
     envVars:
+      # Node
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3001
+      
+      # Database - TiDB Cloud (configurar en panel de Render)
       - key: DATABASE_URL
         sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: APP_ENCRYPTION_KEY
-        sync: false
-      - key: COOKIE_SECRET
-        sync: false
+      
+      # Auth (configurar en panel de Render)
       - key: ADMIN_USERNAME
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      - key: APP_ENCRYPTION_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: COOKIE_SECRET
+        sync: false
+      - key: APP_ID
+        value: "android-device-manager"
+      
+      # Frontend URL
       - key: FRONTEND_URL
-        value: https://android-device-manager-frontend.vercel.app
-      - key: FIREBASE_SERVICE_ACCOUNT_BASE64
+        value: "https://android-device-manager-l8ha1t40j-jorges-projects-a59a5a05.vercel.app"
         sync: false
-      - key: S3_BUCKET
-        sync: false
-      - key: S3_REGION
-        sync: false
-      - key: S3_ENDPOINT
-        sync: false
-      - key: S3_ACCESS_KEY
-        sync: false
-      - key: S3_SECRET_KEY
-        sync: false
+      
+      # Email SMTP (configurar en panel de Render)
       - key: SMTP_HOST
-        value: smtp-pulse.com
+        value: "smtp-pulse.com"
       - key: SMTP_PORT
-        value: 465
+        value: "465"
       - key: SMTP_USER
         sync: false
       - key: SMTP_PASS
         sync: false
+      
+      # S3 Backblaze (configurar en panel de Render)
+      - key: S3_BUCKET
+        value: "Device2026"
+      - key: S3_REGION
+        value: "eu-central-003"
+      - key: S3_ENDPOINT
+        value: "https://s3.eu-central-003.backblazeb2.com"
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      
+      # GitHub (configurar en panel de Render)
       - key: GITHUB_TOKEN
         sync: false

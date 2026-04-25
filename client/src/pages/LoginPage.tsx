@@ -30,7 +30,9 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
         setLoading(false);
       } else {
         toast.success("¡Bienvenido al sistema!");
-        window.location.href = "/dashboard";
+        setTimeout(() => {
+          window.location.replace("/dashboard");
+        }, 500);
       }
     },
     onError: (error: any) => {
@@ -42,7 +44,9 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
   const verify2FAMutation = trpc.auth.verifyEmail2FA.useMutation({
     onSuccess: () => {
       toast.success("¡Verificación exitosa!");
-      window.location.href = "/dashboard";
+      setTimeout(() => {
+        window.location.replace("/dashboard");
+      }, 500);
     },
     onError: (error: any) => {
       toast.error(error.message || "Código incorrecto o expirado");

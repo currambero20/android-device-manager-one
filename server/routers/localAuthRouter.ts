@@ -38,7 +38,7 @@ function setCookie(res: any, token: string) {
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: "lax", // Vercel rewrite makes it same-site
+      sameSite: "none", // Maximum compatibility for hybrid Vercel/Render
       maxAge: COOKIE_MAX_AGE,
       path: "/",
     });

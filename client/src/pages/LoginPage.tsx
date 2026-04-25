@@ -21,6 +21,12 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
   const [pending2FAUserId, setPending2FAUserId] = React.useState<number | null>(null);
   const [resetEmail, setResetEmail] = React.useState("");
 
+  const { isAuthenticated } = trpc.auth.me.useQuery(undefined, { 
+    enabled: false, // We check manually or let App handle it
+  });
+
+  const utils = trpc.useUtils();
+
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: (data: any) => {
       if (data.requires2FA) {
@@ -29,10 +35,12 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
         toast.info("Código de verificación enviado a tu correo.");
         setLoading(false);
       } else {
-        toast.success("¡Bienvenido al sistema!");
+        toast.success("¡Bienvenido al sistema! Redireccionando...");
+        // Pre-fetch auth.me to warm up the session
+        utils.auth.me.invalidate();
         setTimeout(() => {
-          window.location.replace("/dashboard");
-        }, 500);
+          window.location.assign("/dashboard");
+        }, 1000);
       }
     },
     onError: (error: any) => {
@@ -43,10 +51,11 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
 
   const verify2FAMutation = trpc.auth.verifyEmail2FA.useMutation({
     onSuccess: () => {
-      toast.success("¡Verificación exitosa!");
+      toast.success("¡Verificación exitosa! Entrando...");
+      utils.auth.me.invalidate();
       setTimeout(() => {
-        window.location.replace("/dashboard");
-      }, 500);
+        window.location.assign("/dashboard");
+      }, 1000);
     },
     onError: (error: any) => {
       toast.error(error.message || "Código incorrecto o expirado");

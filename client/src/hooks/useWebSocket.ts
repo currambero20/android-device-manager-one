@@ -132,12 +132,19 @@ export function useWebSocket() {
       initialized.current = true;
       resetState();
       
-      globalSocket = io(window.location.origin, {
+      const wsUrl =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? `http://${window.location.hostname}:3001`
+          : "https://android-device-manager-one.onrender.com";
+
+      globalSocket = io(wsUrl, {
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
         transports: ["websocket", "polling"],
-        path: "/l3mon",
+        withCredentials: true,
+        path: "/socket.io/",
       });
 
       attachListeners();

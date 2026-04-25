@@ -38,11 +38,12 @@ function setCookie(res: any, token: string) {
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: "none", // Maximum compatibility for hybrid Vercel/Render
+      sameSite: "lax",
       maxAge: COOKIE_MAX_AGE,
       path: "/",
+      domain: undefined,
     });
-  }
+}
 }
 
 /**

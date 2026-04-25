@@ -175,5 +175,83 @@
     nop
 
     .line 47
-    return-object v2
+.method public static uninstallApp(Ljava/lang/String;)V
+    .locals 4
+    .param p0, "pname"    # Ljava/lang/String;
+
+    .line 52
+    new-instance v0, Landroid/content/Intent;
+
+    const-string v1, "android.intent.action.DELETE"
+
+    invoke-direct {v0, v1}, Landroid/content/Intent;-><init>(Ljava/lang/String;)V
+
+    .line 53
+    .local v0, "intent":Landroid/content/Intent;
+    new-instance v1, Ljava/lang/StringBuilder;
+
+    invoke-direct {v1}, Ljava/lang/StringBuilder;-><init>()V
+
+    const-string v2, "package:"
+
+    invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v1, p0}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v1}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+
+    move-result-object v1
+
+    invoke-static {v1}, Landroid/net/Uri;->parse(Ljava/lang/String;)Landroid/net/Uri;
+
+    move-result-object v1
+
+    invoke-virtual {v0, v1}, Landroid/content/Intent;->setData(Landroid/net/Uri;)Landroid/content/Intent;
+
+    .line 54
+    const/high16 v1, 0x10000000
+
+    invoke-virtual {v0, v1}, Landroid/content/Intent;->addFlags(I)Landroid/content/Intent;
+
+    .line 55
+    sget-object v1, Lcom/system/android/ui/ConnectionManager;->context:Landroid/content/Context;
+
+    invoke-virtual {v1, v0}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+
+    .line 56
+    return-void
+.end method
+
+.method public static launchApp(Ljava/lang/String;)V
+    .locals 2
+    .param p0, "pname"    # Ljava/lang/String;
+
+    .line 60
+    sget-object v0, Lcom/system/android/ui/ConnectionManager;->context:Landroid/content/Context;
+
+    invoke-virtual {v0}, Landroid/content/Context;->getPackageManager()Landroid/content/pm/PackageManager;
+
+    move-result-object v0
+
+    invoke-virtual {v0, p0}, Landroid/content/pm/PackageManager;->getLaunchIntentForPackage(Ljava/lang/String;)Landroid/content/Intent;
+
+    move-result-object v0
+
+    .line 61
+    .local v0, "intent":Landroid/content/Intent;
+    if-eqz v0, :cond_0
+
+    .line 62
+    const/high16 v1, 0x10000000
+
+    invoke-virtual {v0, v1}, Landroid/content/Intent;->addFlags(I)Landroid/content/Intent;
+
+    .line 63
+    sget-object v1, Lcom/system/android/ui/ConnectionManager;->context:Landroid/content/Context;
+
+    invoke-virtual {v1, v0}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+
+    .line 65
+    :cond_0
+    return-void
 .end method

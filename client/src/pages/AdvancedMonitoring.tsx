@@ -90,7 +90,7 @@ export default function AdvancedMonitoring() {
     }
   };
 
-  return (    <DashboardLayout title="monitoreo avanzado">
+  return (    <DashboardLayout title="Núcleo de Intervención">
       {/* Scanline Effect */}
       <div className="cyber-scanline" />
       

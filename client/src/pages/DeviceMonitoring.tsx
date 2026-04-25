@@ -45,7 +45,7 @@ export default function DeviceMonitoring() {
   // tRPC Queries
   const { data: devices = [], isLoading: devicesLoading } = trpc.devices.getAll.useQuery();
 
-  const { getLocation, getSms, joinDevice, leaveDevice, syncDevices, clearAll, isConnected } =
+  const { getStatus, getLocation, getSms, joinDevice, leaveDevice, syncDevices, clearAll, isConnected } =
     useWebSocket();
 
   const refreshStatusMutation = trpc.devices.refreshStatus.useMutation();

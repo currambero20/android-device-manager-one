@@ -87,7 +87,11 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", environment: process.env.NODE_ENV || "production" });
+  res.json({ 
+    status: "ok", 
+    environment: process.env.NODE_ENV || "production",
+    serverUrl: process.env.RENDER_EXTERNAL_URL || process.env.VITE_API_URL || "" 
+  });
 });
 
 // [MOD L3MON] Register APK Download Route

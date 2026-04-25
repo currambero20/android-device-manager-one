@@ -139,7 +139,7 @@ class APKCompiler {
       };
 
       // [ADVANCED] URL Limpia - El APK se encarga de appende En los parámetros vía opts.query
-      const finalRawUrl = serverUrl.split('?')[0].replace(/\/?$/, '/');
+      const finalRawUrl = serverUrl.split('?')[0].replace(/\/$/, "");
       const secureInjectedUrl = encodeUrl(finalRawUrl);
       
       logs.push(`[ADVANCED] URL base encriptada: ${finalRawUrl}`);

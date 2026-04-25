@@ -9,7 +9,7 @@
     "dev": "npm run dev --prefix client",
     "build": "npm install --prefix client --legacy-peer-deps && npm run build --prefix client && mkdir -p public && cp -r client/dist/* public/",
     "start": "npx tsx server/_core/index.ts",
-    "postinstall": "npm install --prefix client --legacy-peer-deps && bash scripts/install-java.sh"
+    "postinstall": "npm install --prefix client --legacy-peer-deps && node -e \"if(!process.env.CI && !process.env.VERCEL) { const {execSync} = require('child_process'); execSync('bash scripts/install-java.sh', {stdio:'inherit'}); }\""
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1024.0",

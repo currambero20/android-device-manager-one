@@ -1,0 +1,25 @@
+# Enforce LF line endings for shell scripts on all platforms
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Default behavior - auto-detect text vs binary
+* text=auto
+
+# Ensure these are always LF
+*.json text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+
+# Binary files - do not modify
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.apk binary
+*.zip binary
+*.tar.gz binary
+*.jar binary

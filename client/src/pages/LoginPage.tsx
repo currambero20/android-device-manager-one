@@ -32,26 +32,24 @@ const loginMutation = trpc.auth.login.useMutation({
       if (data.requires2FA) {
         setPending2FAUserId(data.userId);
         setStep("twofa");
-        toast.info("Código de verificación enviado a tu correo.");
+        toast.info("Código de verificación enviado.");
         setLoading(false);
       } else {
-        toast.success("¡Bienvenido al sistema! Redireccionando...");
+        toast.success("¡Bienvenido! Redireccionando...");
         utils.auth.me.invalidate();
-        
-        // [FIX MOBILE] Esperar a que la cookie esté configurada antes de redirigir
         setTimeout(() => {
-          window.location.assign("/dashboard");
-        }, 2000);
+          window.location.href = "/dashboard";
+        }, 1500);
       }
     },
     onError: (error: any) => {
-      const errorMessage = error?.message || "Error al iniciar sesión";
-      if (errorMessage.includes("fetch") || errorMessage.includes("network") || errorMessage.includes("ERR_")) {
-        toast.error("Error de conexión. Verifica tu internet e intenta de nuevo.");
-      } else {
-        toast.error(errorMessage);
-      }
       setLoading(false);
+      const message = error?.message || "Error de conexión";
+      if (message.includes("fetch") || message.includes("network") || message.includes("ERR_") || message.includes("Failed to fetch")) {
+        toast.error("Error de conexión. Verifica tu internet.");
+      } else {
+        toast.error(message);
+      }
     },
   });
 

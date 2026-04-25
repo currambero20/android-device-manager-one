@@ -3,66 +3,34 @@ import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const SESSION_STORAGE_KEY = "adm_session_token";
+const SESSION_KEY = "adm_session";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
   redirectPath?: string;
 };
 
-function getSessionFromStorage(): string | null {
-  if (typeof window === "undefined") return null;
-  
-  const stored = localStorage.getItem(SESSION_STORAGE_KEY);
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      if (parsed && typeof parsed === "string") {
-        return parsed;
-      }
-    } catch {
-      return stored;
-    }
-  }
-  return null;
-}
-
-function setSessionToStorage(token: string) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(SESSION_STORAGE_KEY, token);
-}
-
-function clearSessionFromStorage() {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(SESSION_STORAGE_KEY);
-}
-
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
     options ?? {};
   const utils = trpc.useUtils();
-  const [sessionChecked, setSessionChecked] = useState(false);
-  const [localSession, setLocalSession] = useState<string | null>(getSessionFromStorage());
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
-    retry: 3,
-    refetchOnWindowFocus: false,
-    enabled: true,
+    retry: 2,
+    refetchOnWindowFocus: true,
+    enabled: mounted,
   });
-
-  useEffect(() => {
-    if (meQuery.isFetched) {
-      setSessionChecked(true);
-    }
-  }, [meQuery.isFetched]);
-
-  useEffect(() => {
-    const storedSession = getSessionFromStorage();
-    setLocalSession(storedSession);
-  }, []);
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
+      utils.auth.me.setData(undefined, null);
+    },
+    onError: () => {
       utils.auth.me.setData(undefined, null);
     },
   });
@@ -77,15 +45,12 @@ export function useAuth(options?: UseAuthOptions) {
       ) {
         return;
       }
-      throw error;
     } finally {
-      utils.auth.me.setData(undefined, null);
-      clearSessionFromStorage();
       localStorage.removeItem("manus-runtime-user-info");
+      localStorage.removeItem(SESSION_KEY);
       window.location.href = redirectPath;
     }
-
-  }, [logoutMutation, utils]);
+  }, [logoutMutation]);
 
   const state = useMemo(() => {
     let user = meQuery.data ?? null;
@@ -95,46 +60,29 @@ export function useAuth(options?: UseAuthOptions) {
     }
 
     if (user) {
-      localStorage.setItem(
-        "manus-runtime-user-info",
-        JSON.stringify(user)
-      );
+      localStorage.setItem("manus-runtime-user-info", JSON.stringify(user));
+      localStorage.setItem(SESSION_KEY, "active");
     } else if (meQuery.isFetched) {
       localStorage.removeItem("manus-runtime-user-info");
+      localStorage.removeItem(SESSION_KEY);
     }
-    
-    const isAuth = !!user;
     
     return {
       user,
-      loading: !meQuery.isFetched && !sessionChecked,
+      loading: meQuery.isLoading,
       error: meQuery.error,
-      isAuthenticated: isAuth,
+      isAuthenticated: !!user,
     };
-  }, [
-    meQuery.data,
-    meQuery.isLoading,
-    meQuery.isFetched,
-    meQuery.error,
-    sessionChecked,
-  ]);
-
+  }, [meQuery.data, meQuery.isLoading, meQuery.isFetched, meQuery.error]);
 
   useEffect(() => {
-    if (!redirectOnUnauthenticated) return;
+    if (!mounted || !redirectOnUnauthenticated) return;
     if (meQuery.isLoading || logoutMutation.isPending) return;
     if (state.user) return;
-    if (typeof window === "undefined") return;
     if (window.location.pathname === redirectPath) return;
 
-    window.location.href = redirectPath
-  }, [
-    redirectOnUnauthenticated,
-    redirectPath,
-    logoutMutation.isPending,
-    meQuery.isLoading,
-    state.user,
-  ]);
+    window.location.href = redirectPath;
+  }, [mounted, redirectOnUnauthenticated, redirectPath, meQuery.isLoading, logoutMutation.isPending, state.user]);
 
   return {
     ...state,
@@ -142,5 +90,3 @@ export function useAuth(options?: UseAuthOptions) {
     logout,
   };
 }
-
-export { setSessionToStorage, clearSessionFromStorage };

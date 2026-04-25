@@ -37,13 +37,13 @@ function setCookie(res: any, token: string) {
   if (res.cookie) {
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax",
+      secure: true, // Always secure in production (Vercel and Render use HTTPS)
+      sameSite: "none", // Required for cross-site cookies in mobile browsers
       maxAge: COOKIE_MAX_AGE,
       path: "/",
       domain: undefined,
     });
-}
+  }
 }
 
 /**

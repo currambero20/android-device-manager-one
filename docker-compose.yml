@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        - VITE_API_URL=/api/trpc
+        - VITE_WEBSOCKET_URL=ws://localhost/ws
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  backend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: sh -c "npm install && npx tsx server/_core/index.ts"
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    depends_on:
+      - mysql
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=mysql://user:password@mysql:3306/device_manager
+      - WEBSOCKET_PORT=3001
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=device_manager
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=rootpassword
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+
+volumes:
+  mysql_data:

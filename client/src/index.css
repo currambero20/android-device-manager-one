@@ -1,0 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  
+  --radius-lg: 1rem;
+  --radius-md: calc(1rem - 2px);
+  --radius-sm: calc(1rem - 4px);
+
+  @keyframes glow-pulse {
+    0%, 100% { filter: drop-shadow(0 0 5px var(--glow-color)); }
+    50% { filter: drop-shadow(0 0 20px var(--glow-color)); }
+  }
+
+  @keyframes scanline {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+}
+
+@layer base {
+  :root {
+    /* Pure Professional Light - Deep Slate Blue Palette */
+    --background: 210 40% 98%; 
+    --foreground: 222 47% 11%; 
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 83% 53%; /* Corporate Blue #2563eb */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 215 20% 65%; /* Muted Grayish Blue */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+    --glow-color: transparent;
+  }
+
+  .dark {
+    /* ELITE DARK - Corporate Intelligence Aesthetic */
+    --background: 222 47% 4%; /* Near Black Deep Navy */
+    --foreground: 210 40% 98%;
+    --card: 222 47% 6%; /* Deep Navy for cards */
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 5%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%; /* Bright Corporate Blue #3b82f6 */
+    --primary-foreground: 222 47% 4%;
+    --secondary: 215 25% 27%; /* Muted Slate Blue */
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 25% 15%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 215 25% 15%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 215 25% 15%;
+    --input: 215 25% 15%;
+    --ring: 217 91% 60%;
+    --glow-color: rgba(59, 130, 246, 0.3);
+  }
+}
+
+@layer base {
+  *, ::after, ::before {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased transition-colors duration-500;
+    font-family: 'Outfit', sans-serif !important;
+  }
+}
+
+@layer utilities {
+  .technical-grid {
+    background-image: 
+      linear-gradient(rgba(0, 245, 212, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 245, 212, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .cyber-scanline {
+    @apply pointer-events-none fixed inset-0 z-50 overflow-hidden opacity-0;
+  }
+  .dark .cyber-scanline {
+    @apply opacity-20;
+  }
+  .dark .cyber-scanline::after {
+    content: "";
+    @apply absolute inset-0 w-full h-[100vh] bg-gradient-to-b from-transparent via-primary/5 to-transparent;
+    animation: scanline 15s linear infinite;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent;
+  }
+  .dark .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-[#ff00ff] to-[#ffbe0b];
+    filter: drop-shadow(0 0 10px rgba(0, 245, 212, 0.3));
+  }
+
+  .glass-panel {
+    @apply bg-white border border-slate-200 shadow-sm rounded-2xl;
+  }
+  .dark .glass-panel {
+    @apply bg-black/60 backdrop-blur-xl border border-primary/15 rounded-2xl;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8), inset 0 1px 0 rgba(0,245,212,0.05);
+  }
+
+  .btn-sapsan {
+    @apply bg-primary text-primary-foreground font-bold rounded-xl transition-all duration-300;
+    animation: glow-pulse 3s infinite;
+  }
+  .btn-sapsan:hover {
+    @apply brightness-110 shadow-[0_0_25px_var(--glow-color)];
+  }
+
+  .neon-border {
+    @apply border border-slate-200 hover:border-primary transition-all duration-300;
+  }
+  .dark .neon-border {
+    @apply border border-primary/30 hover:border-primary transition-all duration-300;
+    box-shadow: 0 0 15px rgba(0, 245, 212, 0.05);
+  }
+
+  .input-sapsan {
+    @apply bg-white border border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary/20 rounded-xl transition-all;
+  }
+  .dark .input-sapsan {
+    @apply bg-black/40 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary/40 rounded-xl transition-all text-primary/90 placeholder:text-muted-foreground;
+  }
+
+  /* ═══ Custom Scrollbar ═══ */
+  .cyber-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .cyber-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .cyber-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted;
+    border-radius: 10px;
+  }
+  .dark .cyber-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-primary/20;
+  }
+}
+
+.dark {
+  color-scheme: dark;
+}

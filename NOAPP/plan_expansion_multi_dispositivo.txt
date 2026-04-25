@@ -1,0 +1,59 @@
+==================================================================
+PLAN DE EXPANSIÓN MULTI-DISPOSITIVO Y MOVILIDAD - ADM_OS
+==================================================================
+
+PARTE 1: DEFINICIONES TÉCNICAS (CONEXIÓN AVANZADA)
+-------------------------------------------------
+1. PROTOCOLO TÉCNICO (wss://)
+   - Es el canal de comunicación en tiempo real (WebSockets).
+   - Link a usar: El host de tu servidor con el prefijo "wss".
+   - Función: Permite que los comandos lleguen al dispositivo en
+     milisegundos y que la respuesta sea instantánea.
+
+2. DEEP LINK SAPSAN (admhub://)
+   - Es un protocolo de apertura de apps a nivel de sistema.
+   - Función: Permite "invocar" la aplicación desde enlaces externos
+     o notificaciones. Si haces clic en un link "admhub://", Android
+     abrirá directamente la consola de ADM.
+
+PARTE 2: PLAN DE ADAPTABILIDAD (PC / TABLET / MÓVIL)
+----------------------------------------------------
+OBJETIVO: Que el panel sea 100% usable en cualquier pantalla.
+
+FASE 1: DISEÑO RESPONSIVO (SIDEBAR Y NAVEGACIÓN)
+- Los menús laterales se ocultarán en móviles bajo un icono de hamburguesa.
+- En tablets, el menú será colapsable (solo iconos).
+- En PC, el menú será fijo y detallado para máxima eficiencia.
+
+FASE 2: RE-ESTRUCTURACIÓN DE MÓDULOS
+- Listado de Dispositivos: 
+  * PC: Grilla de 4 columnas.
+  * Tablet: Grilla de 2 columnas.
+  * Móvil: Lista vertical simplificada con botones de acción rápidos.
+- Monitor de Pantalla: Ajuste automático del tamaño de la captura 
+  según el ancho del navegador.
+
+FASE 3: OPTIMIZACIÓN TÁCTIL (UI/UX)
+- Aumento de zonas de presión en botones para dedos.
+- Soporte para gestos (deslizar para ver logs, etc.).
+
+PARTE 3: VIABILIDAD DE PANEL MÓVIL (APK PROPIO)
+-----------------------------------------------
+¿ES VIABLE?: Sí, es la opción recomendada para administración remota.
+
+MÉTODO 1: PWA (PROGRESSIVE WEB APP) - Recomendado
+- Instalación instantánea desde el navegador.
+- Funciona sin barra de direcciones (pantalla completa).
+- Bajo consumo de recursos.
+
+MÉTODO 2: NATIVE WRAPPER (CAPACITOR/TWA)
+- Crea un archivo .apk real que instalas en tu celular de administrador.
+- VENTAJAS:
+  * Icono propio en el menú de apps.
+  * Notificaciones PUSH: El celular vibrará cuando un dispositivo
+    se conecte, se mueva o capture algo importante.
+  * Persistencia de sesión mejorada (no pide clave cada vez).
+
+==================================================================
+ESTADO DEL PLAN: PENDIENTE DE APROBACIÓN
+==================================================================

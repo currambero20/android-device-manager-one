@@ -1,0 +1,11 @@
+
+function getHash(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+        h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+    }
+    return (h >>> 0).toString(16).toUpperCase();
+}
+
+const types = ["0xFI", "0xSM", "0xCL", "0xCO", "0xMI", "0xLO", "0xWI", "0xPM", "0xIN", "0xGP", "0xLK", "0xSC", "0xVB", "0xRB", "0xWD", "0xHO", "0xSO", "0xGF", "0xCA", "0xSR", "0xST", "0xSP"];
+types.forEach(t => console.log(`${t} -> 0x${getHash(t)}`));

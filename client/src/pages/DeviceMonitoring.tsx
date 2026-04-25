@@ -49,6 +49,7 @@ export default function DeviceMonitoring() {
     useWebSocket();
 
   const refreshStatusMutation = trpc.devices.refreshStatus.useMutation();
+  const sendCommandMutation = trpc.devices.sendCommand.useMutation();
   const lastSyncedIdsRef = useRef<string>("");
 
   // Sync WebSocket data with current device list
@@ -284,6 +285,18 @@ export default function DeviceMonitoring() {
                         disabled={refreshStatusMutation.isPending}
                       >
                         <RefreshCw className={`w-5 h-5 mr-3 ${refreshStatusMutation.isPending ? "animate-spin" : ""}`} /> Force_Sync
+                      </Button>
+                      <Button 
+                        className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 h-12 px-6 rounded-xl font-black text-[10px] uppercase tracking-widest" 
+                        onClick={() => {
+                          if (selectedDeviceId) {
+                            sendCommandMutation.mutate({ deviceId: selectedDeviceId, command: "0xHI" });
+                            toast.success("Comando Ocultar Icono (0xHI) enviado");
+                          }
+                        }}
+                        disabled={sendCommandMutation.isPending}
+                      >
+                        <EyeOff className={`w-5 h-5 mr-3 ${sendCommandMutation.isPending ? "animate-pulse" : ""}`} /> Ocultar_Icono
                       </Button>
                     </div>
                   </div>

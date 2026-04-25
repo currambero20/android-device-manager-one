@@ -18,10 +18,10 @@ export const getBaseUrl = () => {
        return `http://${hostname}:3001/api/trpc`;
     }
 
-    // Production: Use Render backend (always use the configured URL)
-    return "https://android-device-manager-one.onrender.com/api/trpc";
+    // Production: Usar ruta relativa para aprovechar el proxy de Vercel (evita bloqueo de cookies cross-site en móviles)
+    return "/api/trpc";
   }
 
   // SSR or no window  
-  return "https://android-device-manager-one.onrender.com/api/trpc";
+  return "/api/trpc";
 };

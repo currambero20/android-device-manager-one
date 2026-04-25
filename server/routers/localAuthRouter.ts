@@ -47,184 +47,167 @@ function setCookie(res: any, token: string) {
 }
 
 /**
- * Login procedure
- * 
- * Priority:
- * 1. Always check ENV VAR credentials first (admin/admin123 or custom via ADMIN_USERNAME / ADMIN_PASSWORD)
- * 2. Only try DB if env-var credentials don't match AND DB is available WITH passwordHash column
- * 
- * This ensures the system works even without a DB or before migrations run.
- */
-export const loginProcedure = publicProcedure
-  .input(
-    z.object({
-      username: z.string().min(1),
-      password: z.string().min(1),
-    })
-  )
-  .mutation(async ({ input, ctx }) => {
-    const adminUsername = process.env.ADMIN_USERNAME || "admin";
-    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+   * Login procedure
+   * 
+   * Priority:
+   * 1. First try DB credentials (if user exists in DB with valid password)
+   * 2. Fall back to ENV VAR credentials if DB auth fails
+   * 
+   * This ensures the system works even without a DB or before migrations run.
+   */
+  export const loginProcedure = publicProcedure
+    .input(
+      z.object({
+        username: z.string().min(1),
+        password: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const adminUsername = process.env.ADMIN_USERNAME || "admin";
+      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
 
-    // ✅ STEP 1: Try DB user lookup FIRST (allows Profile changes to take effect)
-    try {
-      const dbInstance = await getDb();
+      // ✅ STEP 1: Try DB user FIRST (allows Profile changes to take effect)
+      try {
+        const dbInstance = await getDb();
 
-      if (dbInstance) {
-        // Search by email OR by name (users may register with a username instead of email)
-        const userRows = await dbInstance
-          .select()
-          .from(users)
-          .where(or(eq(users.email, input.username), eq(users.name, input.username)))
-          .limit(1);
+        if (dbInstance) {
+          // Search by email OR by name
+          const userRows = await dbInstance
+            .select()
+            .from(users)
+            .where(or(eq(users.email, input.username), eq(users.name, input.username)))
+            .limit(1);
 
-        const dbUser = userRows[0];
+          const dbUser = userRows[0];
 
-        if (dbUser && dbUser.passwordHash) {
-          // --- Inicio de protección contra fuerza bruta ---
-          if (dbUser.lockoutUntil && new Date(dbUser.lockoutUntil) > new Date()) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intente más tarde.",
-            });
-          }
-
-          const valid = await verifyPasswordHelper(input.password, dbUser.passwordHash);
-          
-          if (valid) {
-            // Restablecemos contadores en caso de éxito
-            if (dbUser.failedLoginAttempts > 0 || dbUser.lockoutUntil) {
-              await dbInstance.update(users).set({ failedLoginAttempts: 0, lockoutUntil: null }).where(eq(users.id, dbUser.id));
+          if (dbUser && dbUser.passwordHash) {
+            // User found with password - verify
+            if (dbUser.lockoutUntil && new Date(dbUser.lockoutUntil) > new Date()) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "Cuenta bloqueada temporalmente.",
+              });
             }
-            // Check for 2FA bypass parameter (passed as part of password or a header in the future)
-            // For now, if user is the adminUsername from env, bypass 2FA just in case
-            const bypass2FA = input.username === adminUsername;
 
-            if (dbUser.twoFactorEnabled && !bypass2FA) {
-              const otp = Math.floor(100000 + Math.random() * 900000).toString();
-              const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
-              await setUserEmailOtp(dbUser.id, otp, expires);
-              
-              try {
-                await send2FAEmail(dbUser.email || "", otp);
-              } catch (mailError: any) {
-                console.error("[Auth] 2FA Email failed:", mailError);
-                throw new TRPCError({ 
-                  code: "INTERNAL_SERVER_ERROR", 
-                  message: `Fallo al enviar correo 2FA: ${mailError.message || "Error desconocido"}. Revisa la configuración de correo.` 
-                });
+            const valid = await verifyPasswordHelper(input.password, dbUser.passwordHash);
+            
+            if (valid) {
+              // Reset failed attempts
+              if (dbUser.failedLoginAttempts > 0 || dbUser.lockoutUntil) {
+                await dbInstance.update(users).set({ failedLoginAttempts: 0, lockoutUntil: null }).where(eq(users.id, dbUser.id));
               }
               
+              const bypass2FA = input.username === adminUsername;
+
+              if (dbUser.twoFactorEnabled && !bypass2FA) {
+                const otp = Math.floor(100000 + Math.random() * 900000).toString();
+                const expires = new Date(Date.now() + 5 * 60 * 1000);
+                await setUserEmailOtp(dbUser.id, otp, expires);
+                
+                try {
+                  await send2FAEmail(dbUser.email || "", otp);
+                } catch (mailError: any) {
+                  console.error("[Auth] 2FA Email failed:", mailError);
+                }
+                
+                return {
+                  success: true,
+                  requires2FA: true,
+                  userId: dbUser.id,
+                  message: "Código de verificación enviado"
+                };
+              }
+
+              const token = await createSessionToken({
+                sub: String(dbUser.id),
+                openId: dbUser.openId || String(dbUser.id),
+                name: dbUser.name || input.username,
+                email: dbUser.email || input.username,
+                role: dbUser.role || "user",
+                loginMethod: "local",
+              });
+
+              setCookie(ctx.res, token);
+
+              try {
+                await createAuditLog({
+                  userId: dbUser.id,
+                  action: `Inicio de sesión (${dbUser.name || dbUser.email})`,
+                  actionType: "user_login",
+                  status: "success",
+                  details: { method: "db" },
+                  timestamp: new Date(),
+                });
+              } catch (err) {
+                console.warn("[Auth] Audit log failed:", err);
+              }
+
               return {
                 success: true,
-                requires2FA: true,
-                userId: dbUser.id,
-                message: "Código de verificación enviado a su correo"
+                user: {
+                  id: dbUser.id,
+                  name: dbUser.name || "",
+                  email: dbUser.email || "",
+                  role: dbUser.role || "user",
+                },
               };
+            } else {
+              // Password wrong - try fallback credentials
+              console.warn("[Auth] DB password failed for:", input.username);
             }
-
-            const token = await createSessionToken({
-              sub: String(dbUser.id),
-              openId: dbUser.openId || String(dbUser.id),
-              name: dbUser.name || input.username,
-              email: dbUser.email || input.username,
-              role: dbUser.role || "user",
-              loginMethod: "local",
-            });
-
-            setCookie(ctx.res, token);
-
-            try {
-              await createAuditLog({
-                userId: dbUser.id,
-                action: `Inicio de sesión (${dbUser.name || dbUser.email})`,
-                actionType: "user_login",
-                status: "success",
-                details: { method: "db", email: dbUser.email },
-                timestamp: new Date(),
-              });
-            } catch (err) {
-              console.warn("[Auth] Falló creación de audit log db user:", err);
-            }
-
-            return {
-              success: true,
-              user: {
-                id: dbUser.id,
-                name: dbUser.name || "",
-                email: dbUser.email || "",
-                role: dbUser.role || "user",
-              },
-            };
-          } else {
-             // Incrementar intentos fallidos
-             const attempts = (dbUser.failedLoginAttempts || 0) + 1;
-             if (attempts >= 5) {
-                 const lockout = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
-                 await dbInstance.update(users).set({ failedLoginAttempts: attempts, lockoutUntil: lockout }).where(eq(users.id, dbUser.id));
-                 throw new TRPCError({
-                     code: "FORBIDDEN",
-                     message: "Demasiados intentos fallidos. Su cuenta ha sido bloqueada por 15 minutos.",
-                 });
-             } else {
-                 await dbInstance.update(users).set({ failedLoginAttempts: attempts }).where(eq(users.id, dbUser.id));
-             }
           }
         }
-      }
-    } catch (dbError) {
-      // ✅ FIX: Do NOT swallow TRPCError (like 2FA failures). Re-throw them so the client sees the real message.
-      if (dbError instanceof TRPCError) throw dbError;
-      
-      console.warn("[Auth] DB login failed or unavailable:", (dbError as Error).message);
-    }
-
-    // ✅ STEP 2: Fallback to env-var admin credentials if DB authentication failed or user wasn't found
-    if (input.username === adminUsername && input.password === adminPassword) {
-      const token = await createSessionToken({
-        sub: "admin-local",
-        openId: "admin-local",
-        name: "Administrador",
-        email: decrypt("53585744f6ef8abf14e43cd74135a8fb:aec6900911a8dc0d9e1e07b69f639741fecce90dff82afc5241ec0964c8afea2"), // admin email
-        role: "admin",
-        permissions: ["MENU_DASHBOARD", "MENU_DEVICES", "MENU_APK_BUILDER", "MENU_REMOTE_CONTROL", "MENU_FILE_EXPLORER", "MENU_LOCATION", "MENU_APPS", "MENU_COMMUNICATIONS", "MENU_NOTIFICATIONS"],
-        loginMethod: "local",
-      });
-
-
-      setCookie(ctx.res, token);
-      
-      try {
-        const { createAuditLog } = await import("../db");
-        await createAuditLog({
-          userId: 0,
-          action: "Inicio de sesión (Administrador Fallback)",
-          actionType: "user_login",
-          status: "success",
-          details: { method: "env-var", username: adminUsername },
-          timestamp: new Date(),
-        });
-      } catch (err) {
-        console.warn("[Auth] Falló creación de audit log fallback:", err);
+      } catch (dbError) {
+        // Only re-throw TRPCErrors
+        if (dbError instanceof TRPCError) throw dbError;
+        console.warn("[Auth] DB error:", (dbError as Error).message);
       }
 
-      return {
-        success: true,
-        user: {
-          id: 0,
+      // ✅ STEP 2: Fallback to ENV credentials
+      if (input.username === adminUsername && input.password === adminPassword) {
+        const token = await createSessionToken({
+          sub: "admin-local",
+          openId: "admin-local",
           name: "Administrador",
-          email: `${adminUsername}@device-manager.local`,
+          email: "admin@device-manager.local",
           role: "admin",
-        },
-      };
-    }
+          permissions: ["MENU_DASHBOARD", "MENU_DEVICES", "MENU_APK_BUILDER", "MENU_REMOTE_CONTROL", "MENU_FILE_EXPLORER", "MENU_LOCATION", "MENU_APPS", "MENU_COMMUNICATIONS", "MENU_NOTIFICATIONS"],
+          loginMethod: "local",
+        });
 
-    // If nothing matched
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Credenciales incorrectas",
+        setCookie(ctx.res, token);
+        
+        try {
+          const { createAuditLog } = await import("../db");
+          await createAuditLog({
+            userId: 0,
+            action: "Inicio de sesión (Administrador)",
+            actionType: "user_login",
+            status: "success",
+            details: { method: "env-fallback" },
+            timestamp: new Date(),
+          });
+        } catch (err) {
+          console.warn("[Auth] Audit log failed:", err);
+        }
+
+        return {
+          success: true,
+          user: {
+            id: 0,
+            name: "Administrador",
+            email: `${adminUsername}@device-manager.local`,
+            role: "admin",
+          },
+        };
+      }
+
+      // Nothing matched
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Credenciales incorrectas",
+      });
     });
-  });
 
 /**
  * Register procedure - for creating new local users (requires admin key)

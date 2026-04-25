@@ -3,7 +3,6 @@ import { getAPKBuilder } from "./apkBuilder";
 import { getDb } from "./db";
 import { apkBuilds } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
-import path from "path";
 
 /**
  * Handle APK download request
@@ -13,14 +12,15 @@ export async function handleAPKDownload(req: Request, res: Response): Promise<vo
     const { buildId } = req.params;
 
     if (!buildId) {
-      res.status(400).json({ error: "Build ID is required" });
+      res.status(400).type("text/plain").send("Build ID is required");
       return;
     }
 
     // Get build info from database
     const db = await getDb();
+    
     if (!db) {
-      res.status(500).json({ error: "Database not available" });
+      res.status(500).type("text/plain").send("Database not available");
       return;
     }
 
@@ -31,7 +31,7 @@ export async function handleAPKDownload(req: Request, res: Response): Promise<vo
       .limit(1);
 
     if (builds.length === 0) {
-      res.status(404).json({ error: "Build not found" });
+      res.status(404).type("text/plain").send("Build not found");
       return;
     }
 
@@ -39,13 +39,13 @@ export async function handleAPKDownload(req: Request, res: Response): Promise<vo
 
     // Check if build is ready
     if (build.status !== "ready") {
-      res.status(400).json({ error: `Build status is ${build.status}` });
+      res.status(400).type("text/plain").send(`Build status is ${build.status}`);
       return;
     }
 
     // Check expiration
     if (build.expiresAt && new Date(build.expiresAt) < new Date()) {
-      res.status(410).json({ error: "Build has expired" });
+      res.status(410).type("text/plain").send("Build has expired");
       return;
     }
 
@@ -53,34 +53,37 @@ export async function handleAPKDownload(req: Request, res: Response): Promise<vo
     const apkBuilder = getAPKBuilder();
     const apkBuffer = await apkBuilder.downloadAPK(buildId);
 
-    if (!apkBuffer) {
-      res.status(404).json({ error: "APK file not found" });
+    if (!apkBuffer || apkBuffer.length === 0) {
+      res.status(404).type("text/plain").send("APK file not found or empty");
       return;
     }
 
     // Update download count
-    await db
-      .update(apkBuilds)
-      .set({
-        downloadCount: (build.downloadCount || 0) + 1,
-        updatedAt: new Date(),
-      })
-      .where(eq(apkBuilds.buildId, buildId));
+    try {
+      await db
+        .update(apkBuilds)
+        .set({
+          downloadCount: (build.downloadCount || 0) + 1,
+          updatedAt: new Date(),
+        })
+        .where(eq(apkBuilds.buildId, buildId));
+    } catch (err) {
+      console.warn("[APK Download] Failed to update download count:", err);
+    }
 
-    // Send file
+    // Send file with correct headers
+    const filename = `${build.appName || "app"}.apk`;
     res.setHeader("Content-Type", "application/vnd.android.package-archive");
-    res.setHeader("Content-Disposition", `attachment; filename="${build.appName}.apk"`);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Content-Length", apkBuffer.length);
-    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Access-Control-Allow-Origin", "*");
 
     res.send(apkBuffer);
-
-    console.log(`[APK Download] Downloaded: ${buildId} (${build.appName})`);
+    console.log(`[APK Download] Sent: ${buildId} (${filename})`);
   } catch (error) {
     console.error("[APK Download] Error:", error);
-    res.status(500).json({
-      error: error instanceof Error ? error.message : "Download failed",
-    });
+    res.status(500).type("text/plain").send("Download failed");
   }
 }
 

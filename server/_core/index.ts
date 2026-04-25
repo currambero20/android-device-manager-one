@@ -52,6 +52,8 @@ app.use(helmet({
   },
 }));
 
+app.use(express.json());
+app.use(cookieParser());
 app.use(xssMiddleware);
 app.use(cors({
   origin: (origin, callback) => {
@@ -72,8 +74,6 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-TRPC-Source"]
 }));
-app.use(cookieParser());
-app.use(express.json());
 
 // Logging
 app.use((req, res, next) => {

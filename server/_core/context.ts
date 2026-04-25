@@ -41,6 +41,12 @@ export async function createContext(opts: CreateExpressContextOptions) {
   const { req, res } = opts;
   const sessionToken = req.cookies?.session_token;
 
+  // Debug logging for mobile connection issues
+  const userAgent = req.headers['user-agent'] || 'unknown';
+  if (/mobile|android|iphone|ipad/i.test(userAgent)) {
+    console.log(`[Context] [MOBILE] Cookies: ${Object.keys(req.cookies || {}).join(', ')} | Token: ${!!sessionToken}`);
+  }
+
   let user: User | null = null;
 
   if (sessionToken) {

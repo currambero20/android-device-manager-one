@@ -1,22 +1,65 @@
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+const SESSION_STORAGE_KEY = "adm_session_token";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
   redirectPath?: string;
 };
 
+function getSessionFromStorage(): string | null {
+  if (typeof window === "undefined") return null;
+  
+  const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed && typeof parsed === "string") {
+        return parsed;
+      }
+    } catch {
+      return stored;
+    }
+  }
+  return null;
+}
+
+function setSessionToStorage(token: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(SESSION_STORAGE_KEY, token);
+}
+
+function clearSessionFromStorage() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(SESSION_STORAGE_KEY);
+}
+
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
     options ?? {};
   const utils = trpc.useUtils();
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [localSession, setLocalSession] = useState<string | null>(getSessionFromStorage());
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
-    retry: false,
+    retry: 3,
     refetchOnWindowFocus: false,
+    enabled: true,
   });
+
+  useEffect(() => {
+    if (meQuery.isFetched) {
+      setSessionChecked(true);
+    }
+  }, [meQuery.isFetched]);
+
+  useEffect(() => {
+    const storedSession = getSessionFromStorage();
+    setLocalSession(storedSession);
+  }, []);
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
@@ -37,6 +80,7 @@ export function useAuth(options?: UseAuthOptions) {
       throw error;
     } finally {
       utils.auth.me.setData(undefined, null);
+      clearSessionFromStorage();
       localStorage.removeItem("manus-runtime-user-info");
       window.location.href = redirectPath;
     }
@@ -44,8 +88,8 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    // Si hay un error de tRPC de UNAUTHOZIED, forzamos user a null
     let user = meQuery.data ?? null;
+    
     if (meQuery.error instanceof TRPCClientError && meQuery.error.data?.code === "UNAUTHORIZED") {
       user = null;
     }
@@ -59,17 +103,20 @@ export function useAuth(options?: UseAuthOptions) {
       localStorage.removeItem("manus-runtime-user-info");
     }
     
+    const isAuth = !!user;
+    
     return {
       user,
-      loading: meQuery.isLoading && !meQuery.isFetched,
+      loading: !meQuery.isFetched && !sessionChecked,
       error: meQuery.error,
-      isAuthenticated: !!user,
+      isAuthenticated: isAuth,
     };
   }, [
     meQuery.data,
     meQuery.isLoading,
     meQuery.isFetched,
     meQuery.error,
+    sessionChecked,
   ]);
 
 
@@ -95,3 +142,5 @@ export function useAuth(options?: UseAuthOptions) {
     logout,
   };
 }
+
+export { setSessionToStorage, clearSessionFromStorage };

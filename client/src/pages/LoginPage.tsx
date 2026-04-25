@@ -27,7 +27,7 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
 
   const utils = trpc.useUtils();
 
-  const loginMutation = trpc.auth.login.useMutation({
+const loginMutation = trpc.auth.login.useMutation({
     onSuccess: (data: any) => {
       if (data.requires2FA) {
         setPending2FAUserId(data.userId);
@@ -41,14 +41,11 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
         // [FIX MOBILE] Esperar a que la cookie esté configurada antes de redirigir
         setTimeout(() => {
           window.location.assign("/dashboard");
-        }, 1500); // Mayor delay para asegurar que la cookie se configure
+        }, 2000);
       }
     },
     onError: (error: any) => {
-      // [FIX MOBILE] Mejor mensaje de error para dispositivos móviles
       const errorMessage = error?.message || "Error al iniciar sesión";
-      
-      // Detectar si es error de conexión (servidor dormido en Render)
       if (errorMessage.includes("fetch") || errorMessage.includes("network") || errorMessage.includes("ERR_")) {
         toast.error("Error de conexión. Verifica tu internet e intenta de nuevo.");
       } else {

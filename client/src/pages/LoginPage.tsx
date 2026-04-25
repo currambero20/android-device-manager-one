@@ -36,15 +36,24 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
         setLoading(false);
       } else {
         toast.success("¡Bienvenido al sistema! Redireccionando...");
-        // Pre-fetch auth.me to warm up the session
         utils.auth.me.invalidate();
+        
+        // [FIX MOBILE] Esperar a que la cookie esté configurada antes de redirigir
         setTimeout(() => {
           window.location.assign("/dashboard");
-        }, 1000);
+        }, 1500); // Mayor delay para asegurar que la cookie se configure
       }
     },
     onError: (error: any) => {
-      toast.error(error.message || "Error al iniciar sesión");
+      // [FIX MOBILE] Mejor mensaje de error para dispositivos móviles
+      const errorMessage = error?.message || "Error al iniciar sesión";
+      
+      // Detectar si es error de conexión (servidor dormido en Render)
+      if (errorMessage.includes("fetch") || errorMessage.includes("network") || errorMessage.includes("ERR_")) {
+        toast.error("Error de conexión. Verifica tu internet e intenta de nuevo.");
+      } else {
+        toast.error(errorMessage);
+      }
       setLoading(false);
     },
   });

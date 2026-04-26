@@ -12,6 +12,7 @@ node_modules/
 # Builds
 dist/
 build/
+!server/assets/apk-template/build/**
 builds/
 apk-builds/
 .vite/

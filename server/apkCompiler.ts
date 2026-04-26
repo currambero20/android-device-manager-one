@@ -419,15 +419,25 @@ export class APKCompiler {
       const finalApkName = `${config.appName.replace(/[^a-zA-Z0-9]/g, "_")}.apk`;
       const signedApk = join(buildIdDir, finalApkName);
       
-      // Buscar el archivo generado (suele terminar en -aligned-debugSigned.apk si no se especifica --overwrite de cierta forma)
+      // Buscar el archivo generado (uber-apk-signer añade sufijos)
       const filesInBuildDir = readdirSync(buildIdDir);
-      const generatedApk = filesInBuildDir.find(f => f.endsWith("-aligned-debugSigned.apk") || f.endsWith("-signed.apk") || (f.startsWith("unsigned") && f.endsWith(".apk") && f !== "unsigned.apk"));
+      logs.push(`[DEBUG] Archivos en build dir: ${filesInBuildDir.join(", ")}`);
+      
+      const generatedApk = filesInBuildDir.find(f => 
+        f.includes("-aligned-debugSigned.apk") || 
+        f.includes("-aligned-signed.apk") ||
+        (f !== "unsigned.apk" && f.endsWith(".apk") && !f.includes(finalApkName))
+      );
       
       if (generatedApk) {
+        logs.push(`[OK] Archivo firmado detectado: ${generatedApk}`);
         renameSync(join(buildIdDir, generatedApk), signedApk);
-      } else if (existsSync(unsignedApk)) {
-        // Fallback si por alguna razón no cambió el nombre pero se firmó
-        copyFileSync(unsignedApk, signedApk);
+      } else {
+        // Si no se encuentra el archivo con sufijo, verificar si el original fue sobreescrito (poco probable pero posible)
+        // O si ya tiene el nombre final.
+        if (!existsSync(signedApk)) {
+          throw new Error("No se pudo encontrar el APK firmado después de ejecutar uber-apk-signer");
+        }
       }
 
       if (!existsSync(signedApk)) {

@@ -347,11 +347,33 @@ class APKCompiler {
       // Verificar que el proyecto esté listo
       const manifestPath = join(projectDir, "AndroidManifest.xml");
       const smaliDir = join(projectDir, "smali");
+      const buildDir = join(projectDir, "build");
+      
       if (!existsSync(manifestPath)) {
         throw new Error("AndroidManifest.xml not found after preparation");
       }
       if (!existsSync(smaliDir)) {
         throw new Error("smali directory not found after preparation");
+      }
+      if (!existsSync(buildDir)) {
+        throw new Error("build directory not found - template incomplete");
+      }
+      
+      // DEBUG: Listar archivos en el proyecto preparado
+      logs.push(`[DEBUG] Project dir contents:`);
+      logs.push(`[DEBUG] - AndroidManifest.xml: ${existsSync(manifestPath)}`);
+      logs.push(`[DEBUG] - smali/: ${existsSync(smaliDir)}`);
+      logs.push(`[DEBUG] - build/: ${existsSync(buildDir)}`);
+      
+      // Verificar contenido de smali
+      const smaliContents = readdirSync(smaliDir);
+      logs.push(`[DEBUG] smali contains: ${smaliContents.join(", ")}`);
+      
+      // Verificar contenido de build
+      if (existsSync(join(buildDir, "apk"))) {
+        const buildApkDir = join(buildDir, "apk");
+        const buildContents = readdirSync(buildApkDir);
+        logs.push(`[DEBUG] build/apk contains: ${buildContents.join(", ")}`);
       }
 
       // Compilar con Apktool

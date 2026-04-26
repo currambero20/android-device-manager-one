@@ -7,6 +7,28 @@ import { apkBuilds } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import axios from "axios";
 
+/**
+ * Función auxiliar para copiar directorios recursivamente
+ */
+function copyDirRecursive(src: string, dest: string): void {
+  if (!existsSync(dest)) {
+    mkdirSync(dest, { recursive: true });
+  }
+  
+  const entries = readdirSync(src, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = join(src, entry.name);
+    const destPath = join(dest, entry.name);
+    
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
 
 /**
  * Servicio de compilación de APK basado en el concepto ADM
@@ -133,12 +155,37 @@ class APKCompiler {
     // Copiar estructura completa del template
     logs.push(`[SETUP] Copiando estructura del template...`);
     try {
-      if (process.platform === "win32") {
-        execSync(`powershell -Command "Copy-Item -Path '${templateDir}\\*' -Destination '${tempProjectDir}' -Recurse -Force"`);
-      } else {
-        execSync(`cp -r "${templateDir}/." "${tempProjectDir}"`);
+      // Usar método más robusto para copiar
+      if (!existsSync(tempProjectDir)) {
+        mkdirSync(tempProjectDir, { recursive: true });
       }
-      logs.push(`[OK] Template copiado`);
+      
+      // Copiar cada directorio manualmente para evitar problemas
+      const dirsToCopy = ["smali", "original", "build", "lib", "res"];
+      for (const dir of dirsToCopy) {
+        const srcDir = join(templateDir, dir);
+        const destDir = join(tempProjectDir, dir);
+        if (existsSync(srcDir)) {
+          if (!existsSync(destDir)) {
+            mkdirSync(destDir, { recursive: true });
+          }
+          copyDirRecursive(srcDir, destDir);
+          logs.push(`[OK] Copiado directorio: ${dir}`);
+        }
+      }
+      
+      // Copiar archivos individuales
+      const filesToCopy = ["AndroidManifest.xml", "apktool.yml"];
+      for (const file of filesToCopy) {
+        const srcFile = join(templateDir, file);
+        const destFile = join(tempProjectDir, file);
+        if (existsSync(srcFile)) {
+          copyFileSync(srcFile, destFile);
+          logs.push(`[OK] Copiado archivo: ${file}`);
+        }
+      }
+      
+      logs.push(`[OK] Template copiado completamente`);
     } catch (e) {
       console.error("[APKCompiler] Error copying template:", e);
       throw e;

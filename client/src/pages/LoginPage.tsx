@@ -37,9 +37,9 @@ const loginMutation = trpc.auth.login.useMutation({
       } else {
         toast.success("¡Bienvenido! Redireccionando...");
         utils.auth.me.invalidate();
-        setTimeout(() => {
-          window.location.replace(window.location.origin + "/dashboard");
-        }, 1500);
+        // Usar método robusto para móviles - usar href completo
+        const dashboardUrl = window.location.origin + "/dashboard";
+        window.location.href = dashboardUrl;
       }
     },
     onError: (error: any) => {
@@ -57,9 +57,9 @@ const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
       toast.success("¡Verificación exitosa! Entrando...");
       utils.auth.me.invalidate();
-      setTimeout(() => {
-        window.location.replace(window.location.origin + "/dashboard");
-      }, 1000);
+      // Usar método robusto para móviles
+      const dashboardUrl = window.location.origin + "/dashboard";
+      window.location.href = dashboardUrl;
     },
     onError: (error: any) => {
       toast.error(error.message || "Código incorrecto o expirado");

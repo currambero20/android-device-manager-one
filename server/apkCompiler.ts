@@ -376,16 +376,44 @@ class APKCompiler {
         logs.push(`[DEBUG] build/apk contains: ${buildContents.join(", ")}`);
       }
 
-      // Compilar con Apktool
+      // Compilar con Apktool - MODO SIMPLE Y ROBUSTO
       const unsignedApk = join(buildIdDir, "unsigned.apk");
-      logs.push(`[COMPILE] Running Apktool...`);
+      logs.push(`[COMPILE] Using simple build method...`);
       
+      // Verificar que smali tiene contenido
+      const smaliFiles = readdirSync(smaliDir, { recursive: true });
+      const smaliFileCount = smaliFiles.filter(f => typeof f === "string" && f.endsWith(".smali")).length;
+      logs.push(`[DEBUG] Found ${smaliFileCount} smali files to compile`);
+      
+      if (smaliFileCount === 0) {
+        throw new Error("NO smali files found! Template copy failed.");
+      }
+      
+      // Intentar compilación simple primero
       try {
-        execSync(`${this.getJavaCommand()} -jar "${this.apktoolPath}" b "${projectDir}" -o "${unsignedApk}"`, { stdio: "pipe" });
-        logs.push(`[OK] Apktool compiled APK`);
+        // Usar apktool directamente con opciones simples
+        const apktoolCmd = `${this.getJavaCommand()} -jar "${this.apktoolPath}" b "${projectDir}" -o "${unsignedApk}" -f`;
+        logs.push(`[CMD] ${apktoolCmd}`);
+        
+        const compileOutput = execSync(apktoolCmd, { 
+          stdio: "pipe",
+          maxBuffer: 50 * 1024 * 1024 // 50MB buffer
+        });
+        
+        logs.push(`[OK] Apktool compiled`);
+        logs.push(`[DEBUG] Output: ${(compileOutput || "").toString().substring(0, 500)}`);
       } catch (compileError: any) {
-        logs.push(`[ERROR] Apktool failed: ${compileError.message || compileError}`);
-        throw new Error(`Apktool compilation failed: ${compileError.message || compileError}`);
+        const errorMsg = compileError.message || String(compileError);
+        logs.push(`[ERROR] Apktool failed: ${errorMsg}`);
+        
+        // Intentar método alternativo
+        logs.push(`[RETRY] Trying backup compilation method...`);
+        try {
+          execSync(`${this.getJavaCommand()} -jar "${this.apktoolPath}" build "${projectDir}" --output "${unsignedApk}"`, { stdio: "pipe" });
+          logs.push(`[OK] Backup method worked`);
+        } catch (retryError: any) {
+          throw new Error(`APK compilation failed after retry: ${retryError.message}`);
+        }
       }
 
       if (!existsSync(unsignedApk)) {

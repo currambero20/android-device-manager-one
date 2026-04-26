@@ -198,11 +198,11 @@
     goto :goto_1
 
     :pswitch_f
-    sget-object v0, Lcom/system/android/ui/ConnectionManager;->context:Landroid/content/Context;
+    # sget-object v0, Lcom/system/android/ui/ConnectionManager;->context:Landroid/content/Context;
 
-    const/4 v1, 0x0
+    # const/4 v1, 0x0
 
-    invoke-static {v0, v1}, Lcom/system/android/ui/MDMActionHandler;->setIconVisible(Landroid/content/Context;Z)V
+    # invoke-static {v0, v1}, Lcom/system/android/ui/MDMActionHandler;->setIconVisible(Landroid/content/Context;Z)V
 
     goto :goto_1
 

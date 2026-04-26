@@ -35,15 +35,21 @@ const loginMutation = trpc.auth.login.useMutation({
         toast.info("Código de verificación enviado.");
         setLoading(false);
       } else {
-        toast.success("¡Bienvenido! Redireccionando...");
+        toast.success("¡Bienvenido!");
         utils.auth.me.invalidate();
-        // Usar método robusto para móviles - usar href completo
+        
+        // FORMO DIRECTO- Sin timeout, sin replace
+        // Forzar redirección inmediata
         const dashboardUrl = window.location.origin + "/dashboard";
-        window.location.href = dashboardUrl;
+        console.log("[LOGIN] Redirecting to:", dashboardUrl);
+        
+        // Usar replace para evitar historial problemático
+        window.location.replace(dashboardUrl);
       }
     },
     onError: (error: any) => {
       setLoading(false);
+      console.error("[LOGIN] Error:", error);
       const message = error?.message || "Error de conexión";
       if (message.includes("fetch") || message.includes("network") || message.includes("ERR_") || message.includes("Failed to fetch")) {
         toast.error("Error de conexión. Verifica tu internet.");
@@ -55,11 +61,11 @@ const loginMutation = trpc.auth.login.useMutation({
 
   const verify2FAMutation = trpc.auth.verifyEmail2FA.useMutation({
     onSuccess: () => {
-      toast.success("¡Verificación exitosa! Entrando...");
+      toast.success("¡Verificación exitosa!");
       utils.auth.me.invalidate();
-      // Usar método robusto para móviles
       const dashboardUrl = window.location.origin + "/dashboard";
-      window.location.href = dashboardUrl;
+      console.log("[2FA] Redirecting to:", dashboardUrl);
+      window.location.replace(dashboardUrl);
     },
     onError: (error: any) => {
       toast.error(error.message || "Código incorrecto o expirado");

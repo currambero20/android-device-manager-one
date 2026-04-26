@@ -403,7 +403,7 @@ class APKCompiler {
       }
       logs.push(`[OK] Copied ${buildFiles.length} files from build`);
       
-      // Copiar certificados de original
+      // Copiar certificados de original - USA LOS MISMOS ARCHIVOS
       const originalMetaDir = join(tempApkDir, "META-INF");
       mkdirSync(originalMetaDir, { recursive: true });
       
@@ -431,49 +431,26 @@ class APKCompiler {
       const apkSize = statSync(unsignedApk).size;
       logs.push(`[OK] APK created: ${(apkSize / 1024 / 1024).toFixed(2)}MB`);
 
-      // Firmar APK
-      logs.push(`[SIGN] Signing APK...`);
-      const uberSignerPath = join(this.assetsDir, "uber-apk-signer.jar");
+      // NO FIRMAR - usar la firma existente del template
+      const signedApk = join(buildIdDir, `${config.appName.replace(/[^a-zA-Z0-9]/g, "_")}.apk`);
       
-      try {
-        execSync(`${this.getJavaCommand()} -jar "${uberSignerPath}" -a "${unsignedApk}" -o "${buildIdDir}" 2>&1`, { stdio: "pipe" });
-        logs.push(`[OK] APK signed`);
-      } catch (signError: any) {
-        logs.push(`[ERROR] Signing failed: ${signError.message || signError}`);
-        throw new Error(`APK signing failed: ${signError.message || signError}`);
-      }
-      
-      const signedTempApk = join(buildIdDir, "unsigned-aligned-debugSigned.apk");
-      const finalSignedApk = join(buildIdDir, `${config.appName.replace(/[^a-zA-Z0-9]/g, "_")}.apk`);
-      
-      if (existsSync(signedTempApk)) {
-          renameSync(signedTempApk, finalSignedApk);
-          logs.push(`[OK] APK renamed: ${basename(finalSignedApk)}`);
-      } else {
-        // Buscar cualquier APK firmado
-        const apkFiles = readdirSync(buildIdDir).filter(f => f.endsWith(".apk"));
-        if (apkFiles.length > 0) {
-          const foundApk = join(buildIdDir, apkFiles[0]);
-          renameSync(foundApk, finalSignedApk);
-          logs.push(`[OK] APK found and renamed: ${apkFiles[0]}`);
-        } else {
-          throw new Error("Signed APK not found");
-        }
-      }
+      // El APK ya está firmado, solo copiarlo con el nombre correcto
+      copyFileSync(unsignedApk, signedApk);
+      logs.push(`[OK] APK ready: ${basename(signedApk)}`);
 
-      if (!existsSync(finalSignedApk)) {
+      if (!existsSync(signedApk)) {
         throw new Error("APK build failed - final file not created");
       }
 
-      const fileSize = statSync(finalSignedApk).size;
-      logs.push(`[SUCCESS] APK generated: ${basename(finalSignedApk)} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
+      const fileSize = statSync(signedApk).size;
+      logs.push(`[SUCCESS] APK generated: ${basename(signedApk)} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
       
-      await this.updateBuildStatus(config.buildId, "ready", finalSignedApk, logs);
+      await this.updateBuildStatus(config.buildId, "ready", signedApk, logs);
 
       return {
         success: true,
         buildId: config.buildId,
-        apkPath: finalSignedApk,
+        apkPath: signedApk,
         logs,
         compilationTime: Date.now() - startTime,
       };

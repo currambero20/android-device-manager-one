@@ -4,6 +4,7 @@ import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const SESSION_KEY = "adm_session";
+const USER_KEY = "adm_user_data";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -21,9 +22,10 @@ export function useAuth(options?: UseAuthOptions) {
   }, []);
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
-    retry: 2,
-    refetchOnWindowFocus: true,
+    retry: 1,
+    refetchOnWindowFocus: false,
     enabled: mounted,
+    staleTime: 5 * 60 * 1000,
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -46,11 +48,11 @@ export function useAuth(options?: UseAuthOptions) {
         return;
       }
     } finally {
-      localStorage.removeItem("manus-runtime-user-info");
+      localStorage.removeItem(USER_KEY);
       localStorage.removeItem(SESSION_KEY);
       window.location.href = redirectPath;
     }
-  }, [logoutMutation]);
+  }, [logoutMutation, redirectPath]);
 
   const state = useMemo(() => {
     let user = meQuery.data ?? null;
@@ -60,10 +62,14 @@ export function useAuth(options?: UseAuthOptions) {
     }
 
     if (user) {
-      localStorage.setItem("manus-runtime-user-info", JSON.stringify(user));
+      try {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+      } catch (e) {
+        console.warn("[Auth] localStorage full:", e);
+      }
       localStorage.setItem(SESSION_KEY, "active");
     } else if (meQuery.isFetched) {
-      localStorage.removeItem("manus-runtime-user-info");
+      localStorage.removeItem(USER_KEY);
       localStorage.removeItem(SESSION_KEY);
     }
     

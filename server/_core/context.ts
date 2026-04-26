@@ -39,7 +39,15 @@ function isAdminUser(user: { role?: string | null; name?: string | null; email?:
 
 export async function createContext(opts: CreateExpressContextOptions) {
   const { req, res } = opts;
-  const sessionToken = req.cookies?.session_token;
+  
+  // Extract token from cookies or Authorization header (Hybrid Session Support)
+  let sessionToken = req.cookies?.session_token;
+  if (!sessionToken && req.headers.authorization) {
+    const parts = req.headers.authorization.split(' ');
+    if (parts.length === 2 && parts[0] === 'Bearer') {
+      sessionToken = parts[1];
+    }
+  }
 
   // Debug logging for mobile connection issues
   const userAgent = req.headers['user-agent'] || 'unknown';

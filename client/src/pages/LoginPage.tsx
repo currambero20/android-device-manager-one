@@ -38,7 +38,7 @@ const loginMutation = trpc.auth.login.useMutation({
         toast.success("¡Bienvenido! Redireccionando...");
         utils.auth.me.invalidate();
         setTimeout(() => {
-          window.location.href = "/dashboard";
+          window.location.replace(window.location.origin + "/dashboard");
         }, 1500);
       }
     },
@@ -58,7 +58,7 @@ const loginMutation = trpc.auth.login.useMutation({
       toast.success("¡Verificación exitosa! Entrando...");
       utils.auth.me.invalidate();
       setTimeout(() => {
-        window.location.assign("/dashboard");
+        window.location.replace(window.location.origin + "/dashboard");
       }, 1000);
     },
     onError: (error: any) => {

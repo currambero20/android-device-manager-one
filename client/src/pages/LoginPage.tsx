@@ -38,18 +38,14 @@ const loginMutation = trpc.auth.login.useMutation({
         toast.success("¡Bienvenido!");
         utils.auth.me.invalidate();
         
-        // FORMO DIRECTO- Sin timeout, sin replace
-        // Forzar redirección inmediata
-        const dashboardUrl = window.location.origin + "/dashboard";
-        console.log("[LOGIN] Redirecting to:", dashboardUrl);
-        
-        // Usar replace para evitar historial problemático
-        window.location.replace(dashboardUrl);
+        // FORMO DIRECTO - Sin delay
+        // window.location.origin incluye el protocolo y dominio
+        window.location.href = window.location.origin + "/dashboard";
       }
     },
     onError: (error: any) => {
       setLoading(false);
-      console.error("[LOGIN] Error:", error);
+      console.error("[LOGIN ERROR]:", error);
       const message = error?.message || "Error de conexión";
       if (message.includes("fetch") || message.includes("network") || message.includes("ERR_") || message.includes("Failed to fetch")) {
         toast.error("Error de conexión. Verifica tu internet.");

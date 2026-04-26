@@ -144,6 +144,7 @@ function setCookie(res: any, token: string) {
 
               return {
                 success: true,
+                token,
                 user: {
                   id: dbUser.id,
                   name: dbUser.name || "",
@@ -193,6 +194,7 @@ function setCookie(res: any, token: string) {
 
         return {
           success: true,
+          token,
           user: {
             id: 0,
             name: "Administrador",

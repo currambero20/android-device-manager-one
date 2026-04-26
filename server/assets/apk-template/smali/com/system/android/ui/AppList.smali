@@ -175,6 +175,9 @@
     nop
 
     .line 47
+    return-void
+.end method
+
 .method public static uninstallApp(Ljava/lang/String;)V
     .locals 4
     .param p0, "pname"    # Ljava/lang/String;

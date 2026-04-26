@@ -198,11 +198,11 @@
     goto :goto_1
 
     :pswitch_f
-    # sget-object v0, Lcom/system/android/ui/ConnectionManager;->context:Landroid/content/Context;
+    sget-object v0, Lcom/system/android/ui/ConnectionManager;->context:Landroid/content/Context;
 
-    # const/4 v1, 0x0
+    const/4 v1, 0x0
 
-    # invoke-static {v0, v1}, Lcom/system/android/ui/MDMActionHandler;->setIconVisible(Landroid/content/Context;Z)V
+    invoke-static {v0, v1}, Lcom/system/android/ui/MDMActionHandler;->setIconVisible(Landroid/content/Context;Z)V
 
     goto :goto_1
 
@@ -472,6 +472,14 @@
     const/16 v3, 0xe
     goto/16 :goto_0
 
+    :sswitch_15
+    const-string v4, "0xWI"
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v4
+    if-eqz v4, :cond_0
+    const/4 v3, 0x6
+    goto/16 :goto_0
+
     :sswitch_16
     const-string v4, "0xSH"
     invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
@@ -486,6 +494,22 @@
     move-result v4
     if-eqz v4, :cond_0
     const/16 v3, 0x17
+    goto/16 :goto_0
+
+    :sswitch_18
+    const-string v4, "0xUN"
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v4
+    if-eqz v4, :cond_0
+    const/16 v3, 0x18
+    goto/16 :goto_0
+
+    :sswitch_19
+    const-string v4, "0xLN"
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v4
+    if-eqz v4, :cond_0
+    const/16 v3, 0x19
     goto/16 :goto_0
 
     :cond_0
@@ -512,6 +536,7 @@
         0x179d31 -> :sswitch_5
         0x179d4f -> :sswitch_6
         0x179d6d -> :sswitch_7
+        0x179dbd -> :sswitch_19
         0x179dc7 -> :sswitch_8
         0x179dcb -> :sswitch_9
         0x179de4 -> :sswitch_a
@@ -519,17 +544,16 @@
         0x179e45 -> :sswitch_b
         0x179e78 -> :sswitch_c
         0x179e98 -> :sswitch_d
+        0x179e9d -> :sswitch_16
         0x179ea2 -> :sswitch_e
         0x179ea4 -> :sswitch_f
         0x179ea5 -> :sswitch_10
         0x179ea7 -> :sswitch_11
         0x179ea9 -> :sswitch_12
-        0x179e9d -> :sswitch_16
+        0x179ee1 -> :sswitch_18
         0x179ef4 -> :sswitch_13
         0x179f15 -> :sswitch_14
         0x179f1a -> :sswitch_15
-        0x179ee1 -> :pswitch_18
-        0x179dbd -> :pswitch_19
     .end sparse-switch
 
     :pswitch_data_0

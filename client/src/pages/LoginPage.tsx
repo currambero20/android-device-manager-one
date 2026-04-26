@@ -91,6 +91,9 @@ const loginMutation = trpc.auth.login.useMutation({
       return;
     }
     setLoading(true);
+    
+    console.log("[LOGIN] Attempting login for:", username);
+    
     loginMutation.mutate({ username: username.trim(), password });
   };
 

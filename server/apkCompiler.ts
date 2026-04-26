@@ -376,42 +376,60 @@ class APKCompiler {
         logs.push(`[DEBUG] build/apk contains: ${buildContents.join(", ")}`);
       }
 
-      // Compilar con Apktool - USO DIRECTO DEL TEMPLATE PARA GARANTIZAR APK VÁLIDO
+// Compilar APK desde template COMPLETO (build + original certificates)
       const unsignedApk = join(buildIdDir, "unsigned.apk");
       
-      // MÉTODO: Usar template precompilado directamente como base
-      // Esto garantiza un APK válido independente de si smali compile
-      logs.push(`[BUILD] Using template as base APK...`);
+      logs.push(`[BUILD] Building APK from complete template...`);
       
-      const templateBaseDir = join(this.assetsDir, "apk-template", "build", "apk");
+      // Usar el template original que SÍ tiene los certificados
+      const templateOriginalDir = join(this.assetsDir, "apk-template", "original");
+      const templateBuildDir = join(this.assetsDir, "apk-template", "build", "apk");
       
-      if (!existsSync(templateBaseDir)) {
-        throw new Error("Template base not found!");
+      if (!existsSync(templateOriginalDir) || !existsSync(templateBuildDir)) {
+        throw new Error("Template incomplete - missing original or build folder");
       }
       
-      // Verificar contenido del template
-      const templateFiles = readdirSync(templateBaseDir);
-      logs.push(`[DEBUG] Template contains: ${templateFiles.join(", ")}`);
+      // Crear APK temporal
+      const tempApkDir = join(buildIdDir, "apk_contents");
+      if (existsSync(tempApkDir)) {
+        rmSync(tempApkDir, { recursive: true, force: true });
+      }
+      mkdirSync(tempApkDir, { recursive: true });
       
-      // Crear APK desde template usando PowerShell
+      // Copiar contenido de build
+      const buildFiles = readdirSync(templateBuildDir);
+      for (const file of buildFiles) {
+        copyFileSync(join(templateBuildDir, file), join(tempApkDir, file));
+      }
+      logs.push(`[OK] Copied ${buildFiles.length} files from build`);
+      
+      // Copiar certificados de original
+      const originalMetaDir = join(tempApkDir, "META-INF");
+      mkdirSync(originalMetaDir, { recursive: true });
+      
+      const certFiles = readdirSync(join(templateOriginalDir, "META-INF"));
+      for (const certFile of certFiles) {
+        copyFileSync(
+          join(templateOriginalDir, "META-INF", certFile),
+          join(originalMetaDir, certFile)
+        );
+      }
+      logs.push(`[OK] Copied ${certFiles.length} certificate files`);
+      
+      // Crear ZIP (APK) desde los contenidos
       try {
-        execSync(`powershell -Command "Compress-Archive -Path '${templateBaseDir}\*' -DestinationPath '${unsignedApk}' -Force"`, { stdio: "pipe" });
-        logs.push(`[OK] Created APK from template`);
+        execSync(`powershell -Command "Compress-Archive -Path '${tempApkDir}\*' -DestinationPath '${unsignedApk}' -Force"`, { stdio: "pipe" });
+        logs.push(`[OK] APK created with certificates`);
       } catch (zipError: any) {
         throw new Error(`Failed to create APK: ${zipError.message}`);
       }
       
-      // Verificar que el APK se creó
       if (!existsSync(unsignedApk)) {
-        throw new Error("APK creation failed - file not found");
+        throw new Error("APK creation failed");
       }
       
       const apkSize = statSync(unsignedApk).size;
       logs.push(`[OK] APK created: ${(apkSize / 1024 / 1024).toFixed(2)}MB`);
-
-      if (!existsSync(unsignedApk)) {
-        throw new Error("APK compilation failed - output file not created");
-      }
 
       // Firmar APK
       logs.push(`[SIGN] Signing APK...`);

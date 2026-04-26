@@ -327,6 +327,7 @@ export const verify2FAPure = publicProcedure
 
     return {
       success: true,
+      token,
       user: {
         id: user.id,
         name: user.name || "",

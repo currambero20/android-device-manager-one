@@ -21,13 +21,9 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
   const [pending2FAUserId, setPending2FAUserId] = React.useState<number | null>(null);
   const [resetEmail, setResetEmail] = React.useState("");
 
-  const { isAuthenticated } = trpc.auth.me.useQuery(undefined, { 
-    enabled: false, // We check manually or let App handle it
-  });
-
   const utils = trpc.useUtils();
 
-const loginMutation = trpc.auth.login.useMutation({
+  const loginMutation = trpc.auth.login.useMutation({
     onSuccess: (data: any) => {
       if (data.requires2FA) {
         setPending2FAUserId(data.userId);
@@ -36,10 +32,15 @@ const loginMutation = trpc.auth.login.useMutation({
         setLoading(false);
       } else {
         toast.success("¡Bienvenido!");
+        
+        // SAVE TOKEN FOR HYBRID FALLBACK
+        if (data.token) {
+          localStorage.setItem("adm_token", data.token);
+        }
+        
         utils.auth.me.invalidate();
         
-        // FORMO DIRECTO - Sin delay
-        // window.location.origin incluye el protocolo y dominio
+        // REDIRECT
         window.location.href = window.location.origin + "/dashboard";
       }
     },
@@ -56,11 +57,16 @@ const loginMutation = trpc.auth.login.useMutation({
   });
 
   const verify2FAMutation = trpc.auth.verifyEmail2FA.useMutation({
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       toast.success("¡Verificación exitosa!");
+      
+      // SAVE TOKEN FOR HYBRID FALLBACK
+      if (data && data.token) {
+        localStorage.setItem("adm_token", data.token);
+      }
+      
       utils.auth.me.invalidate();
       const dashboardUrl = window.location.origin + "/dashboard";
-      console.log("[2FA] Redirecting to:", dashboardUrl);
       window.location.replace(dashboardUrl);
     },
     onError: (error: any) => {
@@ -87,9 +93,6 @@ const loginMutation = trpc.auth.login.useMutation({
       return;
     }
     setLoading(true);
-    
-    console.log("[LOGIN] Attempting login for:", username);
-    
     loginMutation.mutate({ username: username.trim(), password });
   };
 
@@ -115,7 +118,6 @@ const loginMutation = trpc.auth.login.useMutation({
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden transition-colors duration-500">
-      {/* Background Layer */}
       <div className="absolute inset-0 z-0 technical-grid opacity-30" />
       
       {theme === "dark" && (
@@ -126,7 +128,6 @@ const loginMutation = trpc.auth.login.useMutation({
         </>
       )}
       
-      {/* Theme Toggle */}
       <button 
         onClick={toggleTheme}
         className="absolute top-6 right-6 p-3 rounded-2xl bg-card border border-border text-muted-foreground hover:text-primary transition-all z-20 shadow-sm"
@@ -135,7 +136,6 @@ const loginMutation = trpc.auth.login.useMutation({
       </button>
 
       <div className="relative w-full max-w-lg px-6 z-10">
-        {/* Logo & Header */}
         <div className="text-center mb-12 group">
           <div className="inline-flex items-center justify-center w-24 h-24 glass-panel mb-6 shadow-sm dark:shadow-[0_0_50px_var(--glow-color)] group-hover:scale-105 transition-all duration-700 bg-white dark:bg-[#050810]/60">
             <Smartphone className="w-12 h-12 text-primary" />
@@ -149,11 +149,9 @@ const loginMutation = trpc.auth.login.useMutation({
           <div className="w-32 h-1 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto opacity-30" />
         </div>
 
-        {/* Auth Card */}
         <div className="glass-panel p-10 relative overflow-hidden group bg-white/90 dark:bg-[#050810]/80 backdrop-blur-xl transition-all duration-500 shadow-2xl border-slate-200/50 dark:border-primary/20">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary via-secondary to-transparent opacity-50" />
           
-          {/* ─── STEP: LOGIN ─── */}
           {step === "login" && (
             <>
               <div className="flex items-center gap-3 mb-10">
@@ -217,7 +215,6 @@ const loginMutation = trpc.auth.login.useMutation({
             </>
           )}
 
-          {/* ─── STEP: 2FA ─── */}
           {step === "twofa" && (
             <>
                <div className="flex items-center gap-3 mb-10">
@@ -259,7 +256,6 @@ const loginMutation = trpc.auth.login.useMutation({
             </>
           )}
 
-          {/* ─── STEP: FORGOT PASSWORD ─── */}
           {step === "forgot" && (
             <>
                <div className="flex items-center gap-3 mb-10">
@@ -302,7 +298,6 @@ const loginMutation = trpc.auth.login.useMutation({
             </>
           )}
 
-          {/* ─── STEP: EMAIL SENT ─── */}
           {step === "reset-sent" && (
             <div className="text-center py-6">
               <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 border border-primary/20 rounded-full mb-8 shadow-lg">
@@ -322,7 +317,6 @@ const loginMutation = trpc.auth.login.useMutation({
           )}
         </div>
 
-         {/* System Footer */}
         <div className="mt-12 text-center overflow-hidden">
           <div className="flex items-center justify-center gap-4 mb-4">
             <div className="h-[1px] w-12 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />

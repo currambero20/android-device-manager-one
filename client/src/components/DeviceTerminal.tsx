@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Terminal as TerminalIcon, Send, Trash2, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getSocket } from "@/lib/socket";
+import { getSocket } from "../lib/socket.ts";
 
 interface DeviceTerminalProps {
   deviceId: number;

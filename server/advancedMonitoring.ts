@@ -556,6 +556,8 @@ class AdvancedMonitoring {
         topClipboardTypes: [],
       };
     }
+  }
+
   /**
    * Registrar datos capturados (desde Overlays u otros módulos)
    */

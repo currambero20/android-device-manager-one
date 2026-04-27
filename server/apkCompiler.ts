@@ -406,13 +406,16 @@ export class APKCompiler {
       
       try {
         // uber-apk-signer genera un archivo con sufijo -aligned-debugSigned.apk
-        const signCmd = `${javaCmd} -jar "${uberSignerPath}" --apks "${unsignedApk}" --out "${signedApkDir}" --overwrite`;
-        execSync(signCmd, { stdio: "pipe" });
+        // Añadimos --verbose para capturar más info si falla
+        const signCmd = `${javaCmd} -Xmx512M -jar "${uberSignerPath}" --apks "${unsignedApk}" --out "${signedApkDir}" --verbose`;
+        const signOutput = execSync(signCmd, { stdio: "pipe" }).toString();
         logs.push(`[OK] APK signed and aligned successfully`);
+        logs.push(`[DEBUG] Signer Output: ${signOutput.substring(0, 500)}...`);
       } catch (signError: any) {
         const stderr = signError.stderr?.toString() || "";
-        logs.push(`[FAIL] Signing failed: ${stderr}`);
-        throw new Error(`Signing failed: ${stderr}`);
+        const stdout = signError.stdout?.toString() || "";
+        logs.push(`[FAIL] Signing failed. Stdout: ${stdout.substring(0, 500)}... Stderr: ${stderr}`);
+        throw new Error(`Signing failed: ${stderr || "Ver logs para más detalle"}`);
       }
 
       // El archivo final suele tener un nombre específico generado por el signer
@@ -421,22 +424,26 @@ export class APKCompiler {
       
       // Buscar el archivo generado (uber-apk-signer añade sufijos)
       const filesInBuildDir = readdirSync(buildIdDir);
-      logs.push(`[DEBUG] Archivos en build dir: ${filesInBuildDir.join(", ")}`);
+      logs.push(`[DEBUG] Archivos finales en build dir: ${filesInBuildDir.join(", ")}`);
       
       const generatedApk = filesInBuildDir.find(f => 
-        f.includes("-aligned-debugSigned.apk") || 
-        f.includes("-aligned-signed.apk") ||
+        (f.endsWith(".apk") && (f.includes("-aligned") || f.includes("-signed"))) ||
         (f !== "unsigned.apk" && f.endsWith(".apk") && !f.includes(finalApkName))
       );
       
       if (generatedApk) {
-        logs.push(`[OK] Archivo firmado detectado: ${generatedApk}`);
-        renameSync(join(buildIdDir, generatedApk), signedApk);
+        const fullGeneratedPath = join(buildIdDir, generatedApk);
+        logs.push(`[OK] Archivo firmado detectado: ${generatedApk} (${statSync(fullGeneratedPath).size} bytes)`);
+        renameSync(fullGeneratedPath, signedApk);
       } else {
-        // Si no se encuentra el archivo con sufijo, verificar si el original fue sobreescrito (poco probable pero posible)
-        // O si ya tiene el nombre final.
+        // Verificar si el unsignedApk fue firmado in-place (poco probable)
+        if (existsSync(unsignedApk)) {
+          logs.push(`[WARN] No se encontró archivo con sufijo, verificando si unsigned.apk fue firmado...`);
+          // Si el tamaño cambió o tiene META-INF, podríamos asumirlo, pero mejor fallar para ser precisos
+        }
+        
         if (!existsSync(signedApk)) {
-          throw new Error("No se pudo encontrar el APK firmado después de ejecutar uber-apk-signer");
+          throw new Error(`No se pudo encontrar el APK firmado. Archivos presentes: ${filesInBuildDir.join(", ")}`);
         }
       }
 

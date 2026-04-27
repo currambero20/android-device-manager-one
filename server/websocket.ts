@@ -177,9 +177,12 @@ export class WebSocketManager {
 
           if (connectedDeviceId) {
             const dbId = parseInt(String(connectedDeviceId));
+            
             // [COMMAND BRIDGE] Asegurar que el socket esté en la sala de comandos
             socket.join(`device:${dbId}`);
             
+            // [FALLBACK] Si el socket no envió type=device, lo marcamos aquí internamente
+            (socket as any).clientType = "device";
             (socket as any).deviceId = dbId;
             (socket as any).androidId = effectiveId;
             

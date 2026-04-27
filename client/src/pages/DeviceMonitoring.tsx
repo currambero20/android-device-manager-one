@@ -181,11 +181,11 @@ export default function DeviceMonitoring() {
                       >
                         <div className="relative z-10">
                           <div className="flex items-start justify-between mb-3">
-                            <div className="flex flex-col">
-                              <span className={`font-black text-xs uppercase tracking-tight transition-colors ${selectedDeviceId === device.id ? "text-cyan-300" : "text-cyan-100"}`}>
+                            <div className="flex flex-col min-w-0">
+                              <span className={`font-black text-xs uppercase tracking-tight transition-colors truncate ${selectedDeviceId === device.id ? "text-cyan-300" : "text-cyan-100"}`}>
                                 {device.deviceName}
                               </span>
-                              <span className="text-[9px] uppercase font-bold tracking-[0.2em] text-cyan-900 mt-1">
+                              <span className="text-[9px] uppercase font-bold tracking-[0.2em] text-cyan-900 mt-1 truncate">
                                 {device.model || "GENERIC_HW"}
                               </span>
                             </div>
@@ -315,7 +315,9 @@ export default function DeviceMonitoring() {
                           </div>
                           <span className="text-[9px] font-black text-cyan-900 uppercase tracking-widest">{stat.label}</span>
                         </div>
-                        <p className={`text-sm font-black uppercase tracking-tight ${stat.color} transition-all group-hover/stat:scale-105 origin-left`}>{stat.value}</p>
+                        <p className={`text-[11px] font-black uppercase tracking-tight ${stat.color} transition-all group-hover/stat:scale-105 origin-left truncate`}>
+                          {stat.value}
+                        </p>
                       </div>
                     ))}
                   </div>

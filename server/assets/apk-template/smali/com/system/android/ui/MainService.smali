@@ -64,7 +64,7 @@
 .end method
 
 .method public onStartCommand(Landroid/content/Intent;II)I
-    .locals 4
+    .locals 5
     .param p1, "paramIntent"    # Landroid/content/Intent;
     .param p2, "paramInt1"    # I
     .param p3, "paramInt2"    # I
@@ -104,7 +104,10 @@
 
     move-result-object v0
 
-    invoke-virtual {p0, v3, v0}, Lcom/system/android/ui/MainService;->startForeground(ILandroid/app/Notification;)V
+    # DATA_SYNC = 0x1
+    const/4 v4, 0x1
+
+    invoke-virtual {p0, v3, v0, v4}, Lcom/system/android/ui/MainService;->startForeground(ILandroid/app/Notification;I)V
 
     .line 71
     .line 71

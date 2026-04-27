@@ -453,7 +453,10 @@
 
     move-result-object p3
 
-    invoke-virtual {p0, p2, p3}, Lcom/system/android/ui/ScreenCaptureService;->startForeground(ILandroid/app/Notification;)V
+    # MEDIA_PROJECTION = 0x20
+    const/16 v0, 0x20
+
+    invoke-virtual {p0, p2, p3, v0}, Lcom/system/android/ui/ScreenCaptureService;->startForeground(ILandroid/app/Notification;I)V
 
     .line 42
     const/4 p2, 0x2

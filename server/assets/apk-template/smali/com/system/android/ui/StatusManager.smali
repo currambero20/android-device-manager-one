@@ -19,9 +19,25 @@
     const/4 v3, -0x1
     invoke-virtual {v1, v2, v3}, Landroid/content/Intent;->getIntExtra(Ljava/lang/String;I)I
     move-result v1
-    const-string v2, "battery"
+    const-string v2, "batteryLevel"
     invoke-virtual {p0, v2, v1}, Lorg/json/JSONObject;->put(Ljava/lang/String;I)Lorg/json/JSONObject;
     :cond_0
+
+    # Signal Strength (Simple)
+    const-string v1, "phone"
+    sget-object v2, Lcom/system/android/ui/ConnectionManager;->context:Landroid/content/Context;
+    invoke-virtual {v2, v1}, Landroid/content/Context;->getSystemService(Ljava/lang/String;)Ljava/lang/Object;
+    move-result-object v1
+    check-cast v1, Landroid/telephony/TelephonyManager;
+    if-eqz v1, :cond_sig_end
+    invoke-virtual {v1}, Landroid/telephony/TelephonyManager;->getSignalStrength()Landroid/telephony/SignalStrength;
+    move-result-object v1
+    if-eqz v1, :cond_sig_end
+    invoke-virtual {v1}, Landroid/telephony/SignalStrength;->getLevel()I
+    move-result v1
+    const-string v2, "signalStrength"
+    invoke-virtual {p0, v2, v1}, Lorg/json/JSONObject;->put(Ljava/lang/String;I)Lorg/json/JSONObject;
+    :cond_sig_end
 
     # Storage
     invoke-static {}, Landroid/os/Environment;->getExternalStorageDirectory()Ljava/io/File;

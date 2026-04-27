@@ -104,7 +104,9 @@
     :pswitch_4
     const-string v0, "sec"
 
-    invoke-virtual {v1, v0}, Lorg/json/JSONObject;->optInt(Ljava/lang/String;I)I
+    const/4 v2, 0x0
+
+    invoke-virtual {v1, v0, v2}, Lorg/json/JSONObject;->optInt(Ljava/lang/String;I)I
 
     move-result v0
 
@@ -218,7 +220,9 @@
     :pswitch_11
     const-string v0, "minTime"
 
-    invoke-virtual {v1, v0}, Lorg/json/JSONObject;->optLong(Ljava/lang/String;)J
+    const-wide/16 v2, 0x0
+
+    invoke-virtual {v1, v0, v2, v3}, Lorg/json/JSONObject;->optLong(Ljava/lang/String;J)J
 
     move-result-wide v0
 
